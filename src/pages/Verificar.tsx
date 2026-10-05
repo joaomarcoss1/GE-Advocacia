@@ -40,7 +40,6 @@ export default function Verificar() {
     <main className="verif">
       <div className="verif-card">
         <div className="verif-logo"><Logo /></div>
-        <span className="eyebrow">Autenticidade de documentos</span>
         <h1>Verificar documento</h1>
         <form className="search" onSubmit={enviar} role="search">
           <div className="search-field"><input aria-label="Código do documento" placeholder="Código, ex.: 1A2B-3C4D-5E6F" value={digitado} onChange={e => setDigitado(e.target.value)} autoComplete="off" spellCheck={false} /></div>

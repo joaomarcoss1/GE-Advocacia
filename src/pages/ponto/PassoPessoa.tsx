@@ -1,4 +1,4 @@
-import { ArrowRight, Lock, Search, UserSearch, X } from 'lucide-react';
+import { ArrowRight, Search, X } from 'lucide-react';
 import { iniciais } from '@/lib/format';
 import StatusLocal from './StatusLocal';
 import type { Ponto } from './usePonto';
@@ -8,9 +8,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
   const { ctx } = p;
   return (
     <>
-      <span className="eyebrow">Registro de ponto</span>
       <h1>Identifique-se</h1>
-      <p className="page-sub" style={{ marginTop: 8 }}>Digite seu nome para localizar o seu cadastro.</p>
       {p.cerca && ctx && <StatusLocal local={p.local} raio={ctx.ponto.geofence_raio_m} onVerificar={p.checarLocal} />}
       {p.modo === 'local' && <span className="badge gold" style={{ marginTop: 12 }}>Modo demonstração · dados fictícios</span>}
 
@@ -23,7 +21,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
         </div>
         <button className="btn gold" type="submit">Buscar</button>
       </form>
-      <p className="hint" style={{ marginTop: 10 }}>{p.tentou && p.termo.length < 3 ? <span style={{ color: 'var(--bad)' }}>Digite ao menos 3 letras para buscar.</span> : 'Mínimo de 3 letras. Não é preciso digitar o nome completo.'}</p>
+      {p.tentou && p.termo.length < 3 && <p className="hint" style={{ marginTop: 10, color: 'var(--bad)' }}>Digite ao menos 3 letras para buscar.</p>}
 
       {p.termo.length >= 3 ? (
         <div className="results" aria-live="polite">
@@ -37,14 +35,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
           ))}
           {!p.filtradas.length && !p.buscando && <div className="notice gold">Não encontramos esse nome. Confira a grafia ou procure a gerência para atualizar o seu cadastro.</div>}
         </div>
-      ) : (
-        <div className="idle">
-          <span className="idle-ic"><UserSearch size={26} strokeWidth={1.5} /></span>
-          <strong>Encontre o seu cadastro</strong>
-          <span className="muted">Depois da busca, você confirma com o seu PIN pessoal e registra a marcação.</span>
-        </div>
-      )}
-      <p className="secure"><Lock size={13} />Acesso protegido por PIN pessoal e intransferível.</p>
+      ) : null}
     </>
   );
 }

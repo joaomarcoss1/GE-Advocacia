@@ -11,11 +11,11 @@ export function Monograma() {
   );
 }
 
-export default function Logo({ grande, soIcone, rotulo = 'Plataforma administrativa' }: { grande?: boolean; soIcone?: boolean; rotulo?: string }) {
+export default function Logo({ grande, soIcone, rotulo = '' }: { grande?: boolean; soIcone?: boolean; rotulo?: string }) {
   return (
     <span className={`logo ${grande ? 'grande' : ''} ${soIcone ? 'so-icone' : ''}`}>
       <Monograma />
-      <span className="nome"><b>GE Advocacia</b><i>{rotulo}</i></span>
+      <span className="nome"><b>GE Advocacia</b>{rotulo && <i>{rotulo}</i>}</span>
     </span>
   );
 }

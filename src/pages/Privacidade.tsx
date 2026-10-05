@@ -25,7 +25,6 @@ export default function Privacidade() {
       <div className="verif-card" style={{ width: 'min(760px, 100%)' }}>
         <div className="verif-logo"><Logo /></div>
         <div>
-          <span className="eyebrow">Privacidade e proteção de dados</span>
           <h1>Como tratamos os seus dados</h1>
         </div>
         <div className="demo-banner" role="note"><strong>Texto-base para revisão jurídica.</strong> Este aviso descreve o que o sistema faz tecnicamente. Cada escritório deve revisá-lo e adaptá-lo com o seu jurídico antes de adotá-lo; ele não substitui parecer jurídico.</div>

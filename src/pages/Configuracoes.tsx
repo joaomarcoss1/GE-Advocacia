@@ -36,7 +36,7 @@ export default function Configuracoes() {
 
   return (
     <>
-      <PageHeader titulo="Configurações" sub="Dados do escritório, regras de ponto e folha, acessos, privacidade e auditoria." />
+      <PageHeader titulo="Configurações" />
       <div className="card">
         <div style={{ padding: '0 12px' }}>
           <Abas valor={aba} onChange={setAba} itens={[

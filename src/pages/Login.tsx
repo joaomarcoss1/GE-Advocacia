@@ -27,15 +27,11 @@ export default function Login() {
 
   return (
     <div className="auth">
-      <Stage>
-        <p className="headline">Gestão de pessoas e ponto, <em>com a elegância</em> que o seu escritório merece.</p>
-      </Stage>
+      <Stage />
       <section className="auth-side">
         <form className="auth-card stack passo" style={{ gap: 18 }} onSubmit={enviar}>
           <div>
-            <span className="eyebrow">Acesso restrito</span>
-            <h1>Entrar na plataforma</h1>
-            <p className="page-sub" style={{ marginTop: 8 }}>Administração e gerência do seu escritório. Você só acessa os dados do escritório ao qual o seu usuário pertence.</p>
+            <h1>Entrar</h1>
           </div>
           <div className="field">
             <label htmlFor="email">E-mail</label>
@@ -56,7 +52,7 @@ export default function Login() {
           <button className="btn block" style={{ minHeight: 48 }} disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'}</button>
           {modo === 'local' && (
             <div className="demo-banner" data-testid="demo-contas">
-              <strong>Demonstração</strong> · escolha uma conta (cada escritório tem dados independentes):
+              <strong>Demonstração</strong>
               <div className="stack" style={{ gap: 6, marginTop: 8 }}>
                 <button type="button" className="btn ghost sm" onClick={() => { setEmail(DEMO_PLATAFORMA.email); setSenha(DEMO_PLATAFORMA.senha); }}>Plataforma · {DEMO_PLATAFORMA.email}</button>
                 {DEMO_ESCRITORIOS.map(e => (

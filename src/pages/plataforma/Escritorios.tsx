@@ -96,7 +96,7 @@ export default function Escritorios() {
 
   return (
     <>
-      <PageHeader titulo="Escritórios" sub="Cada escritório tem equipe, ponto, folha e usuários totalmente separados. Aqui você cria os acessos iniciais e suspende ou reativa escritórios; os dados deles ficam fora do seu alcance.">
+      <PageHeader titulo="Escritórios">
         <button className="btn gold" onClick={() => setNovo({ ...vazioNovo })}><Plus size={18} />Novo escritório</button>
       </PageHeader>
 

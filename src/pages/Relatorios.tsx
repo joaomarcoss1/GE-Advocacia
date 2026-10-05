@@ -44,7 +44,7 @@ export default function Relatorios() {
 
   return (
     <>
-      <PageHeader titulo="Relatórios" sub="Frequência consolidada e espelho de ponto individual, com exportação em PDF e Excel." />
+      <PageHeader titulo="Relatórios" />
       <div className="card card-pad row" style={{ marginBottom: 16, alignItems: 'flex-end' }}>
         <Field label="De"><input className="input" type="date" value={ini} onChange={e => setIni(e.target.value)} /></Field>
         <Field label="Até"><input className="input" type="date" value={fim} onChange={e => setFim(e.target.value)} /></Field>

@@ -29,10 +29,9 @@ export default function BaterPonto() {
   if (p.falhaEsc) {
     return (
       <div className="auth">
-        <Stage rodape="Plataforma multiescritório" />
+        <Stage />
         <section className="auth-side">
           <div className="auth-card stack passo" style={{ gap: 16 }}>
-            <span className="eyebrow">Registro de ponto</span>
             <h1>{p.falhaEsc === 'ESCRITORIO_SUSPENSO' ? 'Acesso suspenso' : 'Escritório não encontrado'}</h1>
             <p className="page-sub">{p.falhaEsc === 'ESCRITORIO_SUSPENSO'
               ? 'O acesso deste escritório está suspenso. Fale com o administrador.'
@@ -49,7 +48,7 @@ export default function BaterPonto() {
     <div className={`auth ${p.quiosque ? 'quiosque' : ''}`}>
       <button type="button" className="icon-btn q-toggle no-print" style={{ color: 'var(--muted)' }} onClick={p.alternarQuiosque} aria-pressed={p.quiosque}
         aria-label={p.quiosque ? 'Sair do modo quiosque' : 'Ativar modo quiosque (tela cheia para tablet)'} title={p.quiosque ? 'Sair do modo quiosque' : 'Modo quiosque'}>{p.quiosque ? <Minimize2 /> : <Maximize2 />}</button>
-      <Stage escritorio={p.ctx.escritorio_nome} rodape={p.ctx.escritorio_nome}>
+      <Stage escritorio={p.ctx.escritorio_nome}>
         <div aria-label={`Hora atual ${p.agora.hhmm}`}>
           <div className="hora"><span key={hh} className="tick">{hh}</span><span className="sep">:</span><span key={mm} className="tick">{mm}</span></div>
           <div className="dia">{dataExtensa(p.agora.iso)}</div>

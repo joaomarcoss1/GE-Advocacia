@@ -29,7 +29,7 @@ export default function Folha() {
 
   return (
     <>
-      <PageHeader titulo="Folha de pagamento" sub="Diária = salário ÷ dias de trabalho previstos no mês. Cada falta desconta uma diária; dias abonados são pagos.">
+      <PageHeader titulo="Folha de pagamento">
         <button className="btn ghost" onClick={() => novoAjuste()}><Plus size={18} />Lançar ajuste</button>
       </PageHeader>
 

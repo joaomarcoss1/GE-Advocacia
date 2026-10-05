@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import Presenca from '@/components/Presenca';
 import { Kpi, PageHeader } from '@/components/ui';
 import { useDados } from '@/context/Dados';
-import { fmtData, nomeMes, primeiroDoMes, ultimoDoMes } from '@/lib/datetime';
+import { fmtData, primeiroDoMes, ultimoDoMes } from '@/lib/datetime';
 import { calcularPeriodo, situacaoHoje } from '@/lib/folhaLote';
 import { filaDeAnalise } from '@/lib/analises';
 import { brl } from '@/lib/format';
@@ -32,7 +32,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader titulo="Painel" sub={`${nomeMes(agora.data)} · atualizado às ${agora.hhmm}`}>
+      <PageHeader titulo="Painel">
         <Link to="/painel/ponto" className="btn ghost">Registros de ponto</Link>
         <Link to="/painel/folha" className="btn">Folha do mês</Link>
       </PageHeader>

@@ -116,21 +116,14 @@ export function usePergunta() {
 }
 
 /* ---------- Blocos ---------- */
-const EYEBROW: Record<string, string> = {
-  '/painel': 'Visão geral', '/painel/gerencia': 'Gerência', '/painel/funcionarios': 'Equipe', '/painel/cargos': 'Equipe', '/painel/escalas': 'Equipe',
-  '/painel/ponto': 'Frequência', '/painel/ocorrencias': 'Frequência', '/painel/feriados': 'Frequência', '/painel/folha': 'Financeiro',
-  '/painel/relatorios': 'Financeiro', '/painel/configuracoes': 'Sistema', '/plataforma': 'Plataforma',
-};
 /** Telas com tabelas que fazem sentido imprimir (layout próprio de impressão no CSS). */
 const IMPRIMIVEL = new Set(['/painel', '/painel/funcionarios', '/painel/cargos', '/painel/escalas', '/painel/ponto', '/painel/ocorrencias', '/painel/feriados', '/painel/folha', '/painel/relatorios']);
-export function PageHeader({ titulo, sub, children }: { titulo: string; sub?: ReactNode; children?: ReactNode }) {
+export function PageHeader({ titulo, children }: { titulo: string; children?: ReactNode }) {
   const { pathname } = useLocation();
   return (
     <div className="page-head">
       <div>
-        <span className="eyebrow">{EYEBROW[pathname] ?? 'GE Advocacia'}</span>
         <h1 className="page-title">{titulo}</h1>
-        {sub && <p className="page-sub">{sub}</p>}
       </div>
       <div className="row no-print">
         {children}

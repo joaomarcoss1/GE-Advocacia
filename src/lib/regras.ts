@@ -6,7 +6,7 @@ import { erro } from './erros';
 import type { AjusteDia, AjusteFolha, Folha, Ocorrencia, RegistroPonto } from './types';
 
 /** Versão da última migração SQL que este app espera encontrar no banco (supabase/migrations). */
-export const SCHEMA_ESPERADO = 5;
+export const SCHEMA_ESPERADO = 6;
 /** Versão do app mostrada em Diagnóstico. */
 export const APP_VERSAO = '1.0.0';
 

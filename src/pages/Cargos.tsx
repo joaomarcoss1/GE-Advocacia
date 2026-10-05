@@ -29,7 +29,7 @@ export default function Cargos() {
 
   return (
     <>
-      <PageHeader titulo="Cargos" sub="Funções da equipe. Cargos da categoria Gerência aparecem como responsáveis pela aprovação de ponto.">
+      <PageHeader titulo="Cargos">
         <button className="btn gold" onClick={() => setEd(vazio())}><Plus size={18} />Novo cargo</button>
       </PageHeader>
       <div className="card table-wrap">

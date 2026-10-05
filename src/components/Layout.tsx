@@ -48,7 +48,7 @@ export default function Layout() {
 
   const avisos = (
     <>
-      {modo === 'local' && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Modo demonstração</strong> · dados fictícios, salvos só neste navegador. Cada escritório tem o seu próprio conjunto de dados.</div>}
+      {modo === 'local' && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Demonstração</strong> · dados fictícios neste navegador.</div>}
       {atualizacaoPendente && (
         <div className="demo-banner" style={{ marginBottom: 20 }}>
           <strong>Atualização do banco pendente.</strong> O app espera a versão {SCHEMA_ESPERADO} do banco e o Supabase está na versão {versaoBanco ?? 'desconhecida'}.

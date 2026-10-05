@@ -40,7 +40,7 @@ export default function Feriados() {
 
   return (
     <>
-      <PageHeader titulo="Feriados e recessos" sub="Dias sem expediente: não contam como falta e não entram no divisor da diária.">
+      <PageHeader titulo="Feriados e recessos">
         <select className="select" style={{ width: 110 }} value={ano} onChange={e => setAno(Number(e.target.value))} aria-label="Ano">
           {[ano - 1, ano, ano + 1].filter((v, i, a) => a.indexOf(v) === i).map(a => <option key={a}>{a}</option>)}
         </select>

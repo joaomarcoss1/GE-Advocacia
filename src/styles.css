@@ -320,7 +320,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .92rem; }
 
 /* ---------- Ponto (público) e login ---------- */
 .auth { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); background: var(--surface); }
-.auth-side { display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: clamp(40px, 11vh, 120px) clamp(24px, 4vw, 64px) 40px; gap: 22px; background: radial-gradient(900px 500px at 100% 0%, var(--gold-tint), transparent 60%), var(--surface); }
+.auth-side { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: clamp(40px, 11vh, 120px) clamp(24px, 4vw, 64px) 40px; gap: 22px; background: radial-gradient(900px 500px at 100% 0%, var(--gold-tint), transparent 60%), var(--surface); }
 .auth-card { width: min(450px, 100%); }
 .auth-card h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2rem, 3vw, 2.6rem); letter-spacing: -.005em; line-height: 1.05; margin-top: 6px; }
 .auth-link { color: var(--muted); font-size: .9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 6px; min-height: 44px; }
@@ -390,18 +390,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .role-opt input { margin-top: 4px; accent-color: var(--brass); }
 
 /* ---------- Faixa lateral das telas públicas (Palco) ---------- */
-.stage { position: relative; overflow: hidden; isolation: isolate; background: linear-gradient(160deg, var(--brand-3) -20%, var(--brand) 38%, var(--navy-deep) 100%); color: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 32px; padding: clamp(32px, 4.4vw, 68px); }
-.stage-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
-.stage-bg .luz { position: absolute; width: 700px; height: 700px; border-radius: 50%; left: calc(var(--mx, .28) * 100%); top: calc(var(--my, .22) * 100%); transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgb(176 141 87 / 14%), transparent); transition: left .6s ease-out, top .6s ease-out; }
-.stage-bg .coluna { position: absolute; top: 0; bottom: 0; left: calc(9% + var(--k) * 13.4%); width: 1px; background: linear-gradient(to bottom, transparent 0, rgb(176 141 87 / 26%) 24%, rgb(176 141 87 / 8%) 78%, transparent 100%); transform-origin: top; transform: translateX(calc((var(--mx, .5) - .5) * (var(--k) + 1) * -7px)); transition: transform .6s ease-out; animation: coluna 1.5s var(--ease) backwards; animation-delay: calc(var(--k) * 110ms + 200ms); }
-.stage-bg .marca-dagua { position: absolute; right: -6%; bottom: -10%; width: min(62%, 520px); color: rgb(176 141 87 / 7%); }
-@keyframes coluna { from { clip-path: inset(0 0 100% 0); opacity: 0; } to { clip-path: inset(0); opacity: 1; } }
-.stage-top { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; }
-.stage-top .logo { animation: logo-in .6s var(--ease) both; color: #fff; }
-.stage-top .logo .nome i { color: var(--brass-light); }
-@keyframes logo-in { from { opacity: 0; transform: translateY(10px); } }
-.stage-rule { height: 1px; width: 72px; background: var(--brass); transform-origin: left; animation: regua 1s .55s var(--ease) backwards; }
-@keyframes regua { from { transform: scaleX(0); } }
+.stage { position: relative; overflow: hidden; isolation: isolate; background: radial-gradient(900px 600px at 20% 10%, var(--brand-3), transparent 70%), var(--navy-deep); color: #fff; display: flex; flex-direction: column; justify-content: space-between; padding: clamp(32px, 4.4vw, 68px); }
+.stage-mark svg { width: 44px; height: 44px; display: block; }
+.stage-esc { margin-top: 18px; font-size: .78rem; letter-spacing: .2em; text-transform: uppercase; color: rgb(255 255 255 / 66%); }
 .stage-mid { animation: subir .9s .25s var(--ease) backwards; }
 @keyframes subir { from { opacity: 0; transform: translateY(14px); } }
 .stage .hora { font-family: var(--serif); font-weight: 500; font-size: clamp(5rem, 9.5vw, 8.6rem); line-height: .95; letter-spacing: -.02em; font-variant-numeric: lining-nums tabular-nums; display: flex; align-items: baseline; }
@@ -411,21 +402,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .92rem; }
 @keyframes tick { from { opacity: 0; transform: translateY(-.2em); } }
 .stage .dia { color: rgb(255 255 255 / 74%); font-weight: 400; font-size: 1.05rem; margin-top: 14px; }
 .stage .dia::first-letter { text-transform: uppercase; }
-.stage .headline { font-family: var(--serif); font-weight: 500; font-size: clamp(2.4rem, 4vw, 3.5rem); line-height: 1.04; letter-spacing: -.01em; max-width: 16ch; }
-.stage .headline em { font-style: italic; color: var(--brass-light); }
 .stage .feriado { display: inline-block; margin-top: 16px; padding: 5px 13px; border-radius: 99px; background: rgb(176 141 87 / 20%); color: var(--brass-light); font-size: .84rem; font-weight: 550; }
-.stage-bottom { display: flex; flex-direction: column; gap: 18px; }
-.destaques { display: grid; min-height: 84px; }
-.destaques article { grid-area: 1 / 1; opacity: 0; transform: translateY(10px); transition: opacity .7s ease, transform .7s var(--ease); pointer-events: none; max-width: 42ch; }
-.destaques article.on { opacity: 1; transform: none; }
-.destaques h3 { font-size: 1.02rem; font-weight: 600; }
-.destaques p { margin-top: 6px; color: rgb(255 255 255 / 68%); font-size: .94rem; }
-.barras { display: flex; gap: 8px; }
-.barras button { width: 48px; height: 22px; border: 0; background: none; padding: 9px 0; cursor: pointer; }
-.barras button span { display: block; height: 2px; width: 100%; background: rgb(255 255 255 / 22%); position: relative; overflow: hidden; }
-.barras button.on span::after { content: ''; position: absolute; inset: 0; background: var(--brass); transform-origin: left; animation: preenche linear forwards; }
-@keyframes preenche { from { transform: scaleX(0); } }
-.stage-foot { font-size: .72rem; letter-spacing: .2em; text-transform: uppercase; color: rgb(255 255 255 / 62%); }
 .passo { animation: passo .38s var(--ease) both; }
 @keyframes passo { from { opacity: 0; transform: translateX(14px); } }
 .result, .acao, .btn, .keypad button { transition-property: transform, background-color, border-color, color, box-shadow; transition-duration: .16s; }
@@ -558,17 +535,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: .92rem; }
   .auth-card { width: 100%; }
   .steps { margin-bottom: 22px; }
   .stage { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 14px; padding: calc(16px + var(--safe-t)) 20px 18px; }
-  .stage-bg .luz, .stage-bg .marca-dagua { display: none; }
-  .stage-top { gap: 0; }
-  .stage-top .logo svg { width: 32px; height: 32px; }
-  .stage-top .logo .nome b { font-size: 1.3rem; }
-  .stage-top .logo .nome i { font-size: .54rem; }
-  .stage-top .logo { animation: none; }
-  .stage-rule, .stage-bottom { display: none; }
+  .stage-mark svg { width: 32px; height: 32px; }
+  .stage-esc { margin-top: 4px; font-size: .62rem; }
   .stage-mid { text-align: right; justify-self: end; }
   .stage .hora { font-size: 2.9rem; justify-content: flex-end; }
   .stage .dia { font-size: .8rem; margin-top: 2px; }
-  .stage .headline { display: none; }
   .stage .feriado { margin-top: 6px; font-size: .76rem; }
 }
 @media (max-width: 430px) {

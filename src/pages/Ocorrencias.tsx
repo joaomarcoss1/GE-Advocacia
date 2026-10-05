@@ -66,7 +66,7 @@ export default function Ocorrencias() {
 
   return (
     <>
-      <PageHeader titulo="Ocorrências e abonos" sub="Atestados, atrasos e ausências: o administrador aceita (dia pago / sem desconto) ou recusa (desconta da folha).">
+      <PageHeader titulo="Ocorrências e abonos">
         <button className="btn gold" onClick={() => setEd({ tipo: 'atestado', remunerado: true, data_inicio: agora.data, data_fim: agora.data })}><Plus size={18} />Nova ocorrência</button>
       </PageHeader>
 

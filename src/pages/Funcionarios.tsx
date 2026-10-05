@@ -107,7 +107,7 @@ export default function Funcionarios() {
 
   return (
     <>
-      <PageHeader titulo="Funcionários" sub="Cadastro da equipe: cargo, escala, salário (base da diária) e PIN de ponto.">
+      <PageHeader titulo="Funcionários">
         <button className="btn gold" onClick={() => setEd(vazio(agora.data))}><Plus size={18} />Novo funcionário</button>
       </PageHeader>
       <div className="card">

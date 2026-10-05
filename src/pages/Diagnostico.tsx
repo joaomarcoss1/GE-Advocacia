@@ -112,9 +112,7 @@ export default function Diagnostico({ embutido }: { embutido?: boolean }) {
 
   const conteudo = (
     <>
-      <span className="eyebrow">Diagnóstico</span>
       <h1 className="page-title">Estado da instalação</h1>
-      <p className="page-sub">Versões, backup e conexão com o banco. A senha digitada no teste só é enviada ao Supabase, não é guardada.</p>
       <div className="card" style={{ marginTop: 20 }}>
         <div className="card-head"><span className="section-title">Esta instalação</span></div>
         {status ? <Lista itens={status} /> : <div className="empty">Verificando…</div>}

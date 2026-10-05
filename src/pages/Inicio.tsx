@@ -24,15 +24,11 @@ export default function Inicio() {
 
   return (
     <div className="auth">
-      <Stage>
-        <p className="headline">Cada escritório, <em>um espaço</em> só seu.</p>
-      </Stage>
+      <Stage />
       <section className="auth-side">
         <div className="auth-card stack passo" style={{ gap: 22 }}>
           <div>
-            <span className="eyebrow">GE Advocacia</span>
             <h1>Registro de ponto</h1>
-            <p className="page-sub" style={{ marginTop: 8 }}>Informe o endereço do seu escritório para registrar o ponto. Se você usa o tablet ou o celular da recepção, o endereço já fica salvo no atalho.</p>
           </div>
           <form onSubmit={ir} className="stack" style={{ gap: 12 }}>
             <div className="field">
@@ -41,13 +37,12 @@ export default function Inicio() {
                 <span className="muted" style={{ paddingLeft: 14, whiteSpace: 'nowrap' }}>/ponto/</span>
                 <input id="slug" autoFocus autoComplete="off" spellCheck={false} placeholder="meu-escritorio" value={slug} onChange={e => setSlug(e.target.value)} />
               </div>
-              <span className="hint">Combinado com o administrador do seu escritório. Ex.: silva-ribeiro</span>
             </div>
             <button className="btn gold" style={{ minHeight: 50 }} disabled={!limpo}><Clock size={18} />Ir para o registro de ponto<ArrowRight size={16} /></button>
           </form>
           {modo === 'local' && (
             <div className="demo-banner">
-              <strong>Demonstração</strong> · escritórios de exemplo:
+              <strong>Demonstração</strong>
               <div className="row" style={{ gap: 6, marginTop: 8 }}>
                 {DEMO_ESCRITORIOS.map(e => <Link key={e.slug} className="btn ghost sm" to={`/ponto/${e.slug}`}>{e.nome}</Link>)}
               </div>

@@ -137,7 +137,7 @@ export default function Registros() {
 
   return (
     <>
-      <PageHeader titulo="Registros de ponto" sub={`Tolerância de ${config.ponto.tolerancia_min} min · atraso a partir de ${config.ponto.limite_atraso_min} min`}>
+      <PageHeader titulo="Registros de ponto">
         <button className="btn gold" onClick={() => setManual({ funcionario_id: '', data: agora.data, tipo: 'entrada', hora: '', justificativa: '' })}><Plus size={18} />Lançar marcação</button>
       </PageHeader>
       <div className="card">

@@ -51,7 +51,7 @@ export default function Escalas() {
 
   return (
     <>
-      <PageHeader titulo="Escalas" sub="Expediente de segunda a sábado. A escala define os dias previstos, a diária e o que conta como falta.">
+      <PageHeader titulo="Escalas">
         {!somenteLeitura && <button className="btn gold" onClick={() => setEd({ ...escalaVazia() })}><Plus size={18} />Nova escala</button>}
       </PageHeader>
       <div className="grid c2">
