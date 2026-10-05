@@ -2,7 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { LogOut, Menu, X, type LucideIcon } from 'lucide-react';
 import Aparencia from '@/components/Aparencia';
-import Logo from '@/components/Logo';
+import Logo, { Monograma } from '@/components/Logo';
 import { PaginaEsqueleto } from '@/components/ui';
 import type { Sessao } from '@/data/db';
 import { iniciais } from '@/lib/format';
@@ -60,6 +60,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
       <a className="skip" href="#conteudo" onClick={e => { e.preventDefault(); document.getElementById('conteudo')?.focus(); }}>Pular para o conteúdo</a>
       <header className="mobilebar">
         <button onClick={() => setAberto(true)} aria-label="Abrir menu"><Menu size={22} /></button>
+        <span className="mb-marca" aria-hidden="true"><Monograma /></span>
         <span className="titulo">{atual?.rotulo ?? 'GE Advocacia'}</span>
         {chipAlerta && <NavLink to={chipAlerta.to} className="chip alert" style={{ marginRight: 6 }} aria-label={chipAlerta.texto}>{chipAlerta.curto ?? chipAlerta.texto}</NavLink>}
       </header>

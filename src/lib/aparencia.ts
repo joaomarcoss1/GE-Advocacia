@@ -10,6 +10,7 @@ const gravar = (k: string, v: string) => { try { localStorage.setItem(k, v); } c
 export function aplicarTema(t: Tema) {
   const escuro = t === 'escuro' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', escuro ? 'dark' : 'light');
+  document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', escuro ? 'dark light' : 'only light');
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b111b' : '#f7f4ec');
 }
 export function aplicarDensidade(d: Densidade) {

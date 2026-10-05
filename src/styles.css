@@ -81,7 +81,7 @@
   --th-y: 11px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
-  color-scheme: light;
+  color-scheme: only light;       /* impede o escurecimento automático de sites (Chrome/Android); o tema escuro é opção do sistema */
 }
 :root[data-densidade='compacta'] { --cell-y: 8px; --th-y: 8px; }
 
@@ -1123,7 +1123,8 @@ button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; 
   :root[data-theme='light'] .mobilebar button { color: var(--ink); }
   :root[data-theme='light'] .mobilebar :focus-visible { outline-color: var(--brass); }
   :root[data-theme='light'] .scrim { background: rgb(15 28 46 / 38%); }
-  :root[data-theme='light'] .side { color: var(--ink); background: linear-gradient(180deg, #fffdf9 0%, #f7f2e7 100%); border-right: 1px solid color-mix(in oklab, var(--brass) 32%, var(--line)); box-shadow: 30px 0 60px -34px rgb(15 28 46 / 45%); }
+  :root[data-theme='light'] .side { color: var(--ink); background: linear-gradient(180deg, #fffdf9 0%, #f7f2e7 100%); border-right: 1px solid color-mix(in oklab, var(--brass) 32%, var(--line)); }
+  :root[data-theme='light'] .side.open { box-shadow: 30px 0 60px -34px rgb(15 28 46 / 45%); }
   :root[data-theme='light'] .side-brand { color: var(--ink); }
   :root[data-theme='light'] .side-brand .logo svg { filter: drop-shadow(0 6px 10px rgb(15 28 46 / 28%)); }
   :root[data-theme='light'] .side-brand .logo .nome i { color: var(--gold-text); }
@@ -1151,3 +1152,14 @@ button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; 
   :root[data-theme='light'] .side-credito b { color: var(--ink); }
   :root[data-theme='light'] .side :focus-visible { outline-color: var(--brass); }
 }
+
+/* ---------- Celular: mais contraste entre o papel marfim e os cartões brancos; selo da marca no cabeçalho ---------- */
+.mb-marca { display: none; }
+@media screen and (max-width: 980px) {
+  :root[data-theme='light'] { --bg: #f1ede2; }
+  :root[data-theme='light'] .card { border-color: color-mix(in oklab, var(--brass) 18%, var(--line-strong)); box-shadow: inset 0 1px 0 #fff, 0 14px 30px -22px rgb(15 28 46 / 36%), 0 1px 3px rgb(15 28 46 / 8%); }
+  :root[data-theme='light'] .bottomnav { background: #fffdf9; border-top: 1px solid color-mix(in oklab, var(--brass) 30%, var(--line)); box-shadow: 0 -12px 28px -20px rgb(15 28 46 / 40%); }
+  .mb-marca { display: grid; place-items: center; flex: none; margin: 0 4px 0 -2px; }
+  .mb-marca svg { width: 30px; height: 30px; filter: drop-shadow(0 4px 8px rgb(15 28 46 / 28%)); }
+}
+
