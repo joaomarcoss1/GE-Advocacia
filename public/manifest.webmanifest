@@ -1,0 +1,9 @@
+{
+  "name": "GE Advocacia — Plataforma administrativa",
+  "short_name": "GE Advocacia",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1c2e",
+  "theme_color": "#0f1c2e",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

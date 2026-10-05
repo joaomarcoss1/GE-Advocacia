@@ -1,0 +1,77 @@
+name: Backup diário
+# Cópia criptografada do banco e dos atestados para um destino FORA do Supabase.
+# Segredos (Settings > Secrets > Actions): SUPABASE_DB_URL (conexão direta, usuário com leitura total),
+# BACKUP_AGE_RECIPIENT (chave PÚBLICA age; a privada fica só com o responsável),
+# S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY (R2, B2 ou S3),
+# SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY (somente para copiar o bucket "anexos"; nunca vão ao front-end).
+on:
+  schedule:
+    - cron: '17 6 * * *'   # 03:17 em Brasília
+  workflow_dispatch:
+
+permissions: { contents: read }
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      EP: ${{ secrets.S3_ENDPOINT }}
+      BUCKET: ${{ secrets.S3_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ferramentas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y age postgresql-client-16 awscli
+      - name: Dump criptografado do banco
+        run: |
+          set -euo pipefail
+          D=$(date -u +%Y-%m-%d)
+          pg_dump "${{ secrets.SUPABASE_DB_URL }}" --no-owner --no-privileges --format=custom \
+            | age -r "${{ secrets.BACKUP_AGE_RECIPIENT }}" > "db-$D.dump.age"
+          test -s "db-$D.dump.age"
+          aws --endpoint-url "$EP" s3 cp "db-$D.dump.age" "s3://$BUCKET/diario/db-$D.dump.age"
+          # cópia mensal (dia 1) mantida por 12 meses
+          if [ "$(date -u +%d)" = "01" ]; then
+            aws --endpoint-url "$EP" s3 cp "db-$D.dump.age" "s3://$BUCKET/mensal/db-$(date -u +%Y-%m).dump.age"
+          fi
+      - name: Copia o bucket de atestados (criptografado)
+        run: |
+          set -euo pipefail
+          D=$(date -u +%Y-%m-%d)
+          mkdir -p anexos
+          BASE="${{ secrets.SUPABASE_URL }}/storage/v1"
+          KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          # lista recursivamente (pasta por escritório) e baixa cada arquivo
+          listar() { curl -fsS -X POST "$BASE/object/list/anexos" -H "Authorization: Bearer $KEY" -H "apikey: $KEY" \
+            -H 'Content-Type: application/json' -d "{\"prefix\":\"$1\",\"limit\":1000}"; }
+          fila=("")
+          while [ ${#fila[@]} -gt 0 ]; do
+            pre="${fila[0]}"; fila=("${fila[@]:1}")
+            while IFS=$'\t' read -r nome eh_pasta; do
+              [ -z "$nome" ] && continue
+              if [ "$eh_pasta" = "pasta" ]; then fila+=("$pre$nome/")
+              else mkdir -p "anexos/$pre"; curl -fsS "$BASE/object/anexos/$pre$nome" -H "Authorization: Bearer $KEY" -o "anexos/$pre$nome"; fi
+            done < <(listar "$pre" | python3 -c 'import sys,json
+for o in json.load(sys.stdin): print(o["name"]+"\t"+("pasta" if o.get("id") is None else "arquivo"))')
+          done
+          tar -cf - anexos | age -r "${{ secrets.BACKUP_AGE_RECIPIENT }}" > "anexos-$D.tar.age"
+          aws --endpoint-url "$EP" s3 cp "anexos-$D.tar.age" "s3://$BUCKET/diario/anexos-$D.tar.age"
+      - name: Retenção (30 diários, 12 mensais)
+        run: |
+          set -euo pipefail
+          corte=$(date -u -d '30 days ago' +%Y-%m-%d)
+          aws --endpoint-url "$EP" s3 ls "s3://$BUCKET/diario/" | awk '{print $4}' | while read -r f; do
+            d=$(echo "$f" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' || true)
+            [ -n "$d" ] && [[ "$d" < "$corte" ]] && aws --endpoint-url "$EP" s3 rm "s3://$BUCKET/diario/$f" || true
+          done
+          corte_m=$(date -u -d '12 months ago' +%Y-%m)
+          aws --endpoint-url "$EP" s3 ls "s3://$BUCKET/mensal/" | awk '{print $4}' | while read -r f; do
+            m=$(echo "$f" | grep -oE '[0-9]{4}-[0-9]{2}' | head -1 || true)
+            [ -n "$m" ] && [[ "$m" < "$corte_m" ]] && aws --endpoint-url "$EP" s3 rm "s3://$BUCKET/mensal/$f" || true
+          done
+      - name: Registra o backup no sistema (aparece no Diagnóstico)
+        run: psql "${{ secrets.SUPABASE_DB_URL }}" -v ON_ERROR_STOP=1 -c "select public.backup_registrar('github-actions ${{ github.run_id }}')"

@@ -1,0 +1,25 @@
+# Supabase CLI — versiona e aplica as migrações de forma rastreável:
+#   supabase link --project-ref <ref-do-novo-projeto>
+#   supabase db push            # aplica supabase/migrations/*.sql em ordem
+#   supabase functions deploy anexos --no-verify-jwt
+# (Quem prefere o SQL Editor usa supabase/atualizacao_definitiva.sql, que contém as mesmas migrações.)
+project_id = "ge-advocacia"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+# Cadastro aberto DESLIGADO: só o administrador do escritório (ou a plataforma) cria acessos.
+enable_signup = false
+enable_anonymous_sign_ins = false
+site_url = "http://localhost:5173"
+
+[functions.anexos]
+# A função faz a própria autorização (PIN no envio; JWT + papel de administrador na abertura).
+verify_jwt = false

@@ -1,0 +1,572 @@
+{
+ "_leia_me": "Casos de referência das regras de ponto e folha. REGRA NOVA = CASO NOVO AQUI. São executados contra src/lib (vitest), contra o modo demonstração (local.ts) e contra o Postgres (supabase/tests_60_paridade.sql, gerado por gerar_paridade.mjs).",
+ "classificar": [
+  {
+   "rotulo": "entrada pontual",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 0,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "entrada 5 min antes (tolerância)",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "07:55",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -5,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "entrada 5 min depois (limite da tolerância)",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:05",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 5,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "entrada 6 min depois",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:06",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 6,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "entrada 29 min depois",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:29",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 29,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "entrada 30 min depois = atraso",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:30",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 30,
+   "status": "atraso"
+  },
+  {
+   "rotulo": "entrada 2h depois = atraso",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "10:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 120,
+   "status": "atraso"
+  },
+  {
+   "rotulo": "entrada adiantada 20 min não é atraso",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "07:40",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -20,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "retorno do intervalo atrasado",
+   "tipo": "retorno_intervalo",
+   "previsto": "14:00",
+   "real": "14:45",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 45,
+   "status": "atraso"
+  },
+  {
+   "rotulo": "retorno do intervalo no horário",
+   "tipo": "retorno_intervalo",
+   "previsto": "14:00",
+   "real": "14:03",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 3,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "saída para intervalo adiantada 10 min",
+   "tipo": "saida_intervalo",
+   "previsto": "12:00",
+   "real": "11:50",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -10,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "saída para intervalo 30 min antes = antecipada",
+   "tipo": "saida_intervalo",
+   "previsto": "12:00",
+   "real": "11:30",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -30,
+   "status": "saida_antecipada"
+  },
+  {
+   "rotulo": "saída no horário",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "18:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 0,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "saída 3 min depois",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "18:03",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 3,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "saída 20 min depois = extra",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "18:20",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 20,
+   "status": "extra"
+  },
+  {
+   "rotulo": "saída 2h depois = extra",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "20:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 120,
+   "status": "extra"
+  },
+  {
+   "rotulo": "saída 15 min antes = tolerância",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "17:45",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -15,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "saída 30 min antes = antecipada",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "17:30",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -30,
+   "status": "saida_antecipada"
+  },
+  {
+   "rotulo": "saída 3h antes = antecipada",
+   "tipo": "saida",
+   "previsto": "18:00",
+   "real": "15:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -180,
+   "status": "saida_antecipada"
+  },
+  {
+   "rotulo": "sem horário previsto (dia de folga) = extra",
+   "tipo": "entrada",
+   "previsto": null,
+   "real": "09:12",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 0,
+   "status": "extra"
+  },
+  {
+   "rotulo": "sem horário previsto na saída = extra",
+   "tipo": "saida",
+   "previsto": null,
+   "real": "17:00",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 0,
+   "status": "extra"
+  },
+  {
+   "rotulo": "tolerância zero: 1 min conta",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:01",
+   "tol": 0,
+   "lim": 30,
+   "diferenca": 1,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "limite configurado em 15 min",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:15",
+   "tol": 5,
+   "lim": 15,
+   "diferenca": 15,
+   "status": "atraso"
+  },
+  {
+   "rotulo": "limite configurado em 60 min",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:45",
+   "tol": 5,
+   "lim": 60,
+   "diferenca": 45,
+   "status": "tolerancia"
+  },
+  {
+   "rotulo": "jornada contínua de estágio: entrada",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "08:40",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 40,
+   "status": "atraso"
+  },
+  {
+   "rotulo": "jornada contínua de estágio: saída",
+   "tipo": "saida",
+   "previsto": "14:00",
+   "real": "13:20",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -40,
+   "status": "saida_antecipada"
+  },
+  {
+   "rotulo": "virada de hora (07:58 para 08:00)",
+   "tipo": "entrada",
+   "previsto": "08:00",
+   "real": "07:58",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": -2,
+   "status": "no_horario"
+  },
+  {
+   "rotulo": "madrugada (00:10 para 00:00)",
+   "tipo": "entrada",
+   "previsto": "00:00",
+   "real": "00:10",
+   "tol": 5,
+   "lim": 30,
+   "diferenca": 10,
+   "status": "tolerancia"
+  }
+ ],
+ "turno": [
+  {
+   "rotulo": "segunda: entrada",
+   "dias": "COM",
+   "dow": 1,
+   "tipo": "entrada",
+   "previsto": "08:00"
+  },
+  {
+   "rotulo": "segunda: saída para intervalo",
+   "dias": "COM",
+   "dow": 1,
+   "tipo": "saida_intervalo",
+   "previsto": "12:00"
+  },
+  {
+   "rotulo": "segunda: retorno",
+   "dias": "COM",
+   "dow": 1,
+   "tipo": "retorno_intervalo",
+   "previsto": "14:00"
+  },
+  {
+   "rotulo": "segunda: saída",
+   "dias": "COM",
+   "dow": 1,
+   "tipo": "saida",
+   "previsto": "18:00"
+  },
+  {
+   "rotulo": "sábado: entrada",
+   "dias": "COM",
+   "dow": 6,
+   "tipo": "entrada",
+   "previsto": "08:00"
+  },
+  {
+   "rotulo": "sábado: sem intervalo",
+   "dias": "COM",
+   "dow": 6,
+   "tipo": "saida_intervalo",
+   "previsto": null
+  },
+  {
+   "rotulo": "sábado: saída 12h",
+   "dias": "COM",
+   "dow": 6,
+   "tipo": "saida",
+   "previsto": "12:00"
+  },
+  {
+   "rotulo": "domingo inativo",
+   "dias": "COM",
+   "dow": 0,
+   "tipo": "entrada",
+   "previsto": null
+  },
+  {
+   "rotulo": "dia inexistente na escala",
+   "dias": "SEM",
+   "dow": 3,
+   "tipo": "entrada",
+   "previsto": null
+  },
+  {
+   "rotulo": "dia inativo mesmo com horários",
+   "dias": "INATIVO",
+   "dow": 2,
+   "tipo": "entrada",
+   "previsto": null
+  }
+ ],
+ "escalas": {
+  "COM": {
+   "1": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "12:00",
+    "retorno_intervalo": "14:00",
+    "saida": "18:00"
+   },
+   "2": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "12:00",
+    "retorno_intervalo": "14:00",
+    "saida": "18:00"
+   },
+   "3": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "12:00",
+    "retorno_intervalo": "14:00",
+    "saida": "18:00"
+   },
+   "4": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "12:00",
+    "retorno_intervalo": "14:00",
+    "saida": "18:00"
+   },
+   "5": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "12:00",
+    "retorno_intervalo": "14:00",
+    "saida": "18:00"
+   },
+   "6": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "",
+    "retorno_intervalo": "",
+    "saida": "12:00"
+   },
+   "0": {
+    "ativo": false,
+    "entrada": "",
+    "saida_intervalo": "",
+    "retorno_intervalo": "",
+    "saida": ""
+   }
+  },
+  "SEM": {
+   "1": {
+    "ativo": true,
+    "entrada": "08:00",
+    "saida_intervalo": "",
+    "retorno_intervalo": "",
+    "saida": "14:00"
+   }
+  },
+  "INATIVO": {
+   "2": {
+    "ativo": false,
+    "entrada": "08:00",
+    "saida_intervalo": "",
+    "retorno_intervalo": "",
+    "saida": "14:00"
+   }
+  }
+ },
+ "folha": [
+  {
+   "rotulo": "sem faltas paga o salário cheio",
+   "faltas_dias": [],
+   "ocorrencias": [],
+   "esperado": {
+    "faltas": 0,
+    "valor_final": 2600
+   }
+  },
+  {
+   "rotulo": "1 falta desconta 1 diária",
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [],
+   "esperado": {
+    "faltas": 1,
+    "valor_final": 2500
+   }
+  },
+  {
+   "rotulo": "atestado aceito abona",
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [
+    {
+     "inicio": "2026-06-02",
+     "fim": "2026-06-02",
+     "status": "aceita",
+     "remunerado": true
+    }
+   ],
+   "esperado": {
+    "faltas": 0,
+    "valor_final": 2600,
+    "abonados": 1
+   }
+  },
+  {
+   "rotulo": "atestado em análise conta como falta provisória",
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [
+    {
+     "inicio": "2026-06-02",
+     "fim": "2026-06-02",
+     "status": "pendente",
+     "remunerado": true
+    }
+   ],
+   "esperado": {
+    "faltas": 1,
+    "valor_final": 2500
+   }
+  },
+  {
+   "rotulo": "atestado recusado desconta",
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [
+    {
+     "inicio": "2026-06-02",
+     "fim": "2026-06-02",
+     "status": "recusada",
+     "remunerado": true
+    }
+   ],
+   "esperado": {
+    "faltas": 1,
+    "valor_final": 2500
+   }
+  },
+  {
+   "rotulo": "ocorrência não remunerada desconta",
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [
+    {
+     "inicio": "2026-06-02",
+     "fim": "2026-06-02",
+     "status": "aceita",
+     "remunerado": false
+    }
+   ],
+   "esperado": {
+    "faltas": 1,
+    "valor_final": 2500
+   }
+  },
+  {
+   "rotulo": "2 dias de atestado aceito",
+   "faltas_dias": [
+    "2026-06-02",
+    "2026-06-03"
+   ],
+   "ocorrencias": [
+    {
+     "inicio": "2026-06-02",
+     "fim": "2026-06-03",
+     "status": "aceita",
+     "remunerado": true
+    }
+   ],
+   "esperado": {
+    "faltas": 0,
+    "valor_final": 2600,
+    "abonados": 2
+   }
+  },
+  {
+   "rotulo": "feriado sai do divisor e não gera falta",
+   "feriados": [
+    "2026-06-04"
+   ],
+   "faltas_dias": [
+    "2026-06-04"
+   ],
+   "ocorrencias": [],
+   "esperado": {
+    "faltas": 0,
+    "valor_final": 2600,
+    "previstos": 25
+   }
+  },
+  {
+   "rotulo": "falta com feriado no mês: diária 2600/25=104",
+   "feriados": [
+    "2026-06-04"
+   ],
+   "faltas_dias": [
+    "2026-06-02"
+   ],
+   "ocorrencias": [],
+   "esperado": {
+    "faltas": 1,
+    "valor_final": 2496
+   }
+  }
+ ]
+}

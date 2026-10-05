@@ -1,0 +1,51 @@
+name: Teste semanal de restauração
+# Prova que o backup mais recente realmente restaura: baixa, descriptografa e restaura num Postgres descartável.
+# Segredos extras: BACKUP_AGE_IDENTITY (chave PRIVADA age, usada só aqui; considere um ambiente protegido).
+on:
+  schedule:
+    - cron: '43 7 * * 0'
+  workflow_dispatch:
+
+permissions: { contents: read }
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 5s --health-retries 10
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      EP: ${{ secrets.S3_ENDPOINT }}
+      BUCKET: ${{ secrets.S3_BUCKET }}
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y age postgresql-client-16 awscli
+      - name: Baixa o backup mais recente e restaura
+        run: |
+          set -euo pipefail
+          ultimo=$(aws --endpoint-url "$EP" s3 ls "s3://$BUCKET/diario/" | awk '{print $4}' | grep '^db-' | sort | tail -1)
+          test -n "$ultimo"
+          aws --endpoint-url "$EP" s3 cp "s3://$BUCKET/diario/$ultimo" .
+          umask 077; printf '%s' "${{ secrets.BACKUP_AGE_IDENTITY }}" > id.txt
+          age -d -i id.txt "$ultimo" > restore.dump
+          shred -u id.txt
+          psql -h localhost -U postgres -c 'create database restaurado'
+          # papéis do Supabase não existem aqui: erros de GRANT/ROLE são esperados, dados não
+          pg_restore -h localhost -U postgres -d restaurado --no-owner --no-privileges restore.dump 2>restore.log || true
+          grep -ci 'error' restore.log || true
+      - name: Confere o conteúdo
+        run: |
+          set -euo pipefail
+          q() { psql -h localhost -U postgres -d restaurado -At -c "$1"; }
+          esc=$(q 'select count(*) from public.escritorios')
+          fun=$(q 'select count(*) from public.funcionarios')
+          echo "escritórios=$esc funcionários=$fun"
+          test "$esc" -ge 1
+          q 'select max(versao) from public.schema_versao' || true
