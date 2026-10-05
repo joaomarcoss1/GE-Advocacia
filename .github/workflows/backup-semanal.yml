@@ -1,0 +1,45 @@
+name: Backup semanal do banco
+# Todo domingo gera uma cópia CRIPTOGRAFADA do banco e a deixa como arquivo do próprio GitHub Actions (guardada por 90 dias),
+# para você baixar e guardar localmente: Actions > "Backup semanal do banco" > execução mais recente > Artifacts.
+# Segredos: SUPABASE_DB_URL (use o "Session pooler"; o GitHub não tem IPv6) e BACKUP_AGE_RECIPIENT (chave PÚBLICA age;
+# a chave privada fica só com você: age-keygen -o chave.txt). Sem a chave privada ninguém, nem o GitHub, abre o arquivo.
+# Para restaurar: age -d -i chave.txt backup.dump.age > backup.dump && pg_restore --no-owner -d <banco> backup.dump
+# Os arquivos enviados (bucket "documentos") não entram aqui: ficam no Storage e, se conectado, no Google Drive do escritório.
+on:
+  schedule:
+    - cron: '41 7 * * 0'
+  workflow_dispatch:
+
+permissions: { contents: read }
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DB: ${{ secrets.SUPABASE_DB_URL }}
+      DESTINATARIO: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - name: Confere os segredos
+        run: |
+          if [ -z "$DB" ] || [ -z "$DESTINATARIO" ]; then
+            echo "::error::Cadastre SUPABASE_DB_URL e BACKUP_AGE_RECIPIENT para gerar o backup semanal."
+            exit 1
+          fi
+      - name: Ferramentas
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y age postgresql-client
+      - name: Dump criptografado
+        run: |
+          set -euo pipefail
+          D=$(date -u +%Y-%m-%d)
+          pg_dump "$DB" --no-owner --no-privileges --format=custom | age -r "$DESTINATARIO" > "ge-advocacia-$D.dump.age"
+          test -s "ge-advocacia-$D.dump.age"
+          ls -l "ge-advocacia-$D.dump.age"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-semanal
+          path: ge-advocacia-*.dump.age
+          retention-days: 90
+          if-no-files-found: error

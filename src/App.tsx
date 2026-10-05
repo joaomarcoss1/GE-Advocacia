@@ -11,6 +11,7 @@ import Login from '@/pages/Login';
 import Diagnostico from '@/pages/Diagnostico';
 import Verificar from '@/pages/Verificar';
 import Privacidade from '@/pages/Privacidade';
+import EnviarDocumentos from '@/pages/EnviarDocumentos';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Gerencia = lazy(() => import('@/pages/Gerencia'));
@@ -25,6 +26,8 @@ const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
 const Tarefas = lazy(() => import('@/pages/Tarefas'));
 const Agenda = lazy(() => import('@/pages/Agenda'));
+const Processos = lazy(() => import('@/pages/Processos'));
+const Documentos = lazy(() => import('@/pages/Documentos'));
 const Escritorios = lazy(() => import('@/pages/plataforma/Escritorios'));
 
 type Papel = 'admin' | 'gerente' | 'coordenador' | 'plataforma';
@@ -62,6 +65,7 @@ export default function App() {
               <Route path="/diagnostico" element={<Diagnostico />} />
               <Route path="/verificar" element={<Verificar />} />
               <Route path="/verificar/:codigo" element={<Verificar />} />
+              <Route path="/enviar/:token" element={<EnviarDocumentos />} />
               <Route path="/privacidade" element={<Privacidade />} />
               <Route path="/privacidade/:slug" element={<Privacidade />} />
 
@@ -69,6 +73,8 @@ export default function App() {
                 <Route index element={pagina(<InicioPainel />)} />
                 <Route path="tarefas" element={pagina(<Tarefas />)} />
                 <Route path="agenda" element={pagina(<Agenda />)} />
+                <Route path="processos" element={pagina(<Processos />)} />
+                <Route path="documentos" element={pagina(<Documentos />)} />
                 <Route path="gerencia" element={gestao(<Gerencia />)} />
                 <Route path="funcionarios" element={soAdmin(<Funcionarios />)} />
                 <Route path="cargos" element={soAdmin(<Cargos />)} />

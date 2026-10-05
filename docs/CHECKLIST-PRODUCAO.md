@@ -7,6 +7,10 @@
   `insert into public.plataforma_admins (id, nome, email) values ('<uuid do usuário>', 'Nome', 'email');`
 - [ ] Publicar a Edge Function: `supabase functions deploy anexos`. A `service_role` fica **só** nos segredos da função.
 - [ ] (Opcional) Google Agenda automático: seguir `docs/GOOGLE-AGENDA.md` (credenciais OAuth, segredos `GOOGLE_*` e `ALLOWED_ORIGINS`, `supabase functions deploy google-agenda`).
+- [ ] (Opcional) Acompanhamento de processos: `DATAJUD_API_KEY` e `CRON_SECRET` nos segredos das funções, `supabase functions deploy processos`, segredos do GitHub `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `CRON_SECRET` (ver `docs/PROCESSOS-E-DOCUMENTOS.md`).
+- [ ] (Opcional) Google Drive: ativar a Drive API, registrar o redirecionamento `.../functions/v1/documentos`, `supabase functions deploy documentos` e conectar em Configurações > Integrações.
+- [ ] Backup semanal: segredos `SUPABASE_DB_URL` e `BACKUP_AGE_RECIPIENT`, rodar uma vez o workflow e **testar a restauração** com a chave privada.
+- [ ] Primeiro dia: consultar um processo real, enviar um PDF pelo painel e pelo link do cliente, abrir e excluir um documento.
 - [ ] Criar o bucket **privado** `anexos` (nunca público) e conferir a política de acesso.
 - [ ] Habilitar a extensão **pg_cron** (Database → Extensions) e rodar a migração 0005 de novo: ela agenda sozinha a limpeza diária de tentativas de PIN. O expurgo de anexos/geolocalização é executado pelo administrador em Configurações → Privacidade (com prévia).
 - [ ] Variáveis do front-end (Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, opcional `VITE_SENTRY_DSN`. **Nunca** a `service_role`.

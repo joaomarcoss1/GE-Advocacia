@@ -38,28 +38,29 @@ jobs:
           if [ "$(date -u +%d)" = "01" ]; then
             aws --endpoint-url "$EP" s3 cp "db-$D.dump.age" "s3://$BUCKET/mensal/db-$(date -u +%Y-%m).dump.age"
           fi
-      - name: Copia o bucket de atestados (criptografado)
+      - name: Copia os arquivos enviados (atestados e documentos), criptografados
         run: |
           set -euo pipefail
           D=$(date -u +%Y-%m-%d)
-          mkdir -p anexos
           BASE="${{ secrets.SUPABASE_URL }}/storage/v1"
           KEY="${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
-          # lista recursivamente (pasta por escritório) e baixa cada arquivo
-          listar() { curl -fsS -X POST "$BASE/object/list/anexos" -H "Authorization: Bearer $KEY" -H "apikey: $KEY" \
-            -H 'Content-Type: application/json' -d "{\"prefix\":\"$1\",\"limit\":1000}"; }
-          fila=("")
-          while [ ${#fila[@]} -gt 0 ]; do
-            pre="${fila[0]}"; fila=("${fila[@]:1}")
-            while IFS=$'\t' read -r nome eh_pasta; do
-              [ -z "$nome" ] && continue
-              if [ "$eh_pasta" = "pasta" ]; then fila+=("$pre$nome/")
-              else mkdir -p "anexos/$pre"; curl -fsS "$BASE/object/anexos/$pre$nome" -H "Authorization: Bearer $KEY" -o "anexos/$pre$nome"; fi
-            done < <(listar "$pre" | python3 -c 'import sys,json
-for o in json.load(sys.stdin): print(o["name"]+"\t"+("pasta" if o.get("id") is None else "arquivo"))')
+          for B in anexos documentos; do
+            mkdir -p "$B"
+            # lista recursivamente (pasta por escritório) e baixa cada arquivo
+            listar() { curl -fsS -X POST "$BASE/object/list/$B" -H "Authorization: Bearer $KEY" -H "apikey: $KEY" \
+              -H 'Content-Type: application/json' -d "{\"prefix\":\"$1\",\"limit\":1000}"; }
+            fila=("")
+            while [ ${#fila[@]} -gt 0 ]; do
+              pre="${fila[0]}"; fila=("${fila[@]:1}")
+              while IFS=$'\t' read -r nome eh_pasta; do
+                [ -z "$nome" ] && continue
+                if [ "$eh_pasta" = "pasta" ]; then fila+=("$pre$nome/")
+                else mkdir -p "$B/$pre"; curl -fsS "$BASE/object/$B/$pre$nome" -H "Authorization: Bearer $KEY" -o "$B/$pre$nome"; fi
+              done < <(listar "$pre" | python3 -c 'import sys,json; [print(o["name"]+"\t"+("pasta" if o.get("id") is None else "arquivo")) for o in json.load(sys.stdin)]')
+            done
+            tar -cf - "$B" | age -r "${{ secrets.BACKUP_AGE_RECIPIENT }}" > "$B-$D.tar.age"
+            aws --endpoint-url "$EP" s3 cp "$B-$D.tar.age" "s3://$BUCKET/diario/$B-$D.tar.age"
           done
-          tar -cf - anexos | age -r "${{ secrets.BACKUP_AGE_RECIPIENT }}" > "anexos-$D.tar.age"
-          aws --endpoint-url "$EP" s3 cp "anexos-$D.tar.age" "s3://$BUCKET/diario/anexos-$D.tar.age"
       - name: Retenção (30 diários, 12 mensais)
         run: |
           set -euo pipefail

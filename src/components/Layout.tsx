@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  Briefcase, CalendarClock, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, LayoutDashboard, ListChecks, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
+  Briefcase, CalendarClock, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, FolderOpen, LayoutDashboard, ListChecks, Scale, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
 } from 'lucide-react';
 import sqlAtualizacao from '../../supabase/atualizacao_definitiva.sql?raw';
 import Shell, { type ItemNav } from '@/components/Shell';
@@ -9,21 +10,40 @@ import { useDados } from '@/context/Dados';
 import { filaDeAnalise } from '@/lib/analises';
 import { dataExtensa } from '@/lib/datetime';
 import { SCHEMA_ESPERADO } from '@/lib/regras';
+import { autoLigado, backupVencido, marcarBackup, montarArquivo, salvarNaPasta } from '@/lib/backup';
 import { contar } from '@/lib/tarefas';
+import { useToast } from '@/components/ui';
 
 const ATALHOS = {
-  admin: ['/painel', '/painel/tarefas', '/painel/ponto', '/painel/folha'],
-  gerente: ['/painel/gerencia', '/painel/tarefas', '/painel/ponto', '/painel/ocorrencias'],
-  coordenador: ['/painel/tarefas', '/painel/agenda'],
+  admin: ['/painel', '/painel/tarefas', '/painel/processos', '/painel/documentos'],
+  gerente: ['/painel/gerencia', '/painel/tarefas', '/painel/processos', '/painel/documentos'],
+  coordenador: ['/painel/tarefas', '/painel/processos', '/painel/documentos', '/painel/agenda'],
 };
 const PAPEL_ROTULO = { admin: 'Administrador', gerente: 'Gerência', coordenador: 'Coordenação' } as const;
 
 /** Painel de UM escritório: menus, avisos e dados vêm só do escritório da sessão. */
 export default function Layout() {
   const { sessao, sair, modo } = useAuth();
-  const { registros, ocorrencias, tarefas, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
+  const toast = useToast();
+  const { db, registros, ocorrencias, tarefas, novidades, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
+  const [backupPendente, setBackupPendente] = useState(() => backupVencido(escritorio.slug));
+  const ehAdmin = sessao?.papel === 'admin';
+  // Backup semanal: salva sozinho na pasta escolhida (se ligado e liberado pelo navegador); senão, lembra o administrador.
+  useEffect(() => {
+    if (!ehAdmin || carregando || !backupVencido(escritorio.slug)) return;
+    setBackupPendente(true);
+    if (!autoLigado(escritorio.slug)) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        const a = await montarArquivo(db, escritorio, '');
+        if (!cancelado && await salvarNaPasta(escritorio.slug, a.nome, a.bytes, false)) { marcarBackup(escritorio.slug); setBackupPendente(false); toast.ok('Backup semanal salvo na pasta escolhida.'); }
+      } catch { /* o lembrete continua visível */ }
+    })();
+    return () => { cancelado = true; };
+  }, [ehAdmin, carregando, db, escritorio]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!sessao || sessao.papel === 'plataforma') return null;
 
   const papel = sessao.papel;
@@ -34,6 +54,8 @@ export default function Layout() {
     { grupo: 'Visão geral', to: '/painel', fim: true, rotulo: 'Painel', icone: LayoutDashboard, papeis: ['admin'] },
     { grupo: 'Delegação', to: '/painel/tarefas', rotulo: 'Tarefas', icone: ListChecks, papeis: ['admin', 'gerente', 'coordenador'], contagem: atrasadas },
     { to: '/painel/agenda', rotulo: 'Agenda', icone: CalendarClock, papeis: ['admin', 'gerente', 'coordenador'] },
+    { grupo: 'Processos', to: '/painel/processos', rotulo: 'Processos', icone: Scale, papeis: ['admin', 'gerente', 'coordenador'], contagem: novidades.length },
+    { to: '/painel/documentos', rotulo: 'Documentos', icone: FolderOpen, papeis: ['admin', 'gerente', 'coordenador'] },
     { grupo: 'Gestão', to: '/painel/gerencia', rotulo: 'Gerência', icone: ShieldCheck, papeis: ['admin', 'gerente'], contagem: pendentes },
     { grupo: 'Equipe', to: '/painel/funcionarios', rotulo: 'Funcionários', curto: 'Equipe', icone: Users, papeis: ['admin'] },
     { to: '/painel/cargos', rotulo: 'Cargos', icone: Briefcase, papeis: ['admin'] },
@@ -57,6 +79,7 @@ export default function Layout() {
   const avisos = (
     <>
       {modo === 'local' && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Demonstração</strong> · dados fictícios neste navegador.</div>}
+      {ehAdmin && backupPendente && !carregando && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Backup semanal pendente.</strong> <Link to="/painel/configuracoes?aba=backup">Fazer agora</Link></div>}
       {atualizacaoPendente && (
         <div className="demo-banner" style={{ marginBottom: 20 }}>
           <strong>Atualização do banco pendente.</strong> O app espera a versão {SCHEMA_ESPERADO} do banco e o Supabase está na versão {versaoBanco ?? 'desconhecida'}.

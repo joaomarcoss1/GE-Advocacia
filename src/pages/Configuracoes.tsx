@@ -8,14 +8,16 @@ import AbaAcessos from './configuracoes/AbaAcessos';
 import AbaAuditoria from './configuracoes/AbaAuditoria';
 import AbaDados from './configuracoes/AbaDados';
 import AbaEscritorio from './configuracoes/AbaEscritorio';
+import AbaBackup from './configuracoes/AbaBackup';
 import AbaFolha from './configuracoes/AbaFolha';
+import AbaIntegracoes from './configuracoes/AbaIntegracoes';
 import AbaPonto from './configuracoes/AbaPonto';
 import AbaPrivacidade from './configuracoes/AbaPrivacidade';
 
-type Aba = 'escritorio' | 'ponto' | 'folha' | 'acessos' | 'privacidade' | 'auditoria' | 'dados';
-const ABAS: Aba[] = ['escritorio', 'ponto', 'folha', 'acessos', 'privacidade', 'auditoria', 'dados'];
+type Aba = 'escritorio' | 'ponto' | 'folha' | 'acessos' | 'integracoes' | 'backup' | 'privacidade' | 'auditoria' | 'dados';
+const ABAS: Aba[] = ['escritorio', 'ponto', 'folha', 'acessos', 'integracoes', 'backup', 'privacidade', 'auditoria', 'dados'];
 /** Abas cujo conteúdo é um formulário de configuração (mostram o botão Salvar). */
-const COM_SALVAR = new Set<Aba>(['escritorio', 'ponto', 'folha', 'privacidade']);
+const COM_SALVAR = new Set<Aba>(['escritorio', 'ponto', 'folha', 'privacidade', 'integracoes']);
 
 export default function Configuracoes() {
   const { db, config, recarregar, auditar } = useDados();
@@ -41,7 +43,7 @@ export default function Configuracoes() {
         <div style={{ padding: '0 12px' }}>
           <Abas valor={aba} onChange={setAba} itens={[
             { id: 'escritorio', rotulo: 'Escritório' }, { id: 'ponto', rotulo: 'Ponto' }, { id: 'folha', rotulo: 'Folha' }, { id: 'acessos', rotulo: 'Acessos' },
-            { id: 'privacidade', rotulo: 'Privacidade' }, { id: 'auditoria', rotulo: 'Auditoria' }, { id: 'dados', rotulo: 'Dados' },
+            { id: 'integracoes', rotulo: 'Integrações' }, { id: 'backup', rotulo: 'Backup' }, { id: 'privacidade', rotulo: 'Privacidade' }, { id: 'auditoria', rotulo: 'Auditoria' }, { id: 'dados', rotulo: 'Dados' },
           ]} />
         </div>
         <div className="card-pad stack">
@@ -49,6 +51,8 @@ export default function Configuracoes() {
           {aba === 'ponto' && <AbaPonto c={c} setC={setC} />}
           {aba === 'folha' && <AbaFolha c={c} setC={setC} />}
           {aba === 'acessos' && <AbaAcessos />}
+          {aba === 'integracoes' && <AbaIntegracoes c={c} setC={setC} />}
+          {aba === 'backup' && <AbaBackup />}
           {aba === 'privacidade' && <AbaPrivacidade c={c} setC={setC} />}
           {aba === 'auditoria' && <AbaAuditoria />}
           {aba === 'dados' && <AbaDados />}

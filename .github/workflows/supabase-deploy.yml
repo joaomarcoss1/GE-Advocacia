@@ -3,7 +3,7 @@ name: Supabase — aplicar banco e funções
 # Segredos necessários (Settings > Secrets and variables > Actions):
 #   SUPABASE_DB_URL        string de conexão do banco. Use a do POOLER ("Session pooler", porta 5432):
 #                          os runners do GitHub não têm IPv6 e a conexão direta (db.<ref>.supabase.co) é só IPv6.
-#   SUPABASE_ACCESS_TOKEN  (opcional) token pessoal, só para publicar a Edge Function "anexos".
+#   SUPABASE_ACCESS_TOKEN  (opcional) token pessoal, só para publicar as Edge Functions.
 #   SUPABASE_PROJECT_REF   (opcional) zkyxvwdxyocgneizcfiz
 # Nada aqui usa a service_role no front-end; os segredos só existem neste workflow.
 on:
@@ -14,7 +14,7 @@ on:
         required: false
         type: string
       publicar_funcao:
-        description: 'Publicar as Edge Functions (anexos e google-agenda)'
+        description: 'Publicar as Edge Functions (anexos, google-agenda, processos e documentos)'
         required: false
         default: false
         type: boolean
@@ -62,9 +62,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with: { version: latest }
-      - name: Publica as funções anexos e google-agenda (autorização feita dentro delas, ver config.toml)
+      - name: Publica as funções (a autorização é feita dentro delas, ver config.toml)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy anexos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
           supabase functions deploy google-agenda --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+          supabase functions deploy processos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+          supabase functions deploy documentos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"

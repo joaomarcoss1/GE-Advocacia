@@ -1,6 +1,6 @@
 # GE Advocacia
 
-Plataforma administrativa **multiescritório** para escritórios de advocacia: equipe, escalas, ponto por PIN, ocorrências/atestados, folha de conferência por diária e **delegação de tarefas, prazos, audiências e reuniões com Google Agenda**. Cada escritório é um espaço totalmente separado dos demais.
+Plataforma administrativa **multiescritório** para escritórios de advocacia: equipe, escalas, ponto por PIN, ocorrências/atestados, folha de conferência por diária **delegação de tarefas, prazos, audiências e reuniões com Google Agenda**, **acompanhamento de processos**, **documentos com checklist e Google Drive** e **backup semanal**. Cada escritório é um espaço totalmente separado dos demais.
 
 > Projeto independente do "Almeida Advocacia": outro repositório e outro Supabase. Nada daqui toca o sistema do Almeida.
 
@@ -13,6 +13,9 @@ Plataforma administrativa **multiescritório** para escritórios de advocacia: e
 
 ## Delegação e Google Agenda
 Administrador, gerência e **coordenação** delegam tarefas, prazos processuais (com número CNJ validado), audiências, diligências, protocolos e reuniões, com responsável, revisor, participantes, prioridade, andamentos e quadro de acompanhamento. O funcionário vê e atualiza as dele pelo PIN. Cada compromisso vai ao Google Agenda por link, arquivo .ics ou, conectando a conta, de forma automática com convite por e-mail. Detalhes e configuração em `docs/GOOGLE-AGENDA.md`.
+
+## Processos, documentos e backup
+Cadastro de clientes e processos (número CNJ validado) com consulta automática de andamentos (DataJud), que viram tarefas com prazo sugerido em dias úteis. Cada cliente/processo tem uma checklist de documentos; os arquivos entram pelo painel ou por um link de envio do cliente, ficam em Storage privado e são organizados no Google Drive (Cliente/Processo). Backup semanal do sistema, criptografado. Detalhes, configuração e limites em `docs/PROCESSOS-E-DOCUMENTOS.md`.
 
 ## Rodar localmente (modo demonstração)
 ```bash
@@ -48,11 +51,12 @@ Rode `npm run sql:gerar` após alterar migrações para regenerar `atualizacao_d
 ## Documentação
 - `docs/CHECKLIST-PRODUCAO.md` — preparação do Supabase, segredos, proteção de branch
 - `docs/GOOGLE-AGENDA.md` — integração com o Google Agenda (credenciais, segredos e limites)
+- `docs/PROCESSOS-E-DOCUMENTOS.md` — processos, documentos, Google Drive e backup semanal
 - `docs/RESTAURACAO.md` — backup criptografado e restauração
 - `docs/PROPOSTAS-FASES-6-8.md` — folha/encargos, Portaria 671 e integração jurídica (aguardam aprovação)
 
 ## Limitações conhecidas
-- Edge Functions `anexos` e `google-agenda` (esta depende de credenciais Google suas), Storage privado, `pg_cron` e os workflows de backup/restauração foram escritos, mas **não executados contra um Supabase real** (o projeto do GE ainda não existe). Valide-os no primeiro dia de produção.
+- Edge Functions `anexos`, `google-agenda`, `processos` e `documentos` (dependem de credenciais Google e da chave do DataJud), Storage privado, `pg_cron` e os workflows de backup/restauração foram escritos, mas **não executados contra um Supabase real** (o projeto do GE ainda não existe). Valide-os no primeiro dia de produção.
 - Fase 5 (tipagem): o acesso a dados usa a interface `Crud` genérica; os tipos gerados do Supabase (`supabase gen types`) ainda não foram integrados.
 - Fases 6, 7 e 8 estão apenas **propostas** em `docs/PROPOSTAS-FASES-6-8.md`, aguardando aprovação.
 

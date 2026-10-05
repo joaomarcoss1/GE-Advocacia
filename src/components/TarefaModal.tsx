@@ -9,7 +9,7 @@ import type { AreaJuridica, PrioridadeTarefa, Tarefa, TipoTarefa } from '@/lib/t
 interface Form {
   tipo: TipoTarefa; titulo: string; descricao: string; prioridade: PrioridadeTarefa; area: AreaJuridica | ''; cliente: string; processo: string;
   data: string; hora: string; dataFim: string; horaFim: string; diaInteiro: boolean; prazoFatal: boolean; lembrete: number; local: string;
-  responsavel: string; revisor: string; participantes: string[]; sincronizar: boolean;
+  responsavel: string; revisor: string; participantes: string[]; sincronizar: boolean; processoId: string;
 }
 
 function inicial(t: Tarefa | null, padrao?: Partial<Form>): Form {
@@ -19,7 +19,7 @@ function inicial(t: Tarefa | null, padrao?: Partial<Form>): Form {
     tipo: t?.tipo ?? 'tarefa', titulo: t?.titulo ?? '', descricao: t?.descricao ?? '', prioridade: t?.prioridade ?? 'normal', area: t?.area ?? '', cliente: t?.cliente ?? '',
     processo: t?.processo_numero ?? '', data: ini?.data ?? '', hora: t?.dia_inteiro ? '' : ini?.hhmm ?? '', dataFim: fim?.data ?? '', horaFim: t?.dia_inteiro ? '' : fim?.hhmm ?? '',
     diaInteiro: t?.dia_inteiro ?? false, prazoFatal: t?.prazo_fatal ?? false, lembrete: t?.lembrete_min ?? 60, local: t?.local ?? '',
-    responsavel: t?.responsavel_id ?? '', revisor: t?.revisor_id ?? '', participantes: t?.participantes ?? [], sincronizar: false, ...padrao,
+    responsavel: t?.responsavel_id ?? '', revisor: t?.revisor_id ?? '', participantes: t?.participantes ?? [], sincronizar: false, processoId: t?.processo_id ?? '', ...padrao,
   };
 }
 
@@ -27,14 +27,15 @@ function inicial(t: Tarefa | null, padrao?: Partial<Form>): Form {
 export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, onSalvo }: {
   tarefa: Tarefa | null; padrao?: Partial<Form>; googleConectado: boolean; onClose(): void; onSalvo(t: Tarefa, sincronizar: boolean): void;
 }) {
-  const { db, funcionarios } = useDados();
+  const { db, funcionarios, processos, clientes } = useDados();
   const toast = useToast();
   const [f, setF] = useState<Form>(() => inicial(tarefa, padrao));
   const [salvando, setSalvando] = useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF(x => ({ ...x, [k]: v }));
   const equipe = useMemo(() => funcionarios.filter(x => x.ativo).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), [funcionarios]);
   const comAgenda = f.tipo !== 'tarefa';
-  const processoOk = !f.processo.trim() || !!normalizarCnj(f.processo);
+  const proc = f.processoId ? processos.find(p => p.id === f.processoId) : null;
+  const processoOk = !!proc || !f.processo.trim() || !!normalizarCnj(f.processo);
 
   function mudarTipo(t: TipoTarefa) {
     setF(x => ({ ...x, tipo: t, prazoFatal: t === 'prazo' ? x.prazoFatal : false, diaInteiro: t === 'prazo' ? true : x.diaInteiro && t === 'tarefa', data: t !== 'tarefa' && !x.data ? hojeMais(1) : x.data }));
@@ -59,8 +60,8 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
       if (fim < inicio) return toast.erro('O término não pode ser antes do início.');
     }
     const dados: Partial<Tarefa> = {
-      tipo: f.tipo, titulo: f.titulo.trim(), descricao: f.descricao.trim() || null, prioridade: f.prioridade, area: f.area || null, cliente: f.cliente.trim() || null,
-      processo_numero: f.processo.trim() ? (normalizarCnj(f.processo) as string) : null, inicio, fim, dia_inteiro: f.diaInteiro && !!f.data, prazo_fatal: f.tipo === 'prazo' && f.prazoFatal,
+      tipo: f.tipo, titulo: f.titulo.trim(), descricao: f.descricao.trim() || null, prioridade: f.prioridade, area: f.area || proc?.area || null, cliente: f.cliente.trim() || (proc?.cliente_id ? clientes.find(c => c.id === proc.cliente_id)?.nome ?? null : null),
+      processo_id: proc?.id ?? null, processo_numero: proc ? proc.numero : f.processo.trim() ? (normalizarCnj(f.processo) as string) : null, inicio, fim, dia_inteiro: f.diaInteiro && !!f.data, prazo_fatal: f.tipo === 'prazo' && f.prazoFatal,
       lembrete_min: f.lembrete, local: f.local.trim() || null, responsavel_id: f.responsavel || null, revisor_id: f.revisor || null,
       participantes: f.participantes.filter(p => p !== f.responsavel && p !== f.revisor),
     };
@@ -93,12 +94,21 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
         <Field label="Título"><input className="input" value={f.titulo} maxLength={200} autoFocus onChange={e => set('titulo', e.target.value)} placeholder={f.tipo === 'prazo' ? 'Ex.: Contestação' : f.tipo === 'audiencia' ? 'Ex.: Audiência de instrução' : ''} /></Field>
         <Field label="Descrição"><textarea className="textarea" value={f.descricao} maxLength={4000} onChange={e => set('descricao', e.target.value)} /></Field>
 
+        <Field label="Processo cadastrado">
+          <select className="select" value={f.processoId} onChange={e => {
+            const p = processos.find(x => x.id === e.target.value);
+            setF(x => ({ ...x, processoId: e.target.value, responsavel: x.responsavel || p?.responsavel_id || '', processo: '', cliente: '' }));
+          }}>
+            <option value="">Sem processo cadastrado</option>
+            {processos.filter(p => p.situacao === 'ativo' || p.id === f.processoId).map(p => <option key={p.id} value={p.id}>{p.titulo ? `${p.titulo} · ` : ''}{p.numero}</option>)}
+          </select>
+        </Field>
         <div className="grid c3">
-          <Field label="Número do processo" dica={!processoOk ? undefined : 'Formato CNJ'}>
-            <input className="input" inputMode="numeric" value={f.processo} onChange={e => set('processo', mascararCnj(e.target.value))} placeholder="0000000-00.0000.0.00.0000" aria-invalid={!processoOk} />
+          <Field label="Número do processo" dica={!processoOk ? undefined : proc ? 'Vem do cadastro do processo' : 'Formato CNJ'}>
+            <input className="input" inputMode="numeric" value={proc ? proc.numero : f.processo} disabled={!!proc} onChange={e => set('processo', mascararCnj(e.target.value))} placeholder="0000000-00.0000.0.00.0000" aria-invalid={!processoOk} />
             {!processoOk && <span className="hint" style={{ color: 'var(--bad)' }}>Número ou dígito verificador inválido.</span>}
           </Field>
-          <Field label="Cliente"><input className="input" value={f.cliente} maxLength={200} onChange={e => set('cliente', e.target.value)} /></Field>
+          <Field label="Cliente"><input className="input" value={proc?.cliente_id ? clientes.find(c => c.id === proc.cliente_id)?.nome ?? f.cliente : f.cliente} disabled={!!proc?.cliente_id} maxLength={200} onChange={e => set('cliente', e.target.value)} /></Field>
           <Field label="Área">
             <select className="select" value={f.area} onChange={e => set('area', e.target.value as AreaJuridica | '')}>
               <option value="">—</option>

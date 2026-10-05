@@ -31,14 +31,18 @@ export function useToast() {
 }
 
 /* ---------- Modal ---------- */
+/** Janelas abertas, da mais antiga para a mais nova: o Esc fecha só a de cima. */
+const pilhaModais: symbol[] = [];
 export function Modal({ titulo, onClose, children, rodape, largo }: {
   titulo: string; onClose(): void; children: ReactNode; rodape?: ReactNode; largo?: boolean;
 }) {
   useEffect(() => {
-    const h = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const id = Symbol('modal');
+    pilhaModais.push(id);
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape' && pilhaModais[pilhaModais.length - 1] === id) onClose(); };
     document.addEventListener('keydown', h);
     const liberar = travarRolagem();
-    return () => { document.removeEventListener('keydown', h); liberar(); };
+    return () => { document.removeEventListener('keydown', h); liberar(); const i = pilhaModais.indexOf(id); if (i >= 0) pilhaModais.splice(i, 1); };
   }, [onClose]);
   return (
     <div className="overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>

@@ -1,0 +1,47 @@
+name: Acompanhamento de processos e Drive
+# Roda a cada 6 horas: consulta os andamentos dos processos monitorados (DataJud) e reenvia ao Google Drive o que ficou pendente.
+# Segredos (Settings > Secrets and variables > Actions):
+#   SUPABASE_URL        https://<ref>.supabase.co
+#   SUPABASE_ANON_KEY   chave publicável (a mesma do front-end; as funções exigem também o CRON_SECRET)
+#   CRON_SECRET         o MESMO valor cadastrado nos segredos das Edge Functions (supabase secrets set CRON_SECRET=...)
+# Se algum segredo faltar, o fluxo termina sem erro e sem fazer nada.
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions: { contents: read }
+concurrency: monitorar-processos
+
+jobs:
+  varredura:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      URL: ${{ secrets.SUPABASE_URL }}
+      CHAVE: ${{ secrets.SUPABASE_ANON_KEY }}
+      SEGREDO: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Confere os segredos
+        id: segredos
+        run: |
+          if [ -z "$URL" ] || [ -z "$CHAVE" ] || [ -z "$SEGREDO" ]; then
+            echo "::notice::Cadastre SUPABASE_URL, SUPABASE_ANON_KEY e CRON_SECRET para ativar a varredura."
+            echo "ok=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=sim" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Andamentos dos processos
+        if: steps.segredos.outputs.ok == 'sim'
+        run: |
+          curl -fsS -m 240 -X POST "$URL/functions/v1/processos" \
+            -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" -H "x-cron-secret: $SEGREDO" \
+            -H "Content-Type: application/json" -d '{"acao":"varredura"}'
+          echo
+      - name: Documentos pendentes no Google Drive
+        if: steps.segredos.outputs.ok == 'sim' && always()
+        run: |
+          curl -fsS -m 240 -X POST "$URL/functions/v1/documentos" \
+            -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" -H "x-cron-secret: $SEGREDO" \
+            -H "Content-Type: application/json" -d '{"acao":"drive_varredura"}'
+          echo

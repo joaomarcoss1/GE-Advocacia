@@ -27,3 +27,11 @@ verify_jwt = false
 [functions.google-agenda]
 # O retorno do Google (GET) chega sem JWT; as demais ações conferem o JWT e o papel dentro da função.
 verify_jwt = false
+
+[functions.processos]
+# A varredura agendada chega sem JWT (com x-cron-secret); as demais ações conferem o JWT e o papel dentro da função.
+verify_jwt = false
+
+[functions.documentos]
+# O link público do cliente e o retorno do Google chegam sem JWT; as ações do painel conferem o JWT e o papel dentro da função.
+verify_jwt = false
