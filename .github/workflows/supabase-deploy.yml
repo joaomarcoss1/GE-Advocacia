@@ -1,0 +1,68 @@
+name: Supabase — aplicar banco e funções
+# Manual (Actions > "Supabase — aplicar banco e funções" > Run workflow).
+# Segredos necessários (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL        string de conexão do banco. Use a do POOLER ("Session pooler", porta 5432):
+#                          os runners do GitHub não têm IPv6 e a conexão direta (db.<ref>.supabase.co) é só IPv6.
+#   SUPABASE_ACCESS_TOKEN  (opcional) token pessoal, só para publicar a Edge Function "anexos".
+#   SUPABASE_PROJECT_REF   (opcional) zkyxvwdxyocgneizcfiz
+# Nada aqui usa a service_role no front-end; os segredos só existem neste workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: 'E-mail (já criado em Authentication > Users) a promover a administrador da plataforma'
+        required: false
+        type: string
+      publicar_funcao:
+        description: 'Publicar a Edge Function anexos'
+        required: false
+        default: false
+        type: boolean
+
+permissions: { contents: read }
+concurrency: supabase-deploy
+
+jobs:
+  banco:
+    runs-on: ubuntu-latest
+    env:
+      DB: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confere o segredo
+        run: |
+          if [ -z "$DB" ]; then echo "::error::Cadastre o segredo SUPABASE_DB_URL"; exit 1; fi
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Aplica o schema (idempotente: pode rodar mais de uma vez)
+        run: psql "$DB" -X -v ON_ERROR_STOP=1 -q -f supabase/atualizacao_definitiva.sql
+      - name: Versão do esquema e tabelas
+        run: |
+          psql "$DB" -X -At -c "select 'versao='||max(versao) from public.schema_versao"
+          psql "$DB" -X -At -c "select 'tabelas public='||count(*) from information_schema.tables where table_schema='public'"
+          psql "$DB" -X -At -c "select 'tabelas sem RLS: '||coalesce(string_agg(tablename, ', '), 'nenhuma') from pg_tables where schemaname='public' and not rowsecurity"
+      - name: Promove o administrador da plataforma
+        if: ${{ inputs.admin_email != '' }}
+        env:
+          EMAIL: ${{ inputs.admin_email }}
+        run: |
+          psql "$DB" -X -v ON_ERROR_STOP=1 -v email="$EMAIL" <<'SQL'
+          insert into public.plataforma_admins (id, nome, email)
+          select id, coalesce(raw_user_meta_data->>'nome', split_part(email, '@', 1)), email
+          from auth.users where lower(email) = lower(:'email')
+          on conflict (id) do update set ativo = true;
+          select case when count(*) = 0 then 'ERRO: usuário não encontrado em Authentication' else 'ok: administrador da plataforma' end
+          from public.plataforma_admins where lower(email) = lower(:'email');
+          SQL
+
+  funcao:
+    if: ${{ inputs.publicar_funcao }}
+    needs: banco
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Publica a função anexos (a autorização é feita dentro dela; ver supabase/config.toml)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy anexos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
