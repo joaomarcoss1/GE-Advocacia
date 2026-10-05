@@ -18,7 +18,7 @@ Administrador, gerência e **coordenação** delegam tarefas, prazos processuais
 Cadastro de clientes e processos (número CNJ validado) com consulta automática de andamentos (DataJud), que viram tarefas com prazo sugerido em dias úteis. Cada cliente/processo tem uma checklist de documentos; os arquivos entram pelo painel ou por um link de envio do cliente, ficam em Storage privado e são organizados no Google Drive (Cliente/Processo). Backup semanal do sistema, criptografado. Detalhes, configuração e limites em `docs/PROCESSOS-E-DOCUMENTOS.md`.
 
 ## Aplicativo instalável e identidade
-O sistema instala como aplicativo no Android, iPhone e computador, abre sem internet (só a casca; os dados exigem conexão) e tem logo, ícones e animações próprios. Passo a passo, publicação e como trocar a marca da Nexutec em `docs/APLICATIVO-E-IDENTIDADE.md`.
+O sistema instala como aplicativo no Android, iPhone e computador, abre sem internet (só a casca; os dados exigem conexão) e tem logo, ícones e animações próprios. Passo a passo, publicação, identidade visual e o crédito da Nexutec em `docs/APLICATIVO-E-IDENTIDADE.md`.
 
 ## Rodar localmente (modo demonstração)
 ```bash

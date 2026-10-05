@@ -32,7 +32,8 @@ Para conferir depois de publicar: `npm run build`, `npx vite preview --port 4173
 - **Tela de ponto**: o bisel vira o mostrador do relógio; abaixo da hora há a faixa da semana (hoje em dourado) e a régua do dia com o ponto de luz que acompanha o horário.
 - **Lado direito das telas de entrada**: cartão de vidro com fio dourado, marca-d'água da logo e pontilhado discreto.
 - **Painel do sistema**: menu lateral em azul-safira com item ativo em dourado, títulos com ornamento, cartões e indicadores com relevo e canto dourado, tabelas com realce ao passar, botões com degradê (principal azul, destaque em ouro vivo), janelas com fio dourado e fundo desfocado, barras de progresso e estados vazios com a marca ao fundo. Tudo com versão para o tema escuro.
-- **Crédito "Desenvolvido por Nexutec"**: canto do painel azul (computador), rodapé da página (celular) e rodapé do menu lateral. A marca da Nexutec é **provisória**: para usar a logo oficial, troque só o `<svg>` em `src/components/Nexutec.tsx` (use `currentColor` para acompanhar o tema).
+- **Lado do formulário** (entrada, tela inicial e ponto): cantos finos, fio com losango, anéis suaves atrás do cartão e três selos temáticos (horário, segurança, documento) abaixo dele. Tudo decorativo e sem texto.
+- **Crédito**: apenas o texto "Sistema desenvolvido pela Nexutec", sem logo, no canto do painel azul (computador), no rodapé da página (celular) e no rodapé do menu lateral. Para mudar o texto, edite `src/components/Nexutec.tsx`.
 
 ## Interações e animações
 Botões levantam no hover (só em aparelhos com mouse), afundam ao tocar e têm brilho suave nos principais; ícones reagem (setas, atualizar, adicionar). Abas, menu lateral, janelas, avisos e a troca de telas têm transições curtas; os cartões do painel entram em sequência. Tudo é desligado para quem pede *reduzir movimento* no aparelho.

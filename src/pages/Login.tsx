@@ -6,6 +6,7 @@ import { useAuth } from '@/context/Auth';
 import { DEMO_ESCRITORIOS, DEMO_PLATAFORMA } from '@/data/seed';
 import Credito from '@/components/Nexutec';
 import { InstalarApp } from '@/components/Aplicativo';
+import AuthArte, { AuthSelos } from '@/components/AuthArte';
 
 export default function Login() {
   const { sessao, carregando, entrar, modo } = useAuth();
@@ -31,6 +32,7 @@ export default function Login() {
     <div className="auth">
       <Stage />
       <section className="auth-side">
+        <AuthArte />
         <form className="auth-card stack passo" style={{ gap: 18 }} onSubmit={enviar}>
           <div>
             <h1>Entrar</h1>
@@ -71,6 +73,7 @@ export default function Login() {
         <Link to="/" className="auth-link"><ArrowLeft size={15} />Voltar ao início</Link>
         <InstalarApp />
         <Credito className="credito-pagina" />
+        <AuthSelos />
       </section>
     </div>
   );

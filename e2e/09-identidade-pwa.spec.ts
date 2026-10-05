@@ -7,10 +7,16 @@ test.describe('identidade visual e aplicativo instalável', () => {
     const painel = page.locator('.stage');
     await expect(painel.locator('.stage-mark svg')).toBeVisible();
     await expect(painel.locator('.arte-ge')).toBeAttached();                       // arte de fundo do painel azul
-    await expect(painel.getByText('Desenvolvido por')).toBeVisible();
-    await expect(painel.getByText('Nexutec', { exact: true })).toBeVisible();
+    await expect(painel.getByText('Sistema desenvolvido pela Nexutec')).toBeVisible();
+    expect(await painel.locator('svg').evaluateAll(els => els.filter(e => e.closest('.stage-credito')).length)).toBe(0);   // crédito só em texto, sem logo
     // o painel azul não tem parágrafos de texto além do crédito
-    expect(await painel.locator('p').allTextContents()).toEqual(['Desenvolvido porNexutec']);
+    expect(await painel.locator('p').allTextContents()).toEqual(['Sistema desenvolvido pela Nexutec']);
+    // lado do formulário: arte discreta e selos, sem texto
+    const arte = page.locator('.auth-arte');
+    await expect(arte).toBeAttached();
+    await expect(arte).toHaveAttribute('aria-hidden', 'true');
+    expect((await arte.textContent())?.trim()).toBe('');
+    await expect(page.locator('.aa-selos .s')).toHaveCount(3);
   });
 
   test('no celular o crédito vai para o rodapé da página e a marca fica no topo', async ({ browser }) => {

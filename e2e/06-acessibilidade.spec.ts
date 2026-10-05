@@ -39,7 +39,7 @@ for (const tema of ['light', 'dark'] as const) {
         await semear(page);
       });
       test('telas públicas', async ({ page }) => { await varrer(page, PUBLICAS); });
-      test('painel do administrador', async ({ page }) => { await entrar(page, CONTAS.adminA); await varrer(page, ADMIN); });
+      test('painel do administrador', async ({ page }) => { test.slow(); await entrar(page, CONTAS.adminA); await varrer(page, ADMIN); });      // 19 telas, cada uma com análise axe
       test('painel da gerência', async ({ page }) => { await entrar(page, CONTAS.gerenteA); await varrer(page, ['/painel/gerencia', '/painel/ponto', '/painel/ocorrencias']); });
       test('delegação: coordenação, formulário e ficha da tarefa', async ({ page }) => {
         await entrar(page, CONTAS.coordA);

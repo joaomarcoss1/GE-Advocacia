@@ -868,15 +868,12 @@ button.doc-nome:focus-visible { outline: 2px solid var(--brass); outline-offset:
   .arte-particulas i { opacity: .5; }
 }
 
-.credito { margin: 0; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 9px; font-size: .7rem; letter-spacing: .06em; color: rgb(255 255 255 / 46%); transition: color .25s; }
-.credito-marca { display: inline-flex; align-items: center; gap: 5px; color: rgb(255 255 255 / 66%); }
-.credito-marca b { font-weight: 600; font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; }
-.nx-marca { width: 14px; height: 14px; flex: none; }
-.credito:hover, .credito:hover .credito-marca { color: rgb(255 255 255 / 88%); }
-.stage-credito { align-self: flex-start; }
+.credito { margin: 0; font-size: .72rem; letter-spacing: .05em; color: rgb(255 255 255 / 52%); transition: color .25s; }
+.credito b { font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: .68rem; color: rgb(255 255 255 / 76%); transition: color .25s; }
+.credito:hover, .credito:hover b { color: rgb(255 255 255 / 92%); }
+.stage-credito { align-self: flex-start; text-shadow: 0 1px 8px rgb(6 15 32 / 85%); }
 .credito-pagina { display: none; margin-top: 8px; color: var(--muted); }
-.credito-pagina .credito-marca { color: var(--ink-2, var(--muted)); }
-.credito-pagina:hover, .credito-pagina:hover .credito-marca { color: var(--ink); }
+.credito-pagina b { color: var(--ink); }
 .side-credito { margin: 14px 12px 4px; }
 @media screen and (max-width: 980px) {
   .stage-arte, .stage-credito { display: none; }
@@ -1116,3 +1113,21 @@ html { scrollbar-color: color-mix(in oklab, var(--brass) 55%, var(--scroll-thumb
 .barra { box-shadow: inset 0 1px 2px rgb(14 23 38 / 14%); }
 .barra i { background: linear-gradient(90deg, #d9a441, #fff3c4 90%, #f3c963); }
 @media screen and (max-width: 980px) { .auth-side::before { opacity: .055; width: 70%; right: -14%; bottom: -4%; } .auth-card::before, .auth-card::after { display: none; } }
+
+/* ---------- Telas de entrada: arte do lado do formulário ---------- */
+.auth-arte { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict; color: var(--brass); }
+.aa-aneis i { position: absolute; left: 50%; top: 50%; aspect-ratio: 1; border-radius: 50%; border: 1px solid color-mix(in oklab, var(--brass) 20%, transparent); translate: -50% -50%; animation: respira 18s ease-in-out infinite alternate; }
+.aa-aneis i:nth-child(1) { width: min(640px, 92%); } .aa-aneis i:nth-child(2) { width: min(930px, 135%); border-color: color-mix(in oklab, var(--brass) 11%, transparent); animation-delay: -8s; }
+.aa-cantos i { position: absolute; width: 30px; height: 30px; border: 0 solid color-mix(in oklab, var(--brass) 46%, transparent); }
+.aa-cantos i:nth-child(1) { left: 26px; top: 26px; border-width: 1px 0 0 1px; } .aa-cantos i:nth-child(2) { right: 26px; top: 26px; border-width: 1px 1px 0 0; }
+.aa-cantos i:nth-child(3) { left: 26px; bottom: 26px; border-width: 0 0 1px 1px; } .aa-cantos i:nth-child(4) { right: 26px; bottom: 26px; border-width: 0 1px 1px 0; }
+.aa-fio { position: absolute; left: 50%; top: 0; width: 1px; height: clamp(34px, 8vh, 84px); background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--brass) 62%, transparent)); }
+.aa-fio i { position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; rotate: 45deg; border: 1px solid var(--brass); background: var(--surface); }
+.aa-selos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
+.aa-selos .s { width: 40px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; color: color-mix(in oklab, var(--brass) 80%, var(--ink)); border: 1px solid color-mix(in oklab, var(--brass) 42%, transparent);
+  background: linear-gradient(145deg, color-mix(in oklab, var(--surface) 92%, transparent), color-mix(in oklab, var(--surface-2) 70%, transparent)); box-shadow: var(--brilho-topo), 0 8px 18px -10px rgb(15 28 46 / 28%); }
+.aa-selos .s svg { width: 18px; height: 18px; }
+.aa-selos .sep { width: 34px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--brass) 60%, transparent), transparent); }
+@media (max-height: 760px) { .aa-selos { display: none; } }
+@media screen and (max-width: 980px) { .aa-aneis, .aa-fio, .aa-selos { display: none; } .aa-aneis, .aa-fio { display: none; } .aa-cantos i { width: 20px; height: 20px; } .aa-cantos i:nth-child(1), .aa-cantos i:nth-child(3) { left: 12px; } .aa-cantos i:nth-child(2), .aa-cantos i:nth-child(4) { right: 12px; } }
+@media (prefers-reduced-motion: reduce) { .aa-aneis i { animation: none; } }

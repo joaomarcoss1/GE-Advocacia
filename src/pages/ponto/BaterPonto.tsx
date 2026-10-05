@@ -11,6 +11,7 @@ import { usePonto } from './usePonto';
 import Credito from '@/components/Nexutec';
 import { InstalarApp } from '@/components/Aplicativo';
 import { lembrarDestino } from '@/lib/pwa';
+import AuthArte, { AuthSelos } from '@/components/AuthArte';
 
 function Etapas({ atual }: { atual: 1 | 2 | 3 }) {
   const itens = ['Identificação', 'PIN', 'Registro'];
@@ -65,6 +66,7 @@ export default function BaterPonto() {
       </Stage>
 
       <section className="auth-side">
+        <AuthArte />
         <div className="auth-card">
           <Etapas atual={p.etapa === 'pessoa' ? 1 : p.etapa === 'pin' ? 2 : 3} />
           <div key={p.etapa} className="passo">
@@ -79,6 +81,7 @@ export default function BaterPonto() {
           <InstalarApp />
         </div>
         <Credito className="credito-pagina" />
+        <AuthSelos />
       </section>
     </div>
   );
