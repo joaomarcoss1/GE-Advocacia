@@ -351,7 +351,7 @@ create or replace function public._trg_movimento_regras() returns trigger
 language plpgsql set search_path = public, extensions, pg_temp as $$
 begin
   if tg_op = 'INSERT' then
-    if auth.uid() is not null then new.origem := 'manual'; new.tarefa_id := null; new.lido := false; end if;   -- pelo painel, só andamento manual
+    if auth.uid() is not null then new.origem := 'manual'; new.tarefa_id := null; end if;   -- pelo painel, só andamento manual
     new.criado_por_nome := coalesce(new.criado_por_nome, (select nome from public.perfis where id = auth.uid()));
     new.chave := coalesce(nullif(new.chave, ''), 'm|' || coalesce(new.codigo::text, '') || '|' || extract(epoch from new.data_hora)::bigint || '|' || left(new.nome, 80));
     return new;

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { montarCnj } from '@/lib/cnj';
 import { agoraBR, addDays, definirFuso } from '@/lib/datetime';
 import type { Db, PontoApi } from './db';
 import { criarDbLocal } from './local';
@@ -392,5 +393,184 @@ describe('delegação: tarefas, prazos e reuniões (espelho da migração 0006)'
     const audit = (await db.auditoria.list()).filter(a => a.tabela === 'tarefas');
     expect(audit.map(a => a.acao)).toEqual(expect.arrayContaining(['Criado · tarefas', 'Alterado · tarefas']));
     expect(agoraBR().data >= addDays(agoraBR().data, -1)).toBe(true);
+  });
+});
+
+describe('processos, clientes e documentos (espelho da migração 0007)', () => {
+  const coord = (e: typeof A) => db.auth.entrar(e.coordenador.email, e.coordenador.senha);
+  const PDF = (nome = 'doc.pdf') => ({ nome, mime: 'application/pdf', tamanho: 40, conteudo: btoa('%PDF-1.4 conteudo de teste do documento') });
+  const NUM = '00012347720248260001';            // 0001234-77.2024.8.26.0001 (válido)
+
+  it('cadastro: CNJ validado e normalizado, número único por escritório, tribunal pelo número', async () => {
+    await entrar(A);
+    const cli = await db.clientes.insert({ nome: 'Cliente Teste' });
+    const p = await db.processos.insert({ numero: NUM, cliente_id: cli.id });
+    expect(p).toMatchObject({ numero: '0001234-77.2024.8.26.0001', tribunal: 'tjsp', polo: 'ativo', situacao: 'ativo', monitorar: true });
+    await expect(db.processos.insert({ numero: NUM })).rejects.toThrow(/já está cadastrado/);
+    await expect(db.processos.insert({ numero: '0001234-78.2024.8.26.0001' })).rejects.toThrow(/inválido/);
+    const OUTRO = montarCnj('555', '2025', '810', '9');
+    await expect(db.processos.insert({ numero: OUTRO, cliente_id: 'nao-existe' })).rejects.toThrow();
+    await expect(db.processos.insert({ numero: OUTRO, responsavel_id: 'func-9999' })).rejects.toThrow(/equipe/);
+    expect((await db.processos.buscar(NUM))?.tribunal).toBe('TJSP');
+    await expect(db.processos.buscar('123')).rejects.toThrow(/inválido/);
+  });
+
+  it('cada escritório só enxerga os próprios clientes, processos, andamentos, listas, arquivos e links', async () => {
+    await entrar(A);
+    const cli = await db.clientes.insert({ nome: 'Só do escritório A' });
+    const p = await db.processos.insert({ numero: NUM, cliente_id: cli.id });
+    await db.processos.registrarMovimento(p.id, { nome: 'Intimação da parte', data_hora: new Date().toISOString(), categoria: 'intimacao' });
+    const modelo = (await db.checklist.modelos.list()).find(m => m.nome === 'Trabalhista')!;
+    await db.checklist.aplicar(modelo.id, { processo_id: p.id });
+    const doc = await db.arquivos.enviar({ cliente_id: cli.id, processo_id: p.id, arquivo: PDF() });
+    const { token } = await db.arquivos.links.criar({ cliente_id: cli.id, processo_id: p.id });
+    await db.auth.sair(); await entrar(B);
+    expect((await db.clientes.list()).some(c => c.nome === 'Só do escritório A')).toBe(false);
+    expect((await db.processos.list()).some(x => x.numero === p.numero)).toBe(false);
+    expect(await db.processos.movimentos(p.id)).toEqual([]);
+    expect((await db.checklist.itens.list()).some(i => i.processo_id === p.id)).toBe(false);
+    expect(await db.arquivos.list()).not.toContainEqual(expect.objectContaining({ id: doc.id }));
+    await expect(db.arquivos.abrir(doc.id)).rejects.toThrow();
+    await expect(db.arquivos.remover(doc.id)).resolves.toBeUndefined();                       // sem efeito em A
+    await expect(db.arquivos.enviar({ cliente_id: cli.id, arquivo: PDF() })).rejects.toThrow();  // B não envia para cliente de A
+    expect((await db.arquivos.links.list()).length).toBe(0);
+    await expect(db.arquivos.links.criar({ cliente_id: cli.id })).rejects.toThrow();
+    await db.clientes.remove(cli.id);                                                          // sem efeito em A
+    await db.processos.remove(p.id);
+    // o mesmo número pode existir em B, como outro processo
+    await expect(db.processos.insert({ numero: NUM })).resolves.toBeTruthy();
+    await db.auth.sair(); await entrar(A);
+    expect((await db.arquivos.list()).some(d => d.id === doc.id)).toBe(true);
+    expect((await db.processos.list()).some(x => x.id === p.id)).toBe(true);
+    // o token de A abre A (e só A)
+    const info = await db.arquivos.publico.info(token);
+    expect(info).toMatchObject({ ok: true, cliente: 'Só do escritório A', escritorio: A.nome });
+  });
+
+  it('consulta: a primeira vira linha de base (sem tarefas); depois, o que exige ação vira UMA tarefa por andamento', async () => {
+    await entrar(A);
+    const p = await db.processos.insert({ numero: NUM, responsavel_id: 'func-0003', titulo: 'Teste x Teste', area: 'civel' });
+    const antes = (await db.tarefas.list()).length;
+    const r0 = await db.processos.consultar(p.id);
+    expect(r0).toMatchObject({ novos: 3, tarefas: 0, erros: 0 });
+    expect((await db.processos.movimentos(p.id)).every(m => m.lido)).toBe(true);
+    expect((await db.processos.list()).find(x => x.id === p.id)!.ultima_consulta).not.toBeNull();
+    await db.processos.consultar(p.id); await db.processos.consultar(p.id);          // juntada, conclusão: sem ação
+    expect((await db.tarefas.list()).length).toBe(antes);
+    const r3 = await db.processos.consultar(p.id);                                       // despacho: exige ação
+    expect(r3).toMatchObject({ novos: 1, tarefas: 1 });
+    const t = (await db.tarefas.list()).find(x => x.processo_id === p.id)!;
+    expect(t).toMatchObject({ titulo: 'Analisar despacho — Teste x Teste', responsavel_id: 'func-0003', processo_numero: '0001234-77.2024.8.26.0001', prioridade: 'normal', criado_por_nome: 'Acompanhamento de processos' });
+    expect(t.origem_movimento_id).not.toBeNull();
+    const nao = await db.processos.naoLidos();
+    expect(nao.filter(m => m.processo_id === p.id).map(m => m.nome)).toEqual(['Despacho', 'Conclusão', 'Juntada']);
+    expect(nao.find(m => m.nome === 'Despacho')).toMatchObject({ categoria: 'despacho', exige_acao: true, prazo_sugerido_dias: 5, tarefa_id: t.id });
+    await db.processos.marcarLidos(p.id);
+    expect((await db.processos.naoLidos()).some(m => m.processo_id === p.id)).toBe(false);
+    // o processo com tarefa não é excluído; com a automação desligada não nascem tarefas
+    await expect(db.processos.remove(p.id)).rejects.toThrow(/tarefas ou documentos/);
+    const cfg = await db.config.get();
+    await db.config.save({ ...cfg, automacao: { ...cfg.automacao, tarefa_andamento: false } });
+    for (let i = 0; i < 2; i++) await db.processos.consultar(p.id);                     // intimação (exige ação) e audiência
+    expect((await db.tarefas.list()).filter(x => x.processo_id === p.id).length).toBe(1);
+  });
+
+  it('andamento registrado à mão traz a regra da categoria (prazo sugerido) e a coordenação também registra', async () => {
+    await coord(A);
+    const p = (await db.processos.list())[0];
+    const m = await db.processos.registrarMovimento(p.id, { nome: 'Intimação recebida pelo diário', data_hora: new Date().toISOString(), categoria: 'intimacao' });
+    expect(m).toMatchObject({ origem: 'manual', categoria: 'intimacao', exige_acao: true, prazo_sugerido_dias: 15, lido: true });
+    await expect(db.processos.registrarMovimento(p.id, { nome: ' ', data_hora: new Date().toISOString(), categoria: 'outros' })).rejects.toThrow();
+  });
+
+  it('coordenação cadastra mas não exclui; a gerência exclui só cliente sem vínculos', async () => {
+    await coord(A);
+    const c = await db.clientes.insert({ nome: 'Cliente da Coordenação' });
+    await expect(db.clientes.remove(c.id)).rejects.toThrow(/permissão/);
+    expect(await db.funcionarios.list()).toEqual([]);
+    await db.auth.sair(); await entrar(A, 'gerente');
+    const p = await db.processos.insert({ numero: NUM, cliente_id: c.id });
+    await expect(db.clientes.remove(c.id)).rejects.toThrow(/processos ou documentos/);
+    await db.processos.remove(p.id);
+    await db.clientes.remove(c.id);
+    expect((await db.clientes.list()).some(x => x.id === c.id)).toBe(false);
+  });
+
+  it('checklist: aplicar é idempotente; o arquivo marca o item como recebido; excluir devolve a pendente', async () => {
+    await entrar(A);
+    const cli = await db.clientes.insert({ nome: 'Cliente Checklist' });
+    const p = await db.processos.insert({ numero: NUM, cliente_id: cli.id });
+    const trab = (await db.checklist.modelos.list()).find(m => m.nome === 'Trabalhista')!;
+    expect(await db.checklist.aplicar(trab.id, { processo_id: p.id })).toBe(10);
+    expect(await db.checklist.aplicar(trab.id, { processo_id: p.id })).toBe(0);
+    const itens = (await db.checklist.itens.list()).filter(i => i.processo_id === p.id);
+    expect(itens.every(i => i.cliente_id === cli.id)).toBe(true);
+    const ctps = itens.find(i => i.nome.startsWith('Carteira'))!;
+    const d = await db.arquivos.enviar({ cliente_id: cli.id, processo_id: p.id, item_id: ctps.id, arquivo: PDF('ctps.pdf') });
+    expect((await db.checklist.itens.list()).find(i => i.id === ctps.id)!.status).toBe('recebido');
+    await expect(db.arquivos.enviar({ cliente_id: cli.id, processo_id: p.id, item_id: 'item-de-outro', arquivo: PDF() })).rejects.toThrow(/não pertence/);
+    await expect(db.arquivos.enviar({ cliente_id: cli.id, arquivo: { ...PDF('virus.exe'), mime: 'application/x-msdownload' } })).rejects.toThrow(/não aceito/);
+    await expect(db.arquivos.enviar({ cliente_id: cli.id, arquivo: { ...PDF(), tamanho: 5_000_000 } })).rejects.toThrow(/1,5 MB/);
+    await db.arquivos.conferir(d.id, true);
+    expect((await db.arquivos.list({ processo_id: p.id }))[0]).toMatchObject({ conferido: true });
+    const aberto = await db.arquivos.abrir(d.id);
+    expect(aberto.nome).toBe('ctps.pdf');
+    expect(await db.arquivos.resumo()).toMatchObject({ sem_conferir: expect.any(Number), drive_pendente: 0 });
+    await db.arquivos.remover(d.id);
+    expect((await db.checklist.itens.list()).find(i => i.id === ctps.id)!.status).toBe('pendente');
+  });
+
+  it('link do cliente: só o hash fica guardado; o cliente envia sem login; expira, revoga e respeita o limite', async () => {
+    await entrar(A);
+    const cli = await db.clientes.insert({ nome: 'Cliente do Link' });
+    const p = await db.processos.insert({ numero: NUM, cliente_id: cli.id });
+    const trab = (await db.checklist.modelos.list()).find(m => m.nome === 'Trabalhista')!;
+    await db.checklist.aplicar(trab.id, { processo_id: p.id });
+    const { link, token } = await db.arquivos.links.criar({ cliente_id: cli.id, processo_id: p.id, dias: 7, rotulo: 'Documentos iniciais' });
+    expect(token).toMatch(/^[0-9a-f]{48}$/);
+    expect(JSON.stringify(await db.arquivos.links.list())).not.toContain(token);
+    expect(link).not.toHaveProperty('token_hash');
+    expect(Date.parse(link.expira_em)).toBeGreaterThan(Date.now() + 6 * 86_400_000);
+    await db.auth.sair();                                                                      // o cliente não tem login
+    const info = await db.arquivos.publico.info(token);
+    expect(info).toMatchObject({ ok: true, cliente: 'Cliente do Link', processo: '0001234-77.2024.8.26.0001', restantes: 40 });
+    if (!info.ok) throw new Error('esperava ok');
+    expect(info.itens.length).toBe(10);
+    expect(await db.arquivos.publico.info('0'.repeat(48))).toMatchObject({ ok: false });
+    expect(await db.arquivos.publico.enviar('0'.repeat(48), null, PDF())).toMatchObject({ ok: false });
+    expect(await db.arquivos.publico.enviar(token, 'item-de-outro', PDF())).toMatchObject({ ok: false });
+    expect(await db.arquivos.publico.enviar(token, info.itens[0].id, PDF('rg.pdf'))).toEqual({ ok: true });
+    expect(await db.arquivos.publico.enviar(token, null, { ...PDF('x.exe'), mime: 'application/x-msdownload' })).toMatchObject({ ok: false });
+    await entrar(A);
+    const docs = await db.arquivos.list({ processo_id: p.id });
+    expect(docs).toHaveLength(1);
+    expect(docs[0]).toMatchObject({ nome: 'rg.pdf', origem: 'link_cliente', item_id: info.itens[0].id });
+    expect((await db.checklist.itens.list()).find(i => i.id === info.itens[0].id)!.status).toBe('recebido');
+    expect((await db.arquivos.links.list())[0].usos).toBe(1);
+    // revogado: o mesmo token deixa de funcionar
+    await db.arquivos.links.revogar(link.id);
+    await db.auth.sair();
+    expect(await db.arquivos.publico.info(token)).toMatchObject({ ok: false });
+    expect(await db.arquivos.publico.enviar(token, null, PDF())).toMatchObject({ ok: false });
+  });
+
+  it('o link vale só para o cliente e o processo escolhidos; cliente de outro processo é recusado', async () => {
+    await entrar(A);
+    const c1 = await db.clientes.insert({ nome: 'Cliente 1' });
+    const c2 = await db.clientes.insert({ nome: 'Cliente 2' });
+    const p2 = await db.processos.insert({ numero: NUM, cliente_id: c2.id });
+    await expect(db.arquivos.links.criar({ cliente_id: c1.id, processo_id: p2.id })).rejects.toThrow();
+    await expect(db.arquivos.enviar({ cliente_id: c1.id, processo_id: p2.id, arquivo: PDF() })).rejects.toThrow(/outro cliente/);
+  });
+
+  it('escritório com clientes ou processos não pode ser excluído pela plataforma', async () => {
+    await db.auth.entrar(DEMO_PLATAFORMA.email, DEMO_PLATAFORMA.senha);
+    await db.plataforma.criar({ nome: 'Escritório Vazio', slug: 'vazio-teste', fuso: 'America/Fortaleza', adminNome: 'Admin V', adminEmail: 'admin@vazio.test', adminSenha: 'senhaforte2026' });
+    const novo = (await db.plataforma.listar()).find(e => e.slug === 'vazio-teste')!;
+    await db.auth.sair(); await db.auth.entrar('admin@vazio.test', 'senhaforte2026');
+    expect((await db.checklist.modelos.list()).length).toBeGreaterThanOrEqual(7);            // nasce com os modelos
+    await db.clientes.insert({ nome: 'Primeiro Cliente' });
+    await db.auth.sair(); await db.auth.entrar(DEMO_PLATAFORMA.email, DEMO_PLATAFORMA.senha);
+    await expect(db.plataforma.excluir(novo.id)).rejects.toThrow(/já tem funcionários/);
   });
 });

@@ -5,12 +5,14 @@
 import { CARGOS_PADRAO, ESCALAS_MODELO, mesclarConfig } from '@/lib/config';
 import { addDays, agoraBR, brParaIso, definirFuso, eachDay, hhmmParaMin, primeiroDoMes, ultimoDoMes } from '@/lib/datetime';
 import { feriadosPadrao } from '@/lib/feriados';
+import { MODELOS_INICIAIS } from '@/lib/checklist';
 import { montarCnj } from '@/lib/cnj';
 import { calcularFolha } from '@/lib/folha';
 import { classificar, previstoDoTipo, sequenciaDoDia, turnoDaData } from '@/lib/ponto';
+import { classificarMovimento, tarefaDoMovimento } from '@/lib/processos';
 import { validarMudancaFolha } from '@/lib/regras';
 import type {
-  AjusteFolha, Andamento, Cargo, Config, Escala, Feriado, Folha, Funcionario, Ocorrencia, RegistroPonto, Tarefa, Usuario,
+  AjusteFolha, Andamento, Cargo, ChecklistItem, ChecklistModelo, Cliente, Config, DocumentoArquivo, Escala, Feriado, Folha, Funcionario, Movimento, Ocorrencia, Processo, RegistroPonto, Tarefa, Usuario,
 } from '@/lib/types';
 
 export const DEMO_PLATAFORMA = { email: 'plataforma@geadvocacia.com.br', senha: 'GEplataforma2026', nome: 'Equipe GE Advocacia' };
@@ -81,6 +83,8 @@ export async function hashSecreto(chave: string, segredo: string): Promise<strin
 export interface SeedEscritorio {
   cargos: Cargo[]; escalas: Escala[]; funcionarios: Funcionario[]; registros: RegistroPonto[]; ocorrencias: Ocorrencia[];
   feriados: Feriado[]; ajustes: AjusteFolha[]; folhas: Folha[]; config: Config; usuarios: Usuario[]; tarefas: Tarefa[]; andamentos: Andamento[];
+  clientes: Cliente[]; processos: Processo[]; movimentos: (Movimento & { chave: string })[]; modelos: ChecklistModelo[]; itens: ChecklistItem[];
+  arquivos: (DocumentoArquivo & { enviado_por: string | null })[]; conteudos: Record<string, string>;
 }
 
 /** Base de um escritório NOVO (criado pela plataforma): cargos, escalas e feriados; nenhum funcionário. */
@@ -204,7 +208,8 @@ export async function gerarSeedEscritorio(def: DemoEscritorio, escritorioId: str
     { id: `${escritorioId}-coord`, email: def.coordenador.email, nome: def.coordenador.nome, papel: 'coordenador', senha_hash: await hashSecreto(def.coordenador.email, def.coordenador.senha), ativo: true },
   ];
   const { tarefas, andamentos } = gerarTarefas(def, escritorioId, hoje, funcionarios);
-  return { cargos, escalas, funcionarios, registros, ocorrencias, feriados, ajustes, folhas, config, usuarios, tarefas, andamentos };
+  const proc = gerarProcessos(def, hoje, funcionarios, tarefas);
+  return { cargos, escalas, funcionarios, registros, ocorrencias, feriados, ajustes, folhas, config, usuarios, tarefas, andamentos, ...proc };
 }
 
 /** Tarefas, prazos, audiências e reuniões de demonstração (datas relativas a hoje, no fuso do escritório). */
@@ -216,7 +221,7 @@ function gerarTarefas(def: DemoEscritorio, escritorioId: string, hoje: string, f
   let n = 0;
   const mk = (p: Partial<Tarefa> & Pick<Tarefa, 'titulo'>, por: keyof typeof quem): Tarefa => ({
     id: id('tarefa', ++n), tipo: 'tarefa', descricao: null, prioridade: 'normal', status: 'a_fazer', area: null, processo_numero: null, cliente: null, inicio: null, fim: null,
-    dia_inteiro: false, prazo_fatal: false, lembrete_min: 60, local: null, responsavel_id: null, revisor_id: null, participantes: [], concluida_em: null,
+    dia_inteiro: false, prazo_fatal: false, lembrete_min: 60, local: null, responsavel_id: null, revisor_id: null, participantes: [], processo_id: null, origem_movimento_id: null, concluida_em: null,
     criado_por: quem[por].id, criado_por_nome: quem[por].nome, created_at: agoraIso, updated_at: agoraIso, ...p,
   });
   const lista: Tarefa[] = def.slug === DEMO_ESCRITORIOS[0].slug ? [
@@ -242,4 +247,86 @@ function gerarTarefas(def: DemoEscritorio, escritorioId: string, hoje: string, f
     ...(t.status === 'em_andamento' ? [{ id: id('and', i * 2 + 2), tarefa_id: t.id, tipo: 'status' as const, texto: 'Status: a fazer → em andamento', autor_nome: funcs[2]?.nome ?? '', created_at: agoraIso }] : []),
   ]);
   return { tarefas: lista, andamentos };
+}
+
+/** Clientes, processos (com andamentos), listas de documentos e alguns arquivos de demonstração. Tudo fictício. */
+function gerarProcessos(def: DemoEscritorio, hoje: string, funcs: Funcionario[], tarefas: Tarefa[]) {
+  const agoraIso = new Date().toISOString();
+  const f = (n: number) => funcs[n - 1]?.id ?? null;
+  const dia = (n: number, hhmm = '10:00') => brParaIso(addDays(hoje, n), hhmm);
+  const primeiro = def.slug === DEMO_ESCRITORIOS[0].slug;
+  const cli = (n: number, nome: string, tipo: 'pf' | 'pj', documento: string, email: string | null = null): Cliente => ({
+    id: id('cli', n), nome, tipo, documento, email, telefone: null, observacoes: null, ativo: true, drive_folder_id: null, created_at: agoraIso, updated_at: agoraIso,
+  });
+  const clientes: Cliente[] = primeiro
+    ? [cli(1, 'Indústria Beta Ltda', 'pj', '11222333000181', 'contato@beta.exemplo'), cli(2, 'Maria Souza', 'pf', '11122233396'), cli(3, 'Transportes Gama S.A.', 'pj', '44555666000199'),
+       cli(4, 'João Pedro Almeida', 'pf', '22233344405'), cli(5, 'Comercial Delta Ltda', 'pj', '77888999000155')]
+    : [cli(1, 'Amazônia Log Ltda', 'pj', '33444555000166'), cli(2, 'Construtora Rio Negro', 'pj', '55666777000122')];
+  const pr = (n: number, numero: string, cliente: number, p: Partial<Processo>): Processo => ({
+    id: id('proc', n), numero, cliente_id: id('cli', cliente), titulo: null, polo: 'ativo', parte_contraria: null, area: null, classe: null, assunto: null, orgao_julgador: null,
+    tribunal: null, grau: 'G1', data_ajuizamento: null, valor_causa: null, situacao: 'ativo', fase: 'conhecimento', responsavel_id: null, monitorar: true, sigiloso: false,
+    ultima_consulta: agoraIso, ultima_consulta_erro: null, ultima_movimentacao_em: null, observacoes: null, created_at: agoraIso, updated_at: agoraIso, ...p,
+  });
+  const processos: Processo[] = primeiro ? [
+    pr(1, montarCnj('12345', '2025', '810', '0001'), 1, { titulo: 'Beta x Delta Comercial', polo: 'passivo', parte_contraria: 'Delta Comercial Ltda', area: 'civel', classe: 'Procedimento Comum Cível', assunto: 'Cobrança', orgao_julgador: '3ª Vara Cível de São Luís', tribunal: 'tjma', responsavel_id: f(3), valor_causa: 182_500 }),
+    pr(2, montarCnj('7788', '2024', '510', '0002'), 3, { titulo: 'Gama — reclamação trabalhista', polo: 'passivo', area: 'trabalhista', classe: 'Reclamação Trabalhista', assunto: 'Horas extras', orgao_julgador: '2ª Vara do Trabalho de São Luís', tribunal: 'trt10', responsavel_id: f(4) }),
+    pr(3, montarCnj('99001', '2023', '810', '0003'), 5, { titulo: 'Delta — apelação', area: 'civel', classe: 'Apelação Cível', assunto: 'Contratos', orgao_julgador: '1ª Câmara de Direito Privado', tribunal: 'tjma', grau: 'G2', fase: 'recursal', responsavel_id: f(4) }),
+    pr(4, montarCnj('3321', '2025', '810', '0005'), 2, { titulo: 'Souza — divórcio', area: 'familia', classe: 'Divórcio Litigioso', assunto: 'Dissolução', orgao_julgador: '1ª Vara de Família', tribunal: 'tjma', responsavel_id: f(4) }),
+    pr(5, montarCnj('4102', '2025', '510', '0007'), 4, { titulo: 'Almeida — reclamação trabalhista', area: 'trabalhista', classe: 'Reclamação Trabalhista', assunto: 'Verbas rescisórias', tribunal: 'trt10', responsavel_id: f(3) }),
+  ] : [
+    pr(1, montarCnj('4410', '2025', '804', '0001'), 1, { titulo: 'Amazônia Log — execução', area: 'empresarial', classe: 'Execução de Título Extrajudicial', tribunal: 'tjam', responsavel_id: f(2) }),
+    pr(2, montarCnj('5120', '2024', '804', '0002'), 2, { titulo: 'Rio Negro — contrato', polo: 'passivo', area: 'civel', classe: 'Procedimento Comum Cível', tribunal: 'tjam', responsavel_id: f(3) }),
+  ];
+
+  let nm = 0;
+  const mv = (proc: number, dias: number, nome: string, complemento: string | null, lido: boolean, extra: Partial<Movimento> = {}): Movimento & { chave: string } => {
+    const b = { nome, complemento, dataHora: dia(dias) };
+    const c = classificarMovimento(b);
+    return { id: id('mov', ++nm), processo_id: id('proc', proc), origem: 'simulada', codigo: null, nome, complemento, data_hora: b.dataHora, categoria: c.categoria,
+      exige_acao: c.exige_acao, prazo_sugerido_dias: c.prazo_sugerido_dias, lido, tarefa_id: null, criado_por_nome: null, created_at: agoraIso, chave: `seed|${nm}`, ...extra };
+  };
+  const movimentos = primeiro ? [
+    mv(1, -60, 'Distribuição', null, true), mv(1, -30, 'Citação', 'Mandado cumprido', true), mv(1, -3, 'Expedição de documento', 'Intimação: disponibilizada no Diário da Justiça Eletrônico', false),
+    mv(2, -90, 'Distribuição', null, true), mv(2, -2, 'Audiência de instrução designada', null, false),
+    mv(3, -40, 'Sentença', 'Julgado procedente em parte o pedido', true), mv(3, -18, 'Interposto recurso de apelação', null, true), mv(3, -1, 'Conclusão', 'Conclusos ao relator', false),
+    mv(4, -20, 'Distribuição', null, true), mv(4, -1, 'Despacho', 'Determinada a juntada de documentos', false),
+    mv(5, -5, 'Distribuição', null, true),
+  ] : [
+    mv(1, -45, 'Distribuição', null, true), mv(1, -2, 'Decisão', 'Deferida a penhora online', false), mv(2, -30, 'Distribuição', null, true),
+  ];
+  // andamento que exige ação já virou tarefa do responsável (como a automação faz)
+  const auto = movimentos.find(m => m.categoria === 'intimacao' && !m.lido);
+  if (auto) {
+    const p = processos.find(x => x.id === auto.processo_id)!;
+    const sug = tarefaDoMovimento({ id: p.id, numero: p.numero, titulo: p.titulo, cliente: clientes.find(c => c.id === p.cliente_id)?.nome ?? null, responsavel_id: p.responsavel_id }, { nome: auto.nome, complemento: auto.complemento, dataHora: auto.data_hora }, classificarMovimento(auto));
+    const t: Tarefa = { id: id('tarefa', 90), ...sug, status: 'a_fazer', area: p.area, inicio: null, fim: null, dia_inteiro: false, prazo_fatal: false, lembrete_min: 60, local: null, revisor_id: null, participantes: [],
+      origem_movimento_id: auto.id, criado_por: null, criado_por_nome: 'Acompanhamento de processos', concluida_em: null, created_at: agoraIso, updated_at: agoraIso };
+    tarefas.push(t); auto.tarefa_id = t.id;
+  }
+  for (const m of movimentos) { const p = processos.find(x => x.id === m.processo_id)!; if (!p.ultima_movimentacao_em || m.data_hora > p.ultima_movimentacao_em) p.ultima_movimentacao_em = m.data_hora; }
+  for (const t of tarefas) { const p = processos.find(x => x.numero === t.processo_numero); if (p && !t.processo_id) t.processo_id = p.id; }
+
+  const modelos: ChecklistModelo[] = MODELOS_INICIAIS.map((m, i) => ({ id: id('mod', i + 1), nome: m.nome, area: m.area, itens: m.itens, ativo: true, created_at: agoraIso }));
+  const itens: ChecklistItem[] = [];
+  const aplicar = (modelo: string, procNum: number | null, cliNum: number) => {
+    const m = modelos.find(x => x.nome === modelo)!;
+    const doDossie = itens.filter(i => (procNum ? i.processo_id === id('proc', procNum) : !i.processo_id && i.cliente_id === id('cli', cliNum)));
+    m.itens.forEach((it, k) => itens.push({ id: id('item', itens.length + 1), cliente_id: id('cli', cliNum), processo_id: procNum ? id('proc', procNum) : null, nome: it.nome, obrigatorio: it.obrigatorio !== false,
+      status: 'pendente', observacao: null, ordem: doDossie.length + k + 1, recebido_em: null, created_at: agoraIso }));
+  };
+  const arquivos: (DocumentoArquivo & { enviado_por: string | null })[] = [];
+  const conteudos: Record<string, string> = {};
+  if (primeiro) {
+    aplicar('Trabalhista', 2, 3); aplicar('Trabalhista', 5, 4); aplicar('Cível', 1, 1); aplicar('Geral', null, 2);
+    const pdf = btoa('%PDF-1.4\n% documento de demonstração\n1 0 obj<< /Type /Catalog >>endobj\ntrailer<< /Root 1 0 R >>\n%%EOF');
+    ['RG e CPF', 'Comprovante de residência', 'Carteira de trabalho (CTPS)'].forEach((nome, k) => {
+      const item = itens.find(i => i.processo_id === id('proc', 2) && i.nome === nome)!;
+      const d = { id: id('doc', k + 1), cliente_id: id('cli', 3), processo_id: id('proc', 2), item_id: item.id, nome: `${nome.split(' ')[0].toLowerCase()}-${k + 1}.pdf`, mime: 'application/pdf', tamanho: pdf.length, sha256: null,
+        origem: (k === 1 ? 'link_cliente' : 'painel') as 'painel' | 'link_cliente', enviado_por: null, enviado_por_nome: k === 1 ? 'Cliente (link de envio)' : def.gerente.nome, conferido: k === 0, conferido_em: k === 0 ? agoraIso : null,
+        drive_status: 'desligado' as const, drive_link: null, drive_erro: null, created_at: agoraIso };
+      arquivos.push(d); conteudos[d.id] = pdf;
+      item.status = k === 0 ? 'conferido' : 'recebido'; item.recebido_em = agoraIso;
+    });
+  } else aplicar('Empresarial e tributário', 1, 1);
+  return { clientes, processos, movimentos, modelos, itens, arquivos, conteudos };
 }

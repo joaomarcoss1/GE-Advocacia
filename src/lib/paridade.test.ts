@@ -33,6 +33,7 @@ const config: Config = {
   ponto: { tolerancia_min: 5, limite_atraso_min: 30, geofence_ativo: false, geofence_lat: null, geofence_lng: null, geofence_raio_m: 300, geofence_endereco: '' },
   folha: { periodicidade: 'mensal', descontar_atrasos: false, hora_extra_pct: 50 },
   privacidade: { anexos_meses: 60, geolocalizacao_meses: 12 },
+  automacao: { tarefa_andamento: true, enviar_drive: true },
 };
 const func: Funcionario = {
   id: 'f1', nome: 'Teste', cpf: null, email: null, telefone: null, cargo_id: null, escala_id: 'e', vinculo: 'clt', salario_mensal: 2600,

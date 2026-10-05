@@ -63,6 +63,12 @@ export const ERRO_MSG: Record<string, string> = {
   CODIGO_EXISTE: 'Código de documento já utilizado.',
   ESCRITORIO_SUSPENSO: 'O acesso deste escritório está suspenso.',
   ACESSO_INATIVO: 'Este acesso está desativado. Fale com o administrador do escritório.',
+  PROCESSO_EXISTE: 'Este processo já está cadastrado no escritório.',
+  PROCESSO_COM_VINCULOS: 'Este processo tem tarefas ou documentos e não pode ser excluído. Mude a situação para "arquivado" ou "encerrado".',
+  CLIENTE_COM_VINCULOS: 'Este cliente tem processos ou documentos e não pode ser excluído. Desative o cadastro.',
+  CLIENTE_DIFERENTE: 'O processo pertence a outro cliente.',
+  ITEM_INVALIDO: 'Esse item da lista não pertence a este cliente/processo.',
+  DOCUMENTO_IMUTAVEL: 'Documentos recebidos não podem ser alterados; só conferidos ou excluídos.',
   DATAS_INVALIDAS: 'Confira as datas: prazos, audiências e reuniões exigem data, e o término não pode ser antes do início.',
   PROCESSO_INVALIDO: 'Número de processo inválido. Confira os 20 dígitos (formato CNJ: 0000000-00.0000.0.00.0000).',
   RESPONSAVEL_INVALIDO: 'O responsável precisa ser da equipe deste escritório.',
@@ -92,6 +98,7 @@ export function traduzirErroBanco(bruto: string | undefined | null): string {
   if (baixo.includes('could not find the function') || baixo.includes('schema cache') || (baixo.includes('does not exist') && (baixo.includes('relation') || baixo.includes('function')))) {
     return 'O banco precisa da atualização mais recente. Rode o arquivo atualizacao_definitiva.sql no SQL Editor do Supabase (uma vez) e tente de novo.';
   }
+  if (baixo.includes('processos_escritorio_id_numero_key')) return ERRO_MSG.PROCESSO_EXISTE;
   if (baixo.includes('tarefas_check')) return ERRO_MSG.DATAS_INVALIDAS;
   if (baixo.includes('row-level security')) return ERRO_MSG.SEM_PERMISSAO;
   if (baixo.includes('permission denied')) return ERRO_MSG.SEM_PERMISSAO;

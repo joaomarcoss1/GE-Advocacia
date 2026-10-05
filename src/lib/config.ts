@@ -15,6 +15,7 @@ export const CONFIG_PADRAO: Config = {
   folha: { periodicidade: 'mensal', descontar_atrasos: false, hora_extra_pct: 50 },
   // Prazos-padrão de guarda (CONFIRMAR COM O JURÍDICO/CONTABILIDADE de cada escritório)
   privacidade: { anexos_meses: 60, geolocalizacao_meses: 12 },
+  automacao: { tarefa_andamento: true, enviar_drive: true },
 };
 
 export function mesclarConfig(c: Partial<Config> | null | undefined): Config {
@@ -23,6 +24,7 @@ export function mesclarConfig(c: Partial<Config> | null | undefined): Config {
     ponto: { ...CONFIG_PADRAO.ponto, ...c?.ponto },
     folha: { ...CONFIG_PADRAO.folha, ...c?.folha },
     privacidade: { ...CONFIG_PADRAO.privacidade, ...c?.privacidade },
+    automacao: { ...CONFIG_PADRAO.automacao, ...c?.automacao },
   };
 }
 

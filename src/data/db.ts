@@ -2,6 +2,7 @@ import type {
   AcessoSensivel, AjusteDia, AjusteFolha, AnexoMeta, Auditoria, Cargo, Config, ConfigPonto, EscritorioInfo, EscritorioPlataforma, Escala, Feriado,
   Folha, Funcionario, FuncionarioBasico, Ocorrencia, Papel, PapelSessao, RegistroPonto, StatusAnalise, TipoMarcacao, TipoOcorrencia, Usuario,
   Andamento, GoogleStatus, StatusTarefa, SyncGoogle, Tarefa, TarefaFunc,
+  ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta, ResumoDocumentos,
 } from '@/lib/types';
 import type { PontoErro } from '@/lib/erros';
 
@@ -76,6 +77,54 @@ export interface ResumoExpurgo {
   regras: { anexos_meses: number; geolocalizacao_meses: number; tentativas_dias: number };
 }
 
+/** Processos: cadastro + acompanhamento dos andamentos (tribunal) + andamentos registrados à mão. */
+export interface ProcessosRepo extends Crud<Processo> {
+  /** Andamentos de um processo, do mais novo para o mais antigo. */
+  movimentos(processoId: string): Promise<Movimento[]>;
+  /** Andamentos ainda não lidos de todos os processos (a "caixa de entrada" do acompanhamento). */
+  naoLidos(): Promise<Movimento[]>;
+  /** Andamento registrado à mão (ex.: intimação recebida por e-mail ou pelo diário). A categoria define o prazo sugerido. */
+  registrarMovimento(processoId: string, m: { nome: string; complemento?: string; data_hora: string; categoria: Movimento['categoria'] }): Promise<Movimento>;
+  marcarLidos(processoId: string): Promise<void>;
+  /** Preenche o cadastro a partir do número (classe, assunto, órgão...). Null = não encontrado ou tribunal não consultável. */
+  buscar(numero: string): Promise<DadosConsultaProcesso | null>;
+  /** Consulta o tribunal agora e registra os andamentos novos (cria tarefa para os que exigem ação, se a automação estiver ligada). */
+  consultar(processoId: string): Promise<ResultadoConsulta>;
+  /** Mesma consulta para todos os processos monitorados do escritório. */
+  consultarTodos(): Promise<ResultadoConsulta>;
+  /** A fonte automática de andamentos está disponível nesta instalação? (No modo demonstração a consulta é simulada.) */
+  fonte(): Promise<{ disponivel: boolean; simulada: boolean }>;
+}
+
+export interface ArquivosRepo {
+  list(filtro?: { cliente_id?: string; processo_id?: string }): Promise<DocumentoArquivo[]>;
+  enviar(a: { cliente_id: string; processo_id?: string | null; item_id?: string | null; arquivo: ArquivoAnexo }): Promise<DocumentoArquivo>;
+  /** Abre o arquivo (URL assinada de 60 s ou blob local); cada abertura fica registrada. */
+  abrir(id: string): Promise<AnexoAberto>;
+  conferir(id: string, conferido: boolean): Promise<void>;
+  remover(id: string): Promise<void>;
+  resumo(): Promise<ResumoDocumentos>;
+  /** Link para o cliente enviar documentos sem login. O token só é devolvido nesta chamada. */
+  links: {
+    list(): Promise<LinkEnvio[]>;
+    criar(a: { cliente_id: string; processo_id?: string | null; dias?: number; rotulo?: string }): Promise<{ link: LinkEnvio; token: string }>;
+    revogar(id: string): Promise<void>;
+  };
+  /** Google Drive do escritório: pastas por cliente/processo, criadas e preenchidas sozinhas. */
+  drive: {
+    status(): Promise<DriveStatus>;
+    conectar(): Promise<string>;
+    desconectar(): Promise<void>;
+    /** Reenvia ao Drive o que ficou pendente ou com erro. */
+    sincronizar(): Promise<{ enviados: number; erros: number }>;
+  };
+  /** Página pública do cliente (sem login): confere o token e recebe os arquivos. */
+  publico: {
+    info(token: string): Promise<EnvioPublicoInfo | { ok: false; erro: string }>;
+    enviar(token: string, itemId: string | null, arquivo: ArquivoAnexo): Promise<{ ok: true } | { ok: false; erro: string }>;
+  };
+}
+
 export interface Db {
   modo: 'local' | 'supabase';
   /** Preparação assíncrona (dados de demonstração no modo local). */
@@ -108,6 +157,15 @@ export interface Db {
   auditoria: Crud<Auditoria>;
   /** Delegação: tarefas, prazos, audiências e reuniões do escritório (administrador, gerência e coordenação). */
   tarefas: Crud<Tarefa>;
+  clientes: Crud<Cliente>;
+  processos: ProcessosRepo;
+  checklist: {
+    modelos: Crud<ChecklistModelo>;
+    itens: Crud<ChecklistItem>;
+    /** Copia os itens do modelo para o processo (ou cliente), sem repetir os que já existem. Devolve quantos criou. */
+    aplicar(modeloId: string, alvo: { processo_id?: string | null; cliente_id?: string | null }): Promise<number>;
+  };
+  arquivos: ArquivosRepo;
   andamentos: { list(tarefaId: string): Promise<Andamento[]>; add(tarefaId: string, texto: string): Promise<void> };
   /** Google Agenda: cada pessoa conecta a própria conta; os compromissos vão para a agenda dela e os envolvidos recebem o convite. */
   google: {

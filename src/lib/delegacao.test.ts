@@ -8,7 +8,7 @@ import type { Tarefa } from './types';
 const base: Tarefa = {
   id: 't1', tipo: 'prazo', titulo: 'Contestação', descricao: 'Pedir, juntar; "documentos"\nsegunda linha', prioridade: 'alta', status: 'a_fazer', area: 'civel',
   processo_numero: '0001234-77.2024.8.26.0001', cliente: 'Beta Ltda', inicio: null, fim: null, dia_inteiro: false, prazo_fatal: true, lembrete_min: 60, local: 'Fórum, sala 3',
-  responsavel_id: null, revisor_id: null, participantes: [], criado_por: null, criado_por_nome: null, concluida_em: null, created_at: '', updated_at: '',
+  responsavel_id: null, revisor_id: null, participantes: [], processo_id: null, origem_movimento_id: null, criado_por: null, criado_por_nome: null, concluida_em: null, created_at: '', updated_at: '',
 };
 beforeEach(() => definirFuso('America/Fortaleza'));
 

@@ -10,9 +10,11 @@ import { base64ParaBlob } from '@/lib/anexos';
 import { mesclarConfig } from '@/lib/config';
 import { ErroNegocio, PONTO_ERRO_MSG, traduzirErroBanco, type PontoErro } from '@/lib/erros';
 import type {
-  AcessoSensivel, Andamento, AnexoMeta, Config, Escala, EscritorioPlataforma, Folha, FuncionarioBasico, GoogleStatus, SyncGoogle, Tarefa, Usuario,
+  AcessoSensivel, Andamento, AnexoMeta, ChecklistItem, ChecklistModelo, Cliente, Config, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, Escala, EscritorioPlataforma, Folha,
+  FuncionarioBasico, GoogleStatus, LinkEnvio, Movimento, Processo, ResultadoConsulta, SyncGoogle, Tarefa, Usuario,
 } from '@/lib/types';
-import type { AnexoAberto, ArquivoAnexo, Crud, Db, DocumentoVerificado, FolhasRepo, PeriodoFechado, PessoaPonto, PontoApi, PontoResp, ResumoExpurgo, Sessao } from './db';
+import { porCategoria } from '@/lib/processos';
+import type { AnexoAberto, ArquivoAnexo, ArquivosRepo, Crud, Db, ProcessosRepo, DocumentoVerificado, FolhasRepo, PeriodoFechado, PessoaPonto, PontoApi, PontoResp, ResumoExpurgo, Sessao } from './db';
 
 function falha(e: { message?: string } | null): never {
   throw new Error(traduzirErroBanco(e?.message));
@@ -124,6 +126,145 @@ export function criarDbSupabase(url: string, key: string): Db {
     return data as T;
   }
 
+  /** Campos que só o servidor preenche (o app nunca os envia). */
+  const semServidor = (extra: string[]) => <R extends object>(r: R): R => Object.fromEntries(Object.entries(r).filter(([k]) => !SO_SERVIDOR.has(k) && !extra.includes(k))) as R;
+  const limparCliente = semServidor(['drive_folder_id']);
+  const limparProcesso = semServidor(['drive_folder_id', 'ultima_consulta', 'ultima_consulta_erro', 'ultima_movimentacao_em']);
+  const clientesBase = crud<Cliente>('clientes', 'nome');
+  const clientes: Crud<Cliente> = { ...clientesBase, insert: r => clientesBase.insert(limparCliente(r)), update: (id, p) => clientesBase.update(id, limparCliente(p)) };
+  const processosBase = crud<Processo>('processos', 'numero');
+
+  /** Edge Function "processos": consulta ao tribunal (DataJud) e criação das tarefas, com a service_role só dentro dela. */
+  async function funcaoProcessos<T>(corpo: Record<string, unknown>): Promise<T> {
+    const { data, error } = await sb.functions.invoke('processos', { body: corpo });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
+      throw new Error(traduzirErroBanco(msg));
+    }
+    return data as T;
+  }
+  const processos: ProcessosRepo = {
+    ...processosBase,
+    insert: r => processosBase.insert(limparProcesso(r)),
+    update: (id, p) => processosBase.update(id, limparProcesso(p)),
+    async movimentos(id) {
+      const { data, error } = await sb.from('processo_movimentos').select('*').eq('processo_id', id).order('data_hora', { ascending: false }).order('created_at', { ascending: false }).limit(500);
+      if (error) falha(error);
+      return (data ?? []) as Movimento[];
+    },
+    async naoLidos() {
+      const { data, error } = await sb.from('processo_movimentos').select('*').eq('lido', false).order('data_hora', { ascending: false }).order('created_at', { ascending: false }).limit(500);
+      if (error) { if (funcaoAusente(error)) return []; falha(error); }
+      return (data ?? []) as Movimento[];
+    },
+    async registrarMovimento(id, m) {
+      const c = porCategoria(m.categoria);
+      const { data, error } = await sb.from('processo_movimentos').insert({
+        processo_id: id, nome: m.nome.trim(), complemento: m.complemento?.trim() || null, data_hora: m.data_hora, categoria: c.categoria, exige_acao: c.exige_acao,
+        prazo_sugerido_dias: c.prazo_sugerido_dias, lido: true, chave: '',
+      }).select().single();
+      if (error) falha(error);
+      return data as Movimento;
+    },
+    async marcarLidos(id) {
+      const { error } = await sb.from('processo_movimentos').update({ lido: true }).eq('processo_id', id).eq('lido', false);
+      if (error) falha(error);
+    },
+    async buscar(numero) { return (await funcaoProcessos<{ dados: DadosConsultaProcesso | null }>({ acao: 'buscar', numero })).dados; },
+    consultar: id => funcaoProcessos<ResultadoConsulta>({ acao: 'consultar', processo_id: id }),
+    consultarTodos: () => funcaoProcessos<ResultadoConsulta>({ acao: 'consultar_todos' }),
+    async fonte() {
+      try { const r = await funcaoProcessos<{ disponivel: boolean }>({ acao: 'fonte' }); return { disponivel: !!r.disponivel, simulada: false }; }
+      catch { return { disponivel: false, simulada: false }; }
+    },
+  };
+
+  const itensBase = crud<ChecklistItem>('checklist_itens', 'ordem');
+  const checklistItens: Crud<ChecklistItem> = { ...itensBase, insert: r => itensBase.insert(semServidor(['recebido_em'])(r)), update: (id, p) => itensBase.update(id, semServidor(['recebido_em'])(p)) };
+
+  /** Edge Function "documentos": envio ao Storage privado, abertura por URL assinada, Google Drive e página pública do cliente. */
+  async function funcaoDocumentos<T>(corpo: FormData | Record<string, unknown>): Promise<T> {
+    const { data, error } = await sb.functions.invoke('documentos', { body: corpo });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
+      throw new Error(traduzirErroBanco(msg));
+    }
+    return data as T;
+  }
+  const formArquivo = (campos: Record<string, string | null | undefined>, a: ArquivoAnexo) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(campos)) if (v) f.append(k, v);
+    f.append('nome', a.nome);
+    f.append('arquivo', base64ParaBlob(a.conteudo, a.mime), a.nome);
+    return f;
+  };
+  const COLS_DOC = 'id,cliente_id,processo_id,item_id,nome,mime,tamanho,sha256,origem,enviado_por_nome,conferido,conferido_em,drive_status,drive_link,drive_erro,created_at';
+  const arquivos: ArquivosRepo = {
+    async list(f) {
+      let q = sb.from('documentos').select(COLS_DOC).order('created_at', { ascending: false }).limit(1000);
+      if (f?.cliente_id) q = q.eq('cliente_id', f.cliente_id);
+      if (f?.processo_id) q = q.eq('processo_id', f.processo_id);
+      const { data, error } = await q;
+      if (error) { if (funcaoAusente(error)) return []; falha(error); }
+      return (data ?? []) as DocumentoArquivo[];
+    },
+    async enviar(x) {
+      const r = await funcaoDocumentos<{ documento: DocumentoArquivo }>(formArquivo({ acao: 'enviar', cliente_id: x.cliente_id, processo_id: x.processo_id, item_id: x.item_id }, x.arquivo));
+      return r.documento;
+    },
+    abrir: id => funcaoDocumentos<AnexoAberto>({ acao: 'abrir', id }),
+    async conferir(id, conferido) {
+      const { error } = await sb.from('documentos').update({ conferido }).eq('id', id);
+      if (error) falha(error);
+    },
+    async remover(id) {
+      const { error } = await sb.from('documentos').delete().eq('id', id);
+      if (error) falha(error);
+      try { await funcaoDocumentos({ acao: 'limpar' }); } catch { /* a limpeza roda de novo na próxima exclusão ou no agendamento */ }
+    },
+    async resumo() {
+      const { data, error } = await sb.rpc('documentos_resumo');
+      if (error) { if (funcaoAusente(error)) return { total: 0, sem_conferir: 0, drive_pendente: 0 }; falha(error); }
+      const r = (data ?? {}) as Partial<{ total: number; sem_conferir: number; drive_pendente: number }>;
+      return { total: Number(r.total ?? 0), sem_conferir: Number(r.sem_conferir ?? 0), drive_pendente: Number(r.drive_pendente ?? 0) };
+    },
+    links: {
+      async list() {
+        const { data, error } = await sb.from('documento_links').select('id,cliente_id,processo_id,rotulo,expira_em,ativo,max_arquivos,usos,ultimo_uso,created_at').order('created_at', { ascending: false }).limit(500);
+        if (error) { if (funcaoAusente(error)) return []; falha(error); }
+        return (data ?? []) as LinkEnvio[];
+      },
+      async criar(x) {
+        const r = await rpc<{ id: string; token: string }>('link_criar', { p_cliente: x.cliente_id, p_processo: x.processo_id ?? null, p_dias: x.dias ?? 14, p_rotulo: x.rotulo ?? null });
+        const { data, error } = await sb.from('documento_links').select('id,cliente_id,processo_id,rotulo,expira_em,ativo,max_arquivos,usos,ultimo_uso,created_at').eq('id', r.id).single();
+        if (error) falha(error);
+        return { link: data as LinkEnvio, token: r.token };
+      },
+      async revogar(id) { await rpc('link_revogar', { p_id: id }); },
+    },
+    drive: {
+      async status() {
+        const { data, error } = await sb.rpc('drive_status');
+        if (error) { if (funcaoAusente(error)) return { disponivel: false, conectado: false }; falha(error); }
+        const r = (data ?? {}) as { conectado?: boolean; email?: string | null };
+        return { disponivel: true, conectado: !!r.conectado, email: r.email ?? null } satisfies DriveStatus;
+      },
+      async conectar() { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_conectar', retorno: `${location.origin}/painel/configuracoes?aba=integracoes` })).url; },
+      async desconectar() { await rpc('drive_desconectar'); },
+      sincronizar: () => funcaoDocumentos<{ enviados: number; erros: number }>({ acao: 'drive_sincronizar' }),
+    },
+    publico: {
+      async info(token) {
+        try { return await funcaoDocumentos({ acao: 'publico_info', token }); } catch (e) { return { ok: false, erro: (e as Error).message }; }
+      },
+      async enviar(token, itemId, arquivo) {
+        try { return await funcaoDocumentos(formArquivo({ acao: 'publico_enviar', token, item_id: itemId }, arquivo)); } catch (e) { return { ok: false, erro: (e as Error).message }; }
+      },
+    },
+  };
+
   function pontoApi(slugBruto: string): PontoApi {
     const slug = (slugBruto ?? '').trim().toLowerCase();
     return {
@@ -203,6 +344,14 @@ export function criarDbSupabase(url: string, key: string): Db {
     },
     auditoria: crud('auditoria'),
     tarefas,
+    clientes,
+    processos,
+    checklist: {
+      modelos: crud<ChecklistModelo>('checklist_modelos', 'nome'),
+      itens: checklistItens,
+      aplicar: (modeloId, alvo) => rpc<number>('checklist_aplicar', { p_modelo: modeloId, p_processo: alvo.processo_id ?? null, p_cliente: alvo.cliente_id ?? null }),
+    },
+    arquivos,
     andamentos: {
       async list(tarefaId) {
         const { data, error } = await sb.from('tarefa_andamentos').select('id,tarefa_id,tipo,texto,autor_nome,created_at').eq('tarefa_id', tarefaId).order('created_at');

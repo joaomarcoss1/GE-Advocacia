@@ -39,5 +39,5 @@ export async function digitarPin(page: Page, pin: string) {
 /** Abre o app e espera os dados de demonstração nascerem (com o relógio atual) antes de o teste mexer na hora. */
 export async function semear(page: Page) {
   await page.goto('/');
-  await page.waitForFunction(() => localStorage.getItem('ge.v1.seeded') === 'v3');
+  await page.waitForFunction(() => localStorage.getItem('ge.v1.seeded') === 'v4');
 }

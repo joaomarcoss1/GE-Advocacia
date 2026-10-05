@@ -285,11 +285,19 @@ export interface ConfigPrivacidade {
   anexos_meses: number;
   geolocalizacao_meses: number;
 }
+/** Automações de processos e documentos (o administrador liga e desliga em Configurações). */
+export interface ConfigAutomacao {
+  /** Cada andamento que exige ação (sentença, intimação, citação...) vira uma tarefa para o responsável pelo processo. */
+  tarefa_andamento: boolean;
+  /** Documentos recebidos são enviados sozinhos para a pasta do cliente/processo no Google Drive do escritório. */
+  enviar_drive: boolean;
+}
 export interface Config {
   escritorio: ConfigEscritorio;
   ponto: ConfigPonto;
   folha: ConfigFolha;
   privacidade: ConfigPrivacidade;
+  automacao: ConfigAutomacao;
 }
 
 /** Escritório (cliente do GE Advocacia). Cada um tem dados, usuários e fuso próprios e isolados. */
@@ -355,6 +363,9 @@ export interface Tarefa {
   responsavel_id: string | null;
   revisor_id: string | null;
   participantes: string[];
+  /** Processo cadastrado a que a tarefa pertence (traz número, cliente e área) e o andamento que a originou, se foi criada sozinha. */
+  processo_id: string | null;
+  origem_movimento_id: string | null;
   criado_por: string | null;
   criado_por_nome: string | null;
   concluida_em: string | null;
@@ -376,3 +387,54 @@ export interface TarefaFunc extends Pick<Tarefa, 'id' | 'tipo' | 'titulo' | 'des
   papel: 'responsavel' | 'revisor' | 'participante';
   andamentos: { texto: string; autor: string; em: string; tipo: string }[];
 }
+
+// ---------------------------------------------------------------- clientes, processos e documentos
+export type TipoPessoa = 'pf' | 'pj';
+export interface Cliente {
+  id: string; nome: string; tipo: TipoPessoa; documento: string | null; email: string | null; telefone: string | null; observacoes: string | null;
+  ativo: boolean; drive_folder_id?: string | null; created_at: string; updated_at: string;
+}
+export type SituacaoProcesso = 'ativo' | 'suspenso' | 'arquivado' | 'encerrado';
+export type FaseProcesso = 'conhecimento' | 'recursal' | 'execucao' | 'encerramento';
+export type PoloProcesso = 'ativo' | 'passivo' | 'terceiro';
+export interface Processo {
+  id: string;
+  /** Número CNJ já normalizado (NNNNNNN-DD.AAAA.J.TR.OOOO). */
+  numero: string;
+  cliente_id: string | null; titulo: string | null; polo: PoloProcesso; parte_contraria: string | null; area: AreaJuridica | null;
+  classe: string | null; assunto: string | null; orgao_julgador: string | null; tribunal: string | null; grau: string | null;
+  data_ajuizamento: string | null; valor_causa: number | null; situacao: SituacaoProcesso; fase: FaseProcesso; responsavel_id: string | null;
+  monitorar: boolean; sigiloso: boolean; ultima_consulta: string | null; ultima_consulta_erro: string | null; ultima_movimentacao_em: string | null;
+  observacoes: string | null; created_at: string; updated_at: string;
+}
+export type CategoriaMovimento = 'sentenca' | 'decisao' | 'despacho' | 'intimacao' | 'citacao' | 'audiencia' | 'juntada' | 'peticao' | 'recurso' | 'transito' | 'arquivamento' | 'distribuicao' | 'conclusao' | 'outros';
+export interface Movimento {
+  id: string; processo_id: string; origem: 'datajud' | 'manual' | 'simulada'; codigo: number | null; nome: string; complemento: string | null; data_hora: string;
+  categoria: CategoriaMovimento; exige_acao: boolean; prazo_sugerido_dias: number | null; lido: boolean; tarefa_id: string | null; criado_por_nome: string | null; created_at: string;
+}
+export interface ChecklistModelo { id: string; nome: string; area: AreaJuridica | null; itens: { nome: string; obrigatorio?: boolean }[]; ativo: boolean; created_at: string }
+export type StatusItem = 'pendente' | 'recebido' | 'conferido' | 'dispensado';
+export interface ChecklistItem {
+  id: string; cliente_id: string | null; processo_id: string | null; nome: string; obrigatorio: boolean; status: StatusItem; observacao: string | null;
+  ordem: number; recebido_em: string | null; created_at: string;
+}
+export type StatusDrive = 'desligado' | 'pendente' | 'enviado' | 'erro';
+export interface DocumentoArquivo {
+  id: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; mime: string; tamanho: number; sha256: string | null;
+  origem: 'painel' | 'link_cliente'; enviado_por_nome: string | null; conferido: boolean; conferido_em: string | null;
+  drive_status: StatusDrive; drive_link: string | null; drive_erro: string | null; created_at: string;
+}
+export interface LinkEnvio {
+  id: string; cliente_id: string; processo_id: string | null; rotulo: string | null; expira_em: string; ativo: boolean; max_arquivos: number; usos: number; ultimo_uso: string | null; created_at: string;
+}
+export interface DriveStatus { disponivel: boolean; conectado: boolean; email?: string | null }
+export interface ResumoDocumentos { total: number; sem_conferir: number; drive_pendente: number }
+/** O que o cliente vê na página pública de envio (sem login): só a lista do que falta, nada dos demais documentos. */
+export interface EnvioPublicoInfo {
+  ok: true; escritorio: string; cliente: string; processo: string | null; expira_em: string; restantes: number;
+  itens: { id: string; nome: string; obrigatorio: boolean; status: StatusItem }[];
+}
+export interface DadosConsultaProcesso {
+  classe: string | null; assunto: string | null; orgao_julgador: string | null; tribunal: string | null; grau: string | null; data_ajuizamento: string | null; sigiloso: boolean;
+}
+export interface ResultadoConsulta { processos: number; novos: number; tarefas: number; erros: number; mensagem?: string }

@@ -43,7 +43,7 @@ select t.como((select v::uuid from t.ctx where k = 'adminA'));
 insert into public.processo_movimentos (id, processo_id, origem, nome, data_hora, categoria, exige_acao, prazo_sugerido_dias, tarefa_id)
   values ('00000000-0000-0000-0000-0000000a0001', '00000000-0000-0000-0000-0000000e0001', 'datajud', 'Intimação recebida por e-mail', now() - interval '1 day', 'intimacao', true, 15, gen_random_uuid());
 select t.ok((select origem from public.processo_movimentos where id = '00000000-0000-0000-0000-0000000a0001') = 'manual', 'o painel só registra andamento manual (não se passa por tribunal)');
-select t.ok((select tarefa_id is null and not lido from public.processo_movimentos where id = '00000000-0000-0000-0000-0000000a0001'), 'vínculo com tarefa não é forjável');
+select t.ok((select tarefa_id is null from public.processo_movimentos where id = '00000000-0000-0000-0000-0000000a0001'), 'vínculo com tarefa não é forjável');
 select t.falha($q$ update public.processo_movimentos set nome = 'editado' where id = '00000000-0000-0000-0000-0000000a0001' $q$, 'ANDAMENTO_IMUTAVEL', 'andamento não se edita');
 select t.sem_efeito($q$ delete from public.processo_movimentos where id = '00000000-0000-0000-0000-0000000a0001' $q$, 'andamento não se apaga pelo painel');
 update public.processo_movimentos set lido = true where id = '00000000-0000-0000-0000-0000000a0001';

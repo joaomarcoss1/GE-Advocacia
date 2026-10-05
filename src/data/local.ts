@@ -16,16 +16,20 @@ import { RETENCAO_TENTATIVAS_DIAS, SCHEMA_ESPERADO, periodoFechado, temHistorico
 import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
 import { base64ParaBlob } from '@/lib/anexos';
 import { normalizarCnj } from '@/lib/cnj';
+import { MAX_DOCUMENTO_DEMO, MODELOS_INICIAIS, mimeDoNome } from '@/lib/checklist';
+import { chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
 import { STATUS_ROTULO } from '@/lib/tarefas';
 import type {
   AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
+  ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta,
   Funcionario, Ocorrencia, Papel, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
 } from '@/lib/types';
 import type {
-  AnexarArgs, AnexoAberto, BaterArgs, Crud, Db, DocumentoVerificado, FolhasRepo, JustificarAusenciaArgs, JustificativaFunc, MarcacaoHistorico,
+  AnexarArgs, AnexoAberto, ArquivosRepo, BaterArgs, Crud, Db, DocumentoVerificado, FolhasRepo, ProcessosRepo, JustificarAusenciaArgs, JustificativaFunc, MarcacaoHistorico,
   PontoApi, PontoErro, ResumoExpurgo, RetroativoArgs, Sessao,
 } from './db';
 import { DEMO_ESCRITORIOS, DEMO_PLATAFORMA, baseEscritorioNovo, gerarSeedEscritorio, hashSecreto } from './seed';
+import { HISTORICO_SIMULADO, NOVOS_SIMULADOS } from './simulacao';
 
 const NS = 'ge.v1.';
 const K = { esc: `${NS}plataforma.escritorios`, plat: `${NS}plataforma.admins`, sessao: `${NS}sessao`, seeded: `${NS}seeded`, docs: `${NS}documentos` };
@@ -228,6 +232,14 @@ export function criarDbLocal(): Db {
       if ((op === 'upd' || op === 'del') && a.papel === 'coordenador' && velho?.criado_por !== a.sessao.id) throw erro('SEM_PERMISSAO');
       if (op === 'del' || !novo) return;
       novo.titulo = (novo.titulo ?? '').trim();
+      novo.processo_id = novo.processo_id ?? null; novo.origem_movimento_id = novo.origem_movimento_id ?? null;
+      if (novo.processo_id) {                                        // tarefa de processo cadastrado: número, cliente e área vêm do cadastro
+        const pr = lerTab<Processo>(a.slug, 'processos').find(x => x.id === novo.processo_id);
+        if (!pr) throw erro('PROCESSO_INVALIDO');
+        novo.processo_numero = pr.numero;
+        if (!novo.cliente && pr.cliente_id) novo.cliente = lerTab<Cliente>(a.slug, 'clientes').find(c => c.id === pr.cliente_id)?.nome ?? null;
+        novo.area = novo.area ?? pr.area;
+      }
       if (novo.titulo.length < 1 || novo.titulo.length > 200) throw erro('NOME_OBRIGATORIO', 'Informe o título (até 200 caracteres).');
       Object.assign(novo, {
         tipo: novo.tipo ?? 'tarefa', prioridade: novo.prioridade ?? 'normal', status: novo.status ?? 'a_fazer', descricao: novo.descricao?.trim() || null,
@@ -276,6 +288,370 @@ export function criarDbLocal(): Db {
     andamentos: andamentosDe(slug).filter(x => x.tarefa_id === t.id).sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 10)
       .map(x => ({ texto: x.texto, autor: x.autor_nome, em: x.created_at, tipo: x.tipo })),
   });
+
+  // ---------------------------------------------------------------- clientes, processos, documentos (espelha a migração 0007)
+  const GESTAO: Papel[] = ['admin', 'gerente'];
+  type MovimentoLocal = Movimento & { chave: string };
+  type ArquivoLocal = DocumentoArquivo & { enviado_por: string | null };
+  type LinkLocal = LinkEnvio & { token_hash: string };
+  type AcessoDoc = { id: string; documento_id: string; usuario: string; created_at: string };
+  const clientesDe = (slug: string) => lerTab<Cliente>(slug, 'clientes');
+  const processosDe = (slug: string) => lerTab<Processo>(slug, 'processos');
+  const movimentosDe = (slug: string) => lerTab<MovimentoLocal>(slug, 'movimentos');
+  const itensDe = (slug: string) => lerTab<ChecklistItem>(slug, 'checklist_itens');
+  const arquivosDe = (slug: string) => lerTab<ArquivoLocal>(slug, 'arquivos');
+  const linksDe = (slug: string) => lerTab<LinkLocal>(slug, 'links');
+  const semDados = <T extends object>(l: T): Omit<T, 'token_hash'> => { const { token_hash: _t, ...r } = l as T & { token_hash?: string }; return r as Omit<T, 'token_hash'>; };
+
+  const clientes = crud<Cliente>('clientes', {
+    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    antes(op, velho, novo, a) {
+      if (op === 'del') {
+        if (processosDe(a.slug).some(p => p.cliente_id === velho?.id) || arquivosDe(a.slug).some(d => d.cliente_id === velho?.id)) throw erro('CLIENTE_COM_VINCULOS');
+        return;
+      }
+      if (!novo) return;
+      novo.nome = (novo.nome ?? '').trim();
+      if (novo.nome.length < 2 || novo.nome.length > 200) throw erro('NOME_OBRIGATORIO');
+      Object.assign(novo, {
+        tipo: novo.tipo ?? 'pf', documento: (novo.documento ?? '').replace(/[^0-9A-Za-z]/g, '') || null, email: novo.email?.trim() || null, telefone: novo.telefone?.trim() || null,
+        observacoes: novo.observacoes?.trim() || null, ativo: novo.ativo ?? true, updated_at: agoraIso(), drive_folder_id: velho?.drive_folder_id ?? null,
+      });
+    },
+    depois(op, velho, novo, a) {
+      if (op === 'ins' && novo) auditarLocal(a, 'Criado · clientes', novo.nome, 'clientes', novo.id);
+      if (op === 'upd' && novo) auditarLocal(a, 'Alterado · clientes', novo.nome, 'clientes', novo.id);
+      if (op === 'del' && velho) auditarLocal(a, 'Excluído · clientes', velho.nome, 'clientes', velho.id);
+    },
+  });
+
+  const processosBase = crud<Processo>('processos', {
+    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    antes(op, velho, novo, a) {
+      if (op === 'del') {
+        if (lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.processo_id === velho?.id) || arquivosDe(a.slug).some(d => d.processo_id === velho?.id)) throw erro('PROCESSO_COM_VINCULOS');
+        return;
+      }
+      if (!novo) return;
+      const n = normalizarCnj(novo.numero);
+      if (!n) throw erro('PROCESSO_INVALIDO');
+      novo.numero = n;
+      if (processosDe(a.slug).some(p => p.id !== novo.id && p.numero === n)) throw erro('PROCESSO_EXISTE');
+      if (novo.cliente_id && !clientesDe(a.slug).some(c => c.id === novo.cliente_id)) throw erro('NAO_ENCONTRADO');
+      if (novo.responsavel_id && !lerTab<Funcionario>(a.slug, 'funcionarios').some(f => f.id === novo.responsavel_id)) throw erro('RESPONSAVEL_INVALIDO');
+      Object.assign(novo, {
+        cliente_id: novo.cliente_id ?? null, titulo: novo.titulo?.trim() || null, polo: novo.polo ?? 'ativo', parte_contraria: novo.parte_contraria?.trim() || null, area: novo.area ?? null,
+        classe: novo.classe ?? null, assunto: novo.assunto ?? null, orgao_julgador: novo.orgao_julgador ?? null, grau: novo.grau ?? null, data_ajuizamento: novo.data_ajuizamento ?? null,
+        tribunal: novo.tribunal ?? tribunalDeCnj(n)?.alias ?? null, valor_causa: novo.valor_causa ?? null, situacao: novo.situacao ?? 'ativo', fase: novo.fase ?? 'conhecimento',
+        responsavel_id: novo.responsavel_id ?? null, monitorar: novo.monitorar ?? true, sigiloso: !!novo.sigiloso, observacoes: novo.observacoes?.trim() || null, updated_at: agoraIso(),
+        // consulta ao tribunal é do servidor: o painel não altera
+        ultima_consulta: velho?.ultima_consulta ?? null, ultima_consulta_erro: velho?.ultima_consulta_erro ?? null, ultima_movimentacao_em: velho?.ultima_movimentacao_em ?? null,
+      });
+    },
+    depois(op, velho, novo, a) {
+      if (op === 'ins' && novo) auditarLocal(a, 'Criado · processos', novo.numero, 'processos', novo.id);
+      if (op === 'upd' && novo) auditarLocal(a, 'Alterado · processos', novo.numero, 'processos', novo.id);
+      if (op === 'del' && velho) {
+        gravarTab(a.slug, 'movimentos', movimentosDe(a.slug).filter(m => m.processo_id !== velho.id));
+        gravarTab(a.slug, 'checklist_itens', itensDe(a.slug).filter(i => i.processo_id !== velho.id));
+        gravarTab(a.slug, 'links', linksDe(a.slug).filter(l => l.processo_id !== velho.id));
+        auditarLocal(a, 'Excluído · processos', velho.numero, 'processos', velho.id);
+      }
+    },
+  });
+
+  /** Grava andamentos novos (sem repetir), classifica e cria a tarefa dos que exigem ação. Primeira leitura = "linha de base": o histórico entra como lido, sem tarefas. */
+  function ingerirMovimentos(a: Ator, proc: Processo, brutos: MovimentoBruto[], origem: Movimento['origem'], baseline: boolean): { novos: number; tarefas: number } {
+    const todos = movimentosDe(a.slug);
+    const chaves = new Set(todos.filter(m => m.processo_id === proc.id).map(m => m.chave));
+    const cfg = cfgDe(a.slug);
+    const feriados = new Set(lerTab<Feriado>(a.slug, 'feriados').map(f => f.data));
+    const cli = proc.cliente_id ? clientesDe(a.slug).find(c => c.id === proc.cliente_id)?.nome ?? null : null;
+    const tarefas = lerTab<Tarefa>(a.slug, 'tarefas');
+    let novos = 0, criadas = 0, ultima = proc.ultima_movimentacao_em;
+    for (const b of brutos) {
+      const chave = chaveMovimento(origem === 'simulada' ? 'sim' : 'dj', b);
+      if (chaves.has(chave)) continue;
+      chaves.add(chave);
+      const c: Classificacao = classificarMovimento(b);
+      const recente = Date.now() - Date.parse(b.dataHora) <= 7 * 86_400_000;
+      const m: MovimentoLocal = {
+        id: uuid(), processo_id: proc.id, origem, codigo: b.codigo ?? null, nome: b.nome, complemento: b.complemento ?? null, data_hora: b.dataHora, categoria: c.categoria,
+        exige_acao: c.exige_acao, prazo_sugerido_dias: c.prazo_sugerido_dias, lido: baseline && !(recente && c.exige_acao), tarefa_id: null, criado_por_nome: null, created_at: agoraIso(), chave,
+      };
+      if (cfg.automacao.tarefa_andamento && c.exige_acao && (!baseline || recente)) {
+        const sug = tarefaDoMovimento({ id: proc.id, numero: proc.numero, titulo: proc.titulo, cliente: cli, responsavel_id: proc.responsavel_id }, b, c, feriados);
+        const t: Tarefa = {
+          id: uuid(), ...sug, status: 'a_fazer', area: proc.area, inicio: null, fim: null, dia_inteiro: false, prazo_fatal: false, lembrete_min: 60, local: null, revisor_id: null,
+          participantes: [], origem_movimento_id: m.id, criado_por: null, criado_por_nome: 'Acompanhamento de processos', concluida_em: null, created_at: agoraIso(), updated_at: agoraIso(),
+        };
+        tarefas.push(t); m.tarefa_id = t.id; criadas++;
+      }
+      todos.push(m); novos++;
+      if (!ultima || b.dataHora > ultima) ultima = b.dataHora;
+    }
+    gravarTab(a.slug, 'movimentos', todos);
+    if (criadas) gravarTab(a.slug, 'tarefas', tarefas);
+    const procs = processosDe(a.slug);
+    const i = procs.findIndex(p => p.id === proc.id);
+    if (i >= 0) { procs[i] = { ...procs[i], ultima_consulta: agoraIso(), ultima_consulta_erro: null, ultima_movimentacao_em: ultima }; gravarTab(a.slug, 'processos', procs); }
+    return { novos, tarefas: criadas };
+  }
+  function consultarSimulado(a: Ator, proc: Processo): { novos: number; tarefas: number } {
+    const jaSimulados = movimentosDe(a.slug).filter(m => m.processo_id === proc.id && m.origem === 'simulada');
+    if (!proc.ultima_consulta) {
+      const hist = HISTORICO_SIMULADO.map(h => ({ nome: h.nome, complemento: h.complemento ?? null, dataHora: new Date(Date.now() + h.dias * 86_400_000).toISOString() }));
+      return ingerirMovimentos(a, proc, hist, 'simulada', true);
+    }
+    const prox = NOVOS_SIMULADOS[Math.max(0, jaSimulados.length - HISTORICO_SIMULADO.length) % NOVOS_SIMULADOS.length];
+    return ingerirMovimentos(a, proc, [{ nome: prox.nome, complemento: prox.complemento ?? null, dataHora: new Date().toISOString() }], 'simulada', false);
+  }
+
+  /** Data do andamento, do mais novo para o mais antigo; empate = o gravado depois vem primeiro. */
+  const maisNovosPrimeiro = <T extends { data_hora: string }>(l: T[]) => l.map((m, i) => ({ m, i })).sort((x, y) => y.m.data_hora.localeCompare(x.m.data_hora) || y.i - x.i).map(z => z.m);
+
+  const processos: ProcessosRepo = {
+    ...processosBase,
+    async movimentos(id) {
+      const a = tentaAtor();
+      return a && DELEGA.includes(a.papel) ? maisNovosPrimeiro(movimentosDe(a.slug).filter(m => m.processo_id === id)).map(({ chave: _c, ...m }) => m) : [];
+    },
+    async naoLidos() {
+      const a = tentaAtor();
+      return a && DELEGA.includes(a.papel) ? maisNovosPrimeiro(movimentosDe(a.slug).filter(m => !m.lido)).map(({ chave: _c, ...m }) => m) : [];
+    },
+    async registrarMovimento(id, m) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!processosDe(a.slug).some(p => p.id === id)) throw erro('NAO_ENCONTRADO');
+      const nome = m.nome.trim();
+      if (!nome || nome.length > 300 || !m.data_hora) throw erro('NOME_OBRIGATORIO');
+      const c = porCategoria(m.categoria);
+      const novo: MovimentoLocal = {
+        id: uuid(), processo_id: id, origem: 'manual', codigo: null, nome, complemento: m.complemento?.trim() || null, data_hora: m.data_hora, categoria: c.categoria,
+        exige_acao: c.exige_acao, prazo_sugerido_dias: c.prazo_sugerido_dias, lido: true, tarefa_id: null, criado_por_nome: a.sessao.nome, created_at: agoraIso(), chave: `m|${uuid()}`,
+      };
+      gravarTab(a.slug, 'movimentos', [...movimentosDe(a.slug), novo]);
+      const ps = processosDe(a.slug), i = ps.findIndex(p => p.id === id);
+      if (i >= 0 && (!ps[i].ultima_movimentacao_em || m.data_hora > ps[i].ultima_movimentacao_em!)) { ps[i] = { ...ps[i], ultima_movimentacao_em: m.data_hora }; gravarTab(a.slug, 'processos', ps); }
+      const { chave: _c, ...pub } = novo;
+      return pub;
+    },
+    async marcarLidos(id) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      gravarTab(a.slug, 'movimentos', movimentosDe(a.slug).map(m => (m.processo_id === id ? { ...m, lido: true } : m)));
+    },
+    async buscar(numero): Promise<DadosConsultaProcesso | null> {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const n = normalizarCnj(numero);
+      if (!n) throw erro('PROCESSO_INVALIDO');
+      const t = tribunalDeCnj(n);
+      if (!t) return null;
+      return { classe: 'Procedimento Comum Cível', assunto: 'Dados de demonstração', orgao_julgador: 'Vara simulada', tribunal: t.sigla, grau: 'G1', data_ajuizamento: null, sigiloso: false };
+    },
+    async consultar(id) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const p = processosDe(a.slug).find(x => x.id === id);
+      if (!p) throw erro('NAO_ENCONTRADO');
+      const r = consultarSimulado(a, p);
+      return { processos: 1, novos: r.novos, tarefas: r.tarefas, erros: 0, mensagem: 'Consulta simulada (demonstração).' };
+    },
+    async consultarTodos() {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      let novos = 0, tarefas = 0;
+      const alvo = processosDe(a.slug).filter(p => p.monitorar && p.situacao === 'ativo');
+      for (const p of alvo) { const r = consultarSimulado(a, p); novos += r.novos; tarefas += r.tarefas; }
+      return { processos: alvo.length, novos, tarefas, erros: 0, mensagem: 'Consulta simulada (demonstração).' } satisfies ResultadoConsulta;
+    },
+    async fonte() { return { disponivel: true, simulada: true }; },
+  };
+
+  // ---- checklist
+  const modelos = crud<ChecklistModelo>('checklist_modelos', {
+    le: DELEGA, ins: GESTAO, upd: GESTAO, del: GESTAO,
+    antes(op, _v, novo, a) {
+      if (op === 'del' || !novo) return;
+      novo.nome = (novo.nome ?? '').trim();
+      if (novo.nome.length < 2) throw erro('NOME_OBRIGATORIO');
+      if (lerTab<ChecklistModelo>(a.slug, 'checklist_modelos').some(m => m.id !== novo.id && m.nome.toLowerCase() === novo.nome.toLowerCase())) throw erro('NOME_EXISTE', 'Já existe um modelo com esse nome.');
+      novo.itens = (novo.itens ?? []).filter(i => i.nome?.trim()).slice(0, 80).map(i => ({ nome: i.nome.trim(), ...(i.obrigatorio === false ? { obrigatorio: false } : {}) }));
+      novo.ativo = novo.ativo ?? true; novo.area = novo.area ?? null;
+    },
+  });
+  const itens = crud<ChecklistItem>('checklist_itens', {
+    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    antes(op, velho, novo, a) {
+      if (op === 'del' || !novo) return;
+      novo.nome = (novo.nome ?? '').trim();
+      if (!novo.nome) throw erro('NOME_OBRIGATORIO');
+      if (novo.processo_id) {
+        const pr = processosDe(a.slug).find(p => p.id === novo.processo_id);
+        if (!pr) throw erro('NAO_ENCONTRADO');
+        novo.cliente_id = novo.cliente_id ?? pr.cliente_id;
+      }
+      if (!novo.cliente_id && !novo.processo_id) throw erro('NAO_ENCONTRADO');
+      Object.assign(novo, { obrigatorio: novo.obrigatorio ?? true, status: novo.status ?? 'pendente', observacao: novo.observacao ?? null, ordem: novo.ordem ?? 0, cliente_id: novo.cliente_id ?? null, processo_id: novo.processo_id ?? null });
+      if (novo.status === 'recebido' || novo.status === 'conferido') novo.recebido_em = velho?.recebido_em ?? agoraIso(); else novo.recebido_em = null;
+    },
+  });
+  const aplicarChecklist: Db['checklist']['aplicar'] = async (modeloId, alvo) => {
+    const a = ator();
+    if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+    const m = lerTab<ChecklistModelo>(a.slug, 'checklist_modelos').find(x => x.id === modeloId);
+    if (!m) throw erro('NAO_ENCONTRADO');
+    let clienteId = alvo.cliente_id ?? null;
+    const processoId = alvo.processo_id ?? null;
+    if (processoId) { const p = processosDe(a.slug).find(x => x.id === processoId); if (!p) throw erro('NAO_ENCONTRADO'); clienteId = p.cliente_id; }
+    else if (!clienteId || !clientesDe(a.slug).some(c => c.id === clienteId)) throw erro('NAO_ENCONTRADO');
+    const todos = itensDe(a.slug);
+    const doDossie = todos.filter(i => (processoId ? i.processo_id === processoId : !i.processo_id && i.cliente_id === clienteId));
+    let ordem = Math.max(0, ...doDossie.map(i => i.ordem));
+    let n = 0;
+    for (const it of m.itens) {
+      if (doDossie.some(x => x.nome.toLowerCase() === it.nome.toLowerCase())) continue;
+      todos.push({ id: uuid(), cliente_id: clienteId, processo_id: processoId, nome: it.nome, obrigatorio: it.obrigatorio !== false, status: 'pendente', observacao: null, ordem: ++ordem, recebido_em: null, created_at: agoraIso() });
+      n++;
+    }
+    gravarTab(a.slug, 'checklist_itens', todos);
+    return n;
+  };
+
+  // ---- arquivos (documentos dos clientes)
+  const conteudoDe = (slug: string, id: string) => lerJson<Record<string, string>>(kt(slug, 'arquivos_conteudo'), {})[id];
+  function guardarArquivo(slug: string, quem: { id: string | null; nome: string }, origem: DocumentoArquivo['origem'], x: { cliente_id: string; processo_id?: string | null; item_id?: string | null; arquivo: { nome: string; mime: string; tamanho: number; conteudo: string } }): DocumentoArquivo {
+    const { cliente_id, arquivo } = x;
+    const processo_id = x.processo_id ?? null, item_id = x.item_id ?? null;
+    if (!clientesDe(slug).some(c => c.id === cliente_id)) throw erro('NAO_ENCONTRADO');
+    const proc = processo_id ? processosDe(slug).find(p => p.id === processo_id) : null;
+    if (processo_id && (!proc || (proc.cliente_id && proc.cliente_id !== cliente_id))) throw erro('CLIENTE_DIFERENTE');
+    const item = item_id ? itensDe(slug).find(i => i.id === item_id) : null;
+    if (item_id && (!item || !(item.processo_id === processo_id || (!item.processo_id && item.cliente_id === cliente_id)))) throw erro('ITEM_INVALIDO');
+    const mime = mimeDoNome(arquivo.nome);
+    if (!mime || mime !== arquivo.mime && !arquivo.mime.startsWith('image/') || arquivo.conteudo.length < 20) throw erro('ARQUIVO_INVALIDO', 'Tipo de arquivo não aceito. Envie PDF, imagem ou documento do Office.');
+    if (arquivo.tamanho > MAX_DOCUMENTO_DEMO) throw erro('ARQUIVO_INVALIDO', 'No modo demonstração o limite é de 1,5 MB por arquivo (o navegador guarda pouco). No sistema real o limite é de 20 MB.');
+    const doc: ArquivoLocal = {
+      id: uuid(), cliente_id, processo_id, item_id, nome: arquivo.nome.slice(0, 200), mime, tamanho: arquivo.tamanho, sha256: null, origem, enviado_por: quem.id, enviado_por_nome: quem.nome,
+      conferido: false, conferido_em: null, drive_status: 'desligado', drive_link: null, drive_erro: null, created_at: agoraIso(),
+    };
+    const cont = lerJson<Record<string, string>>(kt(slug, 'arquivos_conteudo'), {});
+    cont[doc.id] = arquivo.conteudo;
+    try { gravarJson(kt(slug, 'arquivos_conteudo'), cont); } catch { throw erro('ARQUIVO_INVALIDO', 'Sem espaço no navegador (modo demonstração).'); }
+    gravarTab(slug, 'arquivos', [...arquivosDe(slug), doc]);
+    if (item_id) gravarTab(slug, 'checklist_itens', itensDe(slug).map(i => (i.id === item_id && i.status === 'pendente' ? { ...i, status: 'recebido' as const, recebido_em: agoraIso() } : i)));
+    return doc;
+  }
+  const arquivos: ArquivosRepo = {
+    async list(f) {
+      const a = tentaAtor();
+      if (!a || !DELEGA.includes(a.papel)) return [];
+      return arquivosDe(a.slug).filter(d => (!f?.cliente_id || d.cliente_id === f.cliente_id) && (!f?.processo_id || d.processo_id === f.processo_id)).sort((x, y) => y.created_at.localeCompare(x.created_at)).map(({ enviado_por: _e, ...d }) => d);
+    },
+    async enviar(x) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const { enviado_por: _e, ...d } = guardarArquivo(a.slug, { id: a.sessao.id, nome: a.sessao.nome }, 'painel', x) as ArquivoLocal;
+      auditarLocal(a, 'Documento recebido', d.nome, 'documentos', d.id);
+      return d;
+    },
+    async abrir(id) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const d = arquivosDe(a.slug).find(x => x.id === id), c = conteudoDe(a.slug, id);
+      if (!d || !c) throw erro('NAO_ENCONTRADO');
+      gravarTab(a.slug, 'arquivos_acessos', [...lerTab<AcessoDoc>(a.slug, 'arquivos_acessos'), { id: uuid(), documento_id: id, usuario: `${a.sessao.nome} <${a.sessao.email}>`, created_at: agoraIso() }]);
+      const url = URL.createObjectURL(base64ParaBlob(c, d.mime));
+      return { nome: d.nome, mime: d.mime, url, revogar: () => URL.revokeObjectURL(url) };
+    },
+    async conferir(id, conferido) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).map(d => (d.id === id ? { ...d, conferido, conferido_em: conferido ? agoraIso() : null } : d)));
+    },
+    async remover(id) {
+      const a = ator();
+      if (!GESTAO.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const d = arquivosDe(a.slug).find(x => x.id === id);
+      if (!d) return;
+      gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).filter(x => x.id !== id));
+      const cont = lerJson<Record<string, string>>(kt(a.slug, 'arquivos_conteudo'), {}); delete cont[id]; gravarJson(kt(a.slug, 'arquivos_conteudo'), cont);
+      if (d.item_id && !arquivosDe(a.slug).some(x => x.item_id === d.item_id)) gravarTab(a.slug, 'checklist_itens', itensDe(a.slug).map(i => (i.id === d.item_id && (i.status === 'recebido' || i.status === 'conferido') ? { ...i, status: 'pendente' as const, recebido_em: null } : i)));
+      auditarLocal(a, 'Excluído · documentos', d.nome, 'documentos', d.id);
+    },
+    async resumo() {
+      const a = tentaAtor();
+      const ds = a && DELEGA.includes(a.papel) ? arquivosDe(a.slug) : [];
+      return { total: ds.length, sem_conferir: ds.filter(d => !d.conferido).length, drive_pendente: ds.filter(d => d.drive_status === 'pendente' || d.drive_status === 'erro').length };
+    },
+    links: {
+      async list() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? linksDe(a.slug).map(semDados) : []; },
+      async criar(x) {
+        const a = ator();
+        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+        if (!clientesDe(a.slug).some(c => c.id === x.cliente_id)) throw erro('NAO_ENCONTRADO');
+        if (x.processo_id && !processosDe(a.slug).some(p => p.id === x.processo_id && p.cliente_id === x.cliente_id)) throw erro('NAO_ENCONTRADO');
+        const bytes = new Uint8Array(24); crypto.getRandomValues(bytes);
+        const token = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        const link: LinkLocal = {
+          id: uuid(), cliente_id: x.cliente_id, processo_id: x.processo_id ?? null, rotulo: x.rotulo?.slice(0, 120) ?? null, ativo: true, max_arquivos: 40, usos: 0, ultimo_uso: null,
+          expira_em: new Date(Date.now() + Math.max(1, Math.min(60, x.dias ?? 14)) * 86_400_000).toISOString(), created_at: agoraIso(), token_hash: await hashSecreto('link', token),
+        };
+        gravarTab(a.slug, 'links', [...linksDe(a.slug), link]);
+        return { link: semDados(link), token };
+      },
+      async revogar(id) {
+        const a = ator();
+        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+        if (!linksDe(a.slug).some(l => l.id === id)) throw erro('NAO_ENCONTRADO');
+        gravarTab(a.slug, 'links', linksDe(a.slug).map(l => (l.id === id ? { ...l, ativo: false } : l)));
+      },
+    },
+    // O Drive depende do servidor (OAuth e tokens): na demonstração fica indisponível; os arquivos ficam organizados por cliente e processo no sistema.
+    drive: {
+      async status() { return { disponivel: false, conectado: false }; },
+      async conectar(): Promise<string> { throw erro('GOOGLE_INDISPONIVEL'); },
+      async desconectar() { /* nada a desconectar */ },
+      async sincronizar() { return { enviados: 0, erros: 0 }; },
+    },
+    publico: {
+      async info(token) {
+        const r = await acharLink(token);
+        if ('erro' in r) return { ok: false, erro: r.erro };
+        const { e, l } = r;
+        const cli = clientesDe(e.slug).find(c => c.id === l.cliente_id);
+        const proc = l.processo_id ? processosDe(e.slug).find(p => p.id === l.processo_id) : null;
+        const lista = itensDe(e.slug).filter(i => i.status !== 'dispensado' && (l.processo_id ? i.processo_id === l.processo_id : !i.processo_id && i.cliente_id === l.cliente_id));
+        return { ok: true, escritorio: e.nome, cliente: cli?.nome ?? '', processo: proc?.numero ?? null, expira_em: l.expira_em, restantes: Math.max(0, l.max_arquivos - l.usos),
+          itens: lista.sort((x, y) => x.ordem - y.ordem).map(i => ({ id: i.id, nome: i.nome, obrigatorio: i.obrigatorio, status: i.status })) } satisfies EnvioPublicoInfo;
+      },
+      async enviar(token, itemId, arquivo) {
+        const r = await acharLink(token);
+        if ('erro' in r) return { ok: false, erro: r.erro };
+        const { e, l } = r;
+        if (l.usos >= l.max_arquivos) return { ok: false, erro: 'Limite de arquivos deste link atingido. Peça um novo link ao escritório.' };
+        if (itemId && !itensDe(e.slug).some(i => i.id === itemId && (l.processo_id ? i.processo_id === l.processo_id : !i.processo_id && i.cliente_id === l.cliente_id))) return { ok: false, erro: 'Item não encontrado.' };
+        try { guardarArquivo(e.slug, { id: null, nome: 'Cliente (link de envio)' }, 'link_cliente', { cliente_id: l.cliente_id, processo_id: l.processo_id, item_id: itemId, arquivo }); }
+        catch (x) { return { ok: false, erro: (x as Error).message }; }
+        gravarTab(e.slug, 'links', linksDe(e.slug).map(z => (z.id === l.id ? { ...z, usos: z.usos + 1, ultimo_uso: agoraIso() } : z)));
+        return { ok: true };
+      },
+    },
+  };
+  /** Localiza o link pelo HASH do token (o token em si nunca é guardado) e confere validade. */
+  async function acharLink(token: string): Promise<{ e: EscritorioLocal; l: LinkLocal } | { erro: string }> {
+    const h = await hashSecreto('link', (token ?? '').trim());
+    for (const e of escritorios()) {
+      const l = linksDe(e.slug).find(x => x.token_hash === h);
+      if (!l) continue;
+      if (!e.ativo) return { erro: 'Este endereço está indisponível.' };
+      if (!l.ativo || Date.parse(l.expira_em) < Date.now()) return { erro: 'Este link expirou ou foi cancelado. Peça um novo ao escritório.' };
+      return { e, l };
+    }
+    return { erro: 'Link inválido. Confira o endereço recebido do escritório.' };
+  }
 
   const folhasBase = crud<Folha>('folhas', {
     le: ['admin'], ins: ['admin'], upd: ['admin'], del: ['admin'],
@@ -526,9 +902,11 @@ export function criarDbLocal(): Db {
     };
   }
 
+  const modelosIniciais = (): ChecklistModelo[] => MODELOS_INICIAIS.map(m => ({ id: uuid(), nome: m.nome, area: m.area, itens: m.itens, ativo: true, created_at: agoraIso() }));
+
   // ---------------------------------------------------------------- inicialização (dados de demonstração)
   const init = async () => {
-    if (ls().getItem(K.seeded) === 'v3') return;
+    if (ls().getItem(K.seeded) === 'v4') return;
     const esc: EscritorioLocal[] = [];
     for (const def of DEMO_ESCRITORIOS) {
       const e: EscritorioLocal = { id: `esc-${def.slug}`, nome: def.nome, slug: def.slug, ativo: true, fuso: def.fuso, created_at: agoraIso() };
@@ -539,11 +917,14 @@ export function criarDbLocal(): Db {
       gravarTab(e.slug, 'ajustes', s.ajustes); gravarTab(e.slug, 'folhas', s.folhas); gravarTab(e.slug, 'usuarios', s.usuarios);
       gravarJson(kt(e.slug, 'config'), s.config);
       gravarTab(e.slug, 'tarefas', s.tarefas); gravarTab(e.slug, 'andamentos', s.andamentos);
+      gravarTab(e.slug, 'clientes', s.clientes); gravarTab(e.slug, 'processos', s.processos); gravarTab(e.slug, 'movimentos', s.movimentos);
+      gravarTab(e.slug, 'checklist_modelos', s.modelos); gravarTab(e.slug, 'checklist_itens', s.itens); gravarTab(e.slug, 'arquivos', s.arquivos);
+      gravarJson(kt(e.slug, 'arquivos_conteudo'), s.conteudos);
     }
     gravarJson(K.esc, esc);
     gravarJson(K.plat, [{ id: 'plat-1', email: DEMO_PLATAFORMA.email, nome: DEMO_PLATAFORMA.nome, papel: 'admin', ativo: true, senha_hash: await hashSecreto(DEMO_PLATAFORMA.email, DEMO_PLATAFORMA.senha) }]);
     definirFuso('America/Fortaleza');
-    ls().setItem(K.seeded, 'v3');
+    ls().setItem(K.seeded, 'v4');
   };
 
   // ---------------------------------------------------------------- Db
@@ -610,6 +991,10 @@ export function criarDbLocal(): Db {
       },
     },
     tarefas,
+    clientes,
+    processos,
+    checklist: { modelos, itens, aplicar: aplicarChecklist },
+    arquivos,
     andamentos: {
       async list(tarefaId) { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? andamentosDe(a.slug).filter(x => x.tarefa_id === tarefaId).sort((x, y) => x.created_at.localeCompare(y.created_at)) : []; },
       async add(tarefaId, texto) {
@@ -765,7 +1150,8 @@ export function criarDbLocal(): Db {
         definirFuso(e.fuso);
         const modelo = baseEscritorioNovo();
         gravarTab(slug, 'cargos', modelo.cargos); gravarTab(slug, 'escalas', modelo.escalas);
-        for (const t of ['funcionarios', 'registros', 'ocorrencias', 'ajustes', 'ajustes_dia', 'folhas', 'auditoria', 'anexos', 'tarefas', 'andamentos']) gravarTab(slug, t, []);
+        for (const t of ['funcionarios', 'registros', 'ocorrencias', 'ajustes', 'ajustes_dia', 'folhas', 'auditoria', 'anexos', 'tarefas', 'andamentos', 'clientes', 'processos', 'movimentos', 'checklist_itens', 'arquivos', 'links']) gravarTab(slug, t, []);
+        gravarTab(slug, 'checklist_modelos', modelosIniciais());
         gravarTab(slug, 'feriados', modelo.feriados);
         gravarJson(kt(slug, 'config'), mesclarConfig({ escritorio: { ...CONFIG_PADRAO.escritorio, nome: e.nome } }));
         gravarTab(slug, 'usuarios', [{ id: uuid(), nome: x.adminNome.trim(), email, papel: 'admin', ativo: true, senha_hash: await hashSecreto(email, x.adminSenha) }]);
@@ -814,7 +1200,7 @@ export function criarDbLocal(): Db {
         exigePlataforma();
         const e = escritorios().find(z => z.id === escritorioId);
         if (!e) throw erro('NAO_ENCONTRADO');
-        if (lerTab<Funcionario>(e.slug, 'funcionarios').length) throw erro('ESCRITORIO_COM_DADOS');
+        if (lerTab<Funcionario>(e.slug, 'funcionarios').length || clientesDe(e.slug).length || processosDe(e.slug).length) throw erro('ESCRITORIO_COM_DADOS');
         for (const k of Object.keys(ls()).filter(k => k.startsWith(kt(e.slug, '')))) ls().removeItem(k);
         gravarJson(K.esc, escritorios().filter(z => z.id !== escritorioId));
       },
