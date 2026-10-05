@@ -10,7 +10,7 @@ const gravar = (k: string, v: string) => { try { localStorage.setItem(k, v); } c
 export function aplicarTema(t: Tema) {
   const escuro = t === 'escuro' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', escuro ? 'dark' : 'light');
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b111b' : '#0f1c2e');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b111b' : '#f7f4ec');
 }
 export function aplicarDensidade(d: Densidade) {
   if (d === 'compacta') document.documentElement.setAttribute('data-densidade', 'compacta');
@@ -18,7 +18,7 @@ export function aplicarDensidade(d: Densidade) {
 }
 
 export function useAparencia() {
-  const [tema, setTemaS] = useState<Tema>(() => (ler(K_TEMA) as Tema) || 'auto');
+  const [tema, setTemaS] = useState<Tema>(() => (ler(K_TEMA) as Tema) || 'claro');
   const [densidade, setDensS] = useState<Densidade>(() => (ler(K_DENS) as Densidade) || 'confortavel');
   const setTema = useCallback((t: Tema) => { gravar(K_TEMA, t); setTemaS(t); aplicarTema(t); }, []);
   const setDensidade = useCallback((d: Densidade) => { gravar(K_DENS, d); setDensS(d); aplicarDensidade(d); }, []);

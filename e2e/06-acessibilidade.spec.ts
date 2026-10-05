@@ -35,6 +35,7 @@ for (const tema of ['light', 'dark'] as const) {
       test.beforeEach(async ({ page }) => {
         await page.setViewportSize({ width: tela.largura, height: tela.altura });
         await page.emulateMedia({ colorScheme: tema, reducedMotion: 'reduce' });
+        await page.addInitScript(t => { try { localStorage.setItem('ge.tema', t === 'dark' ? 'escuro' : 'claro'); } catch { /* sem armazenamento */ } }, tema);
         await relogio(page, '09:00');
         await semear(page);
       });

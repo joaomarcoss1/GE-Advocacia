@@ -2,11 +2,11 @@
 (function () {
   try {
     var d = document.documentElement;
-    var t = localStorage.getItem('ge.tema') || 'auto';
+    var t = localStorage.getItem('ge.tema') || 'claro';       // padrão: claro (o escuro e o automático são escolha da pessoa)
     var escuro = t === 'escuro' || (t === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     d.setAttribute('data-theme', escuro ? 'dark' : 'light');
     if (localStorage.getItem('ge.densidade') === 'compacta') d.setAttribute('data-densidade', 'compacta');
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m && escuro) m.setAttribute('content', '#0b111b');
+    if (m) m.setAttribute('content', escuro ? '#0b111b' : '#f7f4ec');
   } catch (e) { /* segue com o padrão claro */ }
 })();

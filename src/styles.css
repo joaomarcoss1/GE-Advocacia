@@ -811,63 +811,7 @@ button.doc-nome:focus-visible { outline: 2px solid var(--brass); outline-offset:
 .mono { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 @media (max-width: 720px) { .doc { padding-left: 4px; } .doc-acoes, .item-acoes { margin-left: 0; } }
 
-/* ---------- Identidade: arte do painel azul e crédito ---------- */
-.stage { background:
-  radial-gradient(760px 520px at 14% 6%, rgb(46 98 172 / 52%), transparent 68%),
-  radial-gradient(620px 460px at 92% 96%, rgb(214 168 82 / 15%), transparent 70%),
-  linear-gradient(162deg, #0f2a52 0%, #0a1b38 46%, #060f20 100%); }
-.stage-arte { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; color: var(--brass-light); contain: strict; }
-.arte-grade { position: absolute; inset: 0; background-image: radial-gradient(circle, rgb(230 205 156 / 30%) 1px, transparent 1.3px); background-size: 30px 30px;
-  -webkit-mask-image: radial-gradient(ellipse 62% 56% at 50% 46%, #000 12%, transparent 75%); mask-image: radial-gradient(ellipse 62% 56% at 50% 46%, #000 12%, transparent 75%); opacity: .5; }
-.arte-feixe { position: absolute; left: 50%; top: 46%; width: 150%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; opacity: .8;
-  background: conic-gradient(from 0deg, transparent 0 18deg, rgb(246 207 110 / 11%) 38deg, transparent 66deg 176deg, rgb(120 168 255 / 10%) 200deg, transparent 232deg);
-  -webkit-mask-image: radial-gradient(circle, #000 0, transparent 58%); mask-image: radial-gradient(circle, #000 0, transparent 58%); animation: gira 70s linear infinite; }
-@keyframes gira { to { rotate: 360deg; } }
-.arte-palco { position: absolute; left: 50%; top: 46%; width: min(72%, 64vh, 560px); aspect-ratio: 1; translate: -50% -50%; container-type: inline-size; }
-.arte-aura { position: absolute; inset: 12%; border-radius: 50%; background: radial-gradient(circle, rgb(246 207 110 / 26%), rgb(246 207 110 / 7%) 48%, transparent 70%); animation: aura 9s ease-in-out infinite alternate; }
-@keyframes aura { from { opacity: .55; scale: .94; } to { opacity: 1; scale: 1.06; } }
-.arte-bezel { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; stroke: rgb(230 205 156 / 55%); animation: gira 220s linear infinite; }
-.arte-bezel line:nth-of-type(5n+1) { stroke: rgb(246 207 110 / 85%); }
-.arte-ge { position: absolute; inset: 15%; width: 70%; height: 70%; color: var(--brass-light); opacity: .85; }
-.arte-ge path { stroke-dasharray: 1; stroke-dashoffset: 0; animation: traco-ge 3.2s .2s var(--ease) both; }
-.arte-ge path:nth-child(2) { animation-delay: .6s; } .arte-ge path:nth-child(3) { animation-delay: 1s; } .arte-ge path:nth-child(4) { animation-delay: 1.4s; } .arte-ge path:nth-child(5) { animation-delay: 1.8s; }
-@keyframes traco-ge { from { stroke-dashoffset: 1; } }
-.arte-aneis i { position: absolute; left: 50%; top: 50%; aspect-ratio: 1; border-radius: 50%; border: 1px solid rgb(230 205 156 / 14%); translate: -50% -50%; animation: respira 16s ease-in-out infinite alternate; }
-.arte-aneis i:nth-child(1) { width: 76%; } .arte-aneis i:nth-child(2) { width: 118%; border-color: rgb(230 205 156 / 8%); animation-delay: -7s; }
-@keyframes respira { to { scale: 1.035; } }
-/* satélites temáticos: balança, fórum, martelo e livro, em pequenas peças de vidro que flutuam */
-.arte-sat { position: absolute; width: 13cqw; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; color: var(--brass-light);
-  background: linear-gradient(145deg, rgb(255 255 255 / 12%), rgb(255 255 255 / 3%)); border: 1px solid rgb(230 205 156 / 38%); box-shadow: 0 10px 30px -10px rgb(0 0 0 / 55%), inset 0 1px 0 rgb(255 255 255 / 18%);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); animation: flutua 8s ease-in-out infinite alternate; }
-.arte-sat svg { width: 46%; height: 46%; }
-.arte-sat.a { left: 2%; top: 14%; } .arte-sat.b { right: 0; top: 24%; animation-delay: -2s; } .arte-sat.c { left: -3%; bottom: 20%; animation-delay: -4s; } .arte-sat.d { right: 3%; bottom: 10%; animation-delay: -6s; }
-@keyframes flutua { from { translate: 0 -5px; } to { translate: 0 6px; } }
-/* pontos de luz */
-.arte-particulas i { position: absolute; left: var(--x); top: var(--y); width: var(--s); height: var(--s); border-radius: 50%; background: var(--brass-light); box-shadow: 0 0 10px 1px rgb(246 207 110 / 70%); opacity: 0; animation: brilha var(--d) ease-in-out var(--t) infinite; }
-@keyframes brilha { 0%, 100% { opacity: 0; translate: 0 6px; } 50% { opacity: .85; translate: 0 -10px; } }
-/* cantos e fio central */
-.arte-cantos i { position: absolute; width: 30px; height: 30px; border: 0 solid rgb(230 205 156 / 40%); }
-.arte-cantos i:nth-child(1) { left: 22px; top: 22px; border-width: 1px 0 0 1px; } .arte-cantos i:nth-child(2) { right: 22px; top: 22px; border-width: 1px 1px 0 0; }
-.arte-cantos i:nth-child(3) { left: 22px; bottom: 22px; border-width: 0 0 1px 1px; } .arte-cantos i:nth-child(4) { right: 22px; bottom: 22px; border-width: 0 1px 1px 0; }
-.arte-fio { position: absolute; left: 50%; top: 0; height: 9%; width: 1px; background: linear-gradient(to bottom, transparent, rgb(230 205 156 / 55%)); }
-.arte-fio i { position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; rotate: 45deg; border: 1px solid rgb(246 207 110 / 90%); background: #0a1b38; }
-.arte-colunas { position: absolute; left: 7%; right: 7%; bottom: 0; height: 30%; display: flex; justify-content: space-between; border-bottom: 1px solid rgb(230 205 156 / 20%); }
-.arte-colunas i { width: 1px; height: 100%; background: linear-gradient(to top, rgb(230 205 156 / 30%), transparent); transform-origin: bottom; animation: coluna 1.4s var(--ease) both; }
-.arte-colunas i:nth-child(1) { animation-delay: .05s; } .arte-colunas i:nth-child(2) { animation-delay: .12s; } .arte-colunas i:nth-child(3) { animation-delay: .19s; }
-.arte-colunas i:nth-child(4) { animation-delay: .26s; } .arte-colunas i:nth-child(5) { animation-delay: .33s; } .arte-colunas i:nth-child(6) { animation-delay: .4s; }
-.arte-colunas i:nth-child(7) { animation-delay: .47s; } .arte-colunas i:nth-child(8) { animation-delay: .54s; } .arte-colunas i:nth-child(9) { animation-delay: .61s; }
-@keyframes coluna { from { transform: scaleY(0); opacity: 0; } }
-/* com o relógio do ponto por cima, o bisel vira o mostrador e o resto recua */
-.stage.com-conteudo .arte-palco { top: 47%; width: min(138%, 96vh, 880px); }
-.stage.com-conteudo .arte-bezel { opacity: .7; }
-.stage.com-conteudo .arte-ge, .stage.com-conteudo .arte-sat, .stage.com-conteudo .arte-aneis { display: none; }
-.stage.com-conteudo .arte-aura { inset: 18%; }
-.stage.com-conteudo .arte-colunas { opacity: .5; }
-@media (prefers-reduced-motion: reduce) {
-  .arte-feixe, .arte-bezel, .arte-aura, .arte-aneis i, .arte-sat, .arte-particulas i, .arte-ge path, .arte-colunas i { animation: none; }
-  .arte-particulas i { opacity: .5; }
-}
-
+/* (arte do painel azul: ver bloco CLÁSSICO no fim do arquivo) */
 .credito { margin: 0; font-size: .72rem; letter-spacing: .05em; color: rgb(255 255 255 / 52%); transition: color .25s; }
 .credito b { font-weight: 600; letter-spacing: .14em; text-transform: uppercase; font-size: .68rem; color: rgb(255 255 255 / 76%); transition: color .25s; }
 .credito:hover, .credito:hover b { color: rgb(255 255 255 / 92%); }
@@ -877,7 +821,7 @@ button.doc-nome:focus-visible { outline: 2px solid var(--brass); outline-offset:
 .side-credito { margin: 14px 12px 4px; }
 @media screen and (max-width: 980px) {
   .stage-arte, .stage-credito { display: none; }
-  .credito-pagina { display: inline-flex; align-self: center; }
+  .credito-pagina { display: block; text-align: center; align-self: center; }
 }
 
 /* caixa de contas de demonstração: rótulos longos quebram em vez de estourar a largura */
@@ -987,7 +931,7 @@ a, button, [role='button'], [role='tab'], summary, label.btn, .check, .kcard, .a
   .mobilebar .chip { display: block; max-width: 40vw; min-height: 36px; line-height: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
   .btn { max-width: 100%; white-space: normal; text-align: center; line-height: 1.25; }
   .chip.alert, a.chip { min-height: 40px; }
-  .demo-banner a, .notice a, .kpi .hint a { display: inline-block; padding: 12px 4px; margin: -12px -4px; }
+  .demo-banner a:not(.btn), .notice a:not(.btn), .kpi .hint a { display: inline-block; padding: 12px 4px; margin: -12px -4px; }
   .check { min-height: 44px; }
   .seg button { min-height: 42px; }
   .add-dia { width: 40px; height: 40px; }
@@ -1033,23 +977,7 @@ a, button, [role='button'], [role='tab'], summary, label.btn, .check, .kcard, .a
 html { scrollbar-color: color-mix(in oklab, var(--brass) 55%, var(--scroll-thumb)) var(--scroll-track); }
 ::-webkit-scrollbar-thumb { background: color-mix(in oklab, var(--brass) 45%, var(--scroll-thumb)); border-radius: 8px; }
 
-/* ---------- Telas de entrada: lado direito ---------- */
-.auth-side { position: relative; isolation: isolate; overflow: hidden; }
-.auth-side::before { content: ''; position: absolute; z-index: -1; right: -7%; bottom: -10%; width: min(74%, 560px); aspect-ratio: 1; background: var(--brass); opacity: .09;
-  -webkit-mask: url(/arte/marca-linha.svg) center / contain no-repeat; mask: url(/arte/marca-linha.svg) center / contain no-repeat; }
-.auth-side::after { content: ''; position: absolute; z-index: -1; inset: 0; background-image: radial-gradient(circle, color-mix(in oklab, var(--brass) 36%, transparent) 1px, transparent 1.3px); background-size: 28px 28px; opacity: .42;
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 85% 95%, #000, transparent 70%); mask-image: radial-gradient(ellipse 70% 60% at 85% 95%, #000, transparent 70%); }
-@media screen and (min-width: 981px) {
-  .auth-card { position: relative; width: min(500px, 100%); padding: clamp(28px, 3vw, 42px); border-radius: 24px; border: 1px solid color-mix(in oklab, var(--brass) 26%, var(--line)); box-shadow: var(--brilho-topo), 0 40px 70px -38px rgb(15 28 46 / 38%), 0 10px 22px -14px rgb(15 28 46 / 14%);
-    background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 94%, transparent), color-mix(in oklab, var(--surface-2) 92%, transparent)); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
-  .auth-card::before { content: ''; position: absolute; left: 34px; right: 34px; top: -1px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--brass), var(--brass-light), var(--brass), transparent); }
-  .auth-card::after { content: ''; position: absolute; left: 50%; bottom: -26px; width: 120px; height: 8px; translate: -50% 0; background:
-    linear-gradient(90deg, transparent, color-mix(in oklab, var(--brass) 70%, transparent)) left center / 46px 1px no-repeat,
-    linear-gradient(270deg, transparent, color-mix(in oklab, var(--brass) 70%, transparent)) right center / 46px 1px no-repeat; }
-  .quiosque .auth-card { width: min(600px, 100%); }
-}
-.auth-card h1 { background: linear-gradient(180deg, var(--ink), color-mix(in oklab, var(--ink) 72%, var(--brass))); -webkit-background-clip: text; background-clip: text; color: transparent; }
-:root[data-theme='dark'] .auth-card h1 { background: none; color: var(--ink); }
+/* (telas de entrada: ver bloco CLÁSSICO no fim do arquivo) */
 
 /* ---------- Cartões, KPIs e cabeçalho de página ---------- */
 .card { border-radius: 16px; box-shadow: var(--brilho-topo), var(--sombra-premium); }
@@ -1112,22 +1040,114 @@ html { scrollbar-color: color-mix(in oklab, var(--brass) 55%, var(--scroll-thumb
   -webkit-mask: url(/arte/marca-linha.svg) center / contain no-repeat; mask: url(/arte/marca-linha.svg) center / contain no-repeat; }
 .barra { box-shadow: inset 0 1px 2px rgb(14 23 38 / 14%); }
 .barra i { background: linear-gradient(90deg, #d9a441, #fff3c4 90%, #f3c963); }
-@media screen and (max-width: 980px) { .auth-side::before { opacity: .055; width: 70%; right: -14%; bottom: -4%; } .auth-card::before, .auth-card::after { display: none; } }
 
-/* ---------- Telas de entrada: arte do lado do formulário ---------- */
-.auth-arte { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; contain: strict; color: var(--brass); }
-.aa-aneis i { position: absolute; left: 50%; top: 50%; aspect-ratio: 1; border-radius: 50%; border: 1px solid color-mix(in oklab, var(--brass) 20%, transparent); translate: -50% -50%; animation: respira 18s ease-in-out infinite alternate; }
-.aa-aneis i:nth-child(1) { width: min(640px, 92%); } .aa-aneis i:nth-child(2) { width: min(930px, 135%); border-color: color-mix(in oklab, var(--brass) 11%, transparent); animation-delay: -8s; }
-.aa-cantos i { position: absolute; width: 30px; height: 30px; border: 0 solid color-mix(in oklab, var(--brass) 46%, transparent); }
-.aa-cantos i:nth-child(1) { left: 26px; top: 26px; border-width: 1px 0 0 1px; } .aa-cantos i:nth-child(2) { right: 26px; top: 26px; border-width: 1px 1px 0 0; }
-.aa-cantos i:nth-child(3) { left: 26px; bottom: 26px; border-width: 0 0 1px 1px; } .aa-cantos i:nth-child(4) { right: 26px; bottom: 26px; border-width: 0 1px 1px 0; }
-.aa-fio { position: absolute; left: 50%; top: 0; width: 1px; height: clamp(34px, 8vh, 84px); background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--brass) 62%, transparent)); }
-.aa-fio i { position: absolute; left: -3px; bottom: -3px; width: 7px; height: 7px; rotate: 45deg; border: 1px solid var(--brass); background: var(--surface); }
-.aa-selos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 10px; }
-.aa-selos .s { width: 40px; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; color: color-mix(in oklab, var(--brass) 80%, var(--ink)); border: 1px solid color-mix(in oklab, var(--brass) 42%, transparent);
-  background: linear-gradient(145deg, color-mix(in oklab, var(--surface) 92%, transparent), color-mix(in oklab, var(--surface-2) 70%, transparent)); box-shadow: var(--brilho-topo), 0 8px 18px -10px rgb(15 28 46 / 28%); }
-.aa-selos .s svg { width: 18px; height: 18px; }
-.aa-selos .sep { width: 34px; height: 1px; background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--brass) 60%, transparent), transparent); }
-@media (max-height: 760px) { .aa-selos { display: none; } }
-@media screen and (max-width: 980px) { .aa-aneis, .aa-fio, .aa-selos { display: none; } .aa-aneis, .aa-fio { display: none; } .aa-cantos i { width: 20px; height: 20px; } .aa-cantos i:nth-child(1), .aa-cantos i:nth-child(3) { left: 12px; } .aa-cantos i:nth-child(2), .aa-cantos i:nth-child(4) { right: 12px; } }
-@media (prefers-reduced-motion: reduce) { .aa-aneis i { animation: none; } }
+
+/* =====================================================================
+   CLÁSSICO · telas de entrada em linguagem de escritório de advocacia
+   Moldura dupla, pórtico de fórum em linha fina, selo, papel timbrado.
+   ===================================================================== */
+.stage { background:
+  radial-gradient(900px 520px at 50% -8%, rgb(54 98 160 / 38%), transparent 66%),
+  repeating-linear-gradient(135deg, rgb(255 255 255 / 1.6%) 0 1px, transparent 1px 8px),
+  linear-gradient(180deg, #0c1f3d 0%, #0a1930 52%, #07122a 100%); }
+.stage-arte { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; color: rgb(226 200 150 / 72%); contain: strict; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: clamp(52px, 9%, 104px) 0 clamp(96px, 12%, 132px); }
+.stage-moldura { position: absolute; inset: 18px; pointer-events: none; border: 1px solid rgb(226 200 150 / 32%); }
+.stage-moldura::before { content: ''; position: absolute; inset: 5px; border: 1px solid rgb(226 200 150 / 15%); }
+.forum { position: relative; flex: none; width: min(86%, 540px); height: auto; animation: forum-sobe 2.4s var(--ease) both;
+  -webkit-mask-image: linear-gradient(to top, #000 62%, rgb(0 0 0 / 72%)); mask-image: linear-gradient(to top, #000 62%, rgb(0 0 0 / 72%)); }
+@keyframes forum-sobe { from { clip-path: inset(100% 0 0 0); opacity: .3; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+.stage-emblema { position: relative; flex: none; margin-top: 40px; width: 112px; aspect-ratio: 1; display: grid; place-items: center; animation: rise .9s .15s var(--ease) both; }
+.stage-emblema svg { width: 112px; height: 112px; filter: drop-shadow(0 16px 26px rgb(0 0 0 / 50%)); }
+.em-anel { position: absolute; left: 50%; top: 50%; translate: -50% -50%; aspect-ratio: 1; border-radius: 50%; border: 1px solid rgb(226 200 150 / 38%); }
+.em-anel.a { width: 172px; } .em-anel.b { width: 218px; border-color: rgb(226 200 150 / 16%); }
+.em-losango { position: absolute; width: 7px; height: 7px; rotate: 45deg; border: 1px solid rgb(226 200 150 / 85%); background: #0a1930; translate: -50% -50%; }
+.em-losango.n { left: 50%; top: calc(50% - 109px); } .em-losango.s { left: 50%; top: calc(50% + 109px); }
+.em-losango.l { top: 50%; left: calc(50% + 109px); } .em-losango.o { top: 50%; left: calc(50% - 109px); }
+.stage.livre .stage-mark { visibility: hidden; }
+.stage.com-conteudo .forum { opacity: .5; -webkit-mask-image: linear-gradient(to top, #000 12%, transparent 40%); mask-image: linear-gradient(to top, #000 12%, transparent 40%); }
+.stage.com-conteudo .stage-arte { padding-bottom: 96px; }
+.stage-fio { flex: 1 1 0; min-height: 30px; width: 1px; margin: 36px 0 22px; position: relative; background: linear-gradient(to bottom, transparent, rgb(226 200 150 / 55%) 18%, rgb(226 200 150 / 55%) 82%, transparent); }
+.stage-fio i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; rotate: 45deg; translate: -50% -50%; border: 1px solid rgb(226 200 150 / 90%); background: #0a1930; }
+.stage.com-conteudo .forum { animation-name: forum-sobe-suave; }
+@keyframes forum-sobe-suave { from { clip-path: inset(100% 0 0 0); opacity: .1; } to { clip-path: inset(0 0 0 0); opacity: .5; } }
+.stage-credito { text-shadow: 0 1px 8px rgb(6 15 32 / 85%); }
+@media (prefers-reduced-motion: reduce) { .forum, .stage-emblema { animation: none; } }
+
+/* ---------- Lado do formulário: papel timbrado ---------- */
+.auth-side { --papel: #fbf9f4; position: relative; isolation: isolate; overflow: hidden; background: var(--papel); }
+:root[data-theme='dark'] .auth-side { --papel: #0e1726; }
+.auth-side::before { content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(720px 420px at 100% 0%, rgb(214 168 82 / 13%), transparent 70%), repeating-linear-gradient(0deg, rgb(15 28 46 / 1.3%) 0 1px, transparent 1px 3px); }
+.auth-side::after { content: ''; position: absolute; inset: 18px; z-index: -1; pointer-events: none; border: 1px solid color-mix(in oklab, var(--brass) 34%, transparent); outline: 1px solid color-mix(in oklab, var(--brass) 14%, transparent); outline-offset: -6px; }
+.auth-card h1 { text-align: center; }
+.auth-card h1::after { content: ''; display: block; height: 9px; margin: 16px auto 4px; max-width: 150px;
+  background: linear-gradient(90deg, transparent, var(--brass)) left center / calc(50% - 10px) 1px no-repeat, linear-gradient(270deg, transparent, var(--brass)) right center / calc(50% - 10px) 1px no-repeat, radial-gradient(circle, var(--brass) 2.2px, transparent 2.7px) center / 9px 9px no-repeat; }
+.auth-card .steps { justify-content: center; }
+.auth-card .page-sub { text-align: center; margin-inline: auto; }
+.auth-link { justify-content: center; }
+button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; width: 100%; }
+@media screen and (min-width: 981px) {
+  .auth-card { position: relative; width: min(480px, 100%); padding: 58px 44px 36px; border-radius: 6px; background: var(--surface);
+    border: 1px solid color-mix(in oklab, var(--brass) 50%, var(--line));
+    box-shadow: inset 0 0 0 6px var(--surface), inset 0 0 0 7px color-mix(in oklab, var(--brass) 36%, transparent), 0 40px 70px -46px rgb(15 28 46 / 38%), 0 6px 16px -10px rgb(15 28 46 / 14%); }
+  .auth-card::before { content: ''; position: absolute; top: -35px; left: 50%; width: 70px; height: 70px; translate: -50% 0; border-radius: 17px; background: url(/favicon.svg) center / 100% 100% no-repeat;
+    box-shadow: 0 0 0 7px var(--papel), 0 0 0 8px color-mix(in oklab, var(--brass) 50%, transparent), 0 16px 28px -12px rgb(15 28 46 / 50%); }
+  .quiosque .auth-card { width: min(620px, 100%); }
+}
+
+/* ---------- Celular: tons claros (marfim), faixa de marca clássica ---------- */
+@media screen and (max-width: 980px) {
+  .stage-arte { display: block; padding: 0; }
+  .stage-moldura, .stage-emblema, .stage-fio { display: none; }
+  .auth-side::after { display: none; }
+  .auth-card { border: 0; box-shadow: none; background: transparent; padding: 0; }
+  .stage { border-bottom: 3px double color-mix(in oklab, var(--brass) 55%, transparent); }
+  .stage.livre { grid-template-columns: minmax(0, 1fr); justify-items: center; min-height: 150px; padding: calc(26px + var(--safe-t)) 20px 26px; }
+  .stage.livre .stage-mark { visibility: visible; }
+  .stage.livre .stage-mark svg { width: 70px; height: 70px; filter: drop-shadow(0 12px 20px rgb(15 28 46 / 35%)); }
+  .stage.livre .stage-mid { display: none; }
+  .forum { position: absolute; left: 50%; translate: -50% 0; width: 128%; bottom: -16px; }
+  .stage.com-conteudo .forum { bottom: -16px; }
+  :root[data-theme='light'] .stage { background: linear-gradient(180deg, #fffdf9 0%, #f6f0e3 100%); color: var(--ink); }
+  :root[data-theme='light'] .stage-arte { color: var(--brass); }
+  :root[data-theme='light'] .forum { opacity: .2; }
+  :root[data-theme='light'] .stage.com-conteudo .forum { opacity: .2; animation-name: none; }
+  :root[data-theme='light'] .stage .hora { color: var(--ink); }
+  :root[data-theme='light'] .stage .hora .sep { color: var(--brass); }
+  :root[data-theme='light'] .stage .dia, :root[data-theme='light'] .stage-esc { color: var(--muted); }
+  :root[data-theme='light'] .stage .feriado { background: var(--gold-tint); color: var(--gold-text); }
+  :root[data-theme='dark'] .forum { opacity: .2; }
+
+  /* app: cabeçalho, menu lateral e atalhos em marfim */
+  :root[data-theme='light'] .mobilebar { background: linear-gradient(180deg, #fffdf9, #f8f4ea); color: var(--ink); border-bottom: 1px solid color-mix(in oklab, var(--brass) 40%, var(--line)); box-shadow: 0 8px 22px -18px rgb(15 28 46 / 45%); }
+  :root[data-theme='light'] .mobilebar button { color: var(--ink); }
+  :root[data-theme='light'] .mobilebar :focus-visible { outline-color: var(--brass); }
+  :root[data-theme='light'] .scrim { background: rgb(15 28 46 / 38%); }
+  :root[data-theme='light'] .side { color: var(--ink); background: linear-gradient(180deg, #fffdf9 0%, #f7f2e7 100%); border-right: 1px solid color-mix(in oklab, var(--brass) 32%, var(--line)); box-shadow: 30px 0 60px -34px rgb(15 28 46 / 45%); }
+  :root[data-theme='light'] .side-brand { color: var(--ink); }
+  :root[data-theme='light'] .side-brand .logo svg { filter: drop-shadow(0 6px 10px rgb(15 28 46 / 28%)); }
+  :root[data-theme='light'] .side-brand .logo .nome i { color: var(--gold-text); }
+  :root[data-theme='light'] .side .icon-btn { color: var(--ink) !important; }
+  :root[data-theme='light'] .escritorio-card { background: color-mix(in oklab, var(--brass) 9%, #fff); border-color: color-mix(in oklab, var(--brass) 40%, var(--line)); }
+  :root[data-theme='light'] .escritorio-card .rot { color: var(--gold-text); }
+  :root[data-theme='light'] .escritorio-card strong { color: var(--ink); }
+  :root[data-theme='light'] .escritorio-card .slug { color: var(--muted); }
+  :root[data-theme='light'] .nav-group { color: var(--muted); }
+  :root[data-theme='light'] .nav-group::after { background: linear-gradient(90deg, color-mix(in oklab, var(--brass) 70%, transparent), transparent); }
+  :root[data-theme='light'] .nav a { color: color-mix(in oklab, var(--ink) 84%, transparent); }
+  :root[data-theme='light'] .nav a svg { color: var(--muted); }
+  :root[data-theme='light'] .nav a:hover { background: color-mix(in oklab, var(--brass) 11%, transparent); color: var(--ink); }
+  :root[data-theme='light'] .nav a.on { background: linear-gradient(90deg, color-mix(in oklab, var(--brass) 26%, #fff), color-mix(in oklab, var(--brass) 6%, #fff)); color: var(--ink); border-color: color-mix(in oklab, var(--brass) 40%, transparent); box-shadow: none; }
+  :root[data-theme='light'] .nav a.on svg { color: var(--gold-text); }
+  :root[data-theme='light'] .nav a.on::before { background: linear-gradient(180deg, #e9bd55, #b9822c); box-shadow: none; }
+  :root[data-theme='light'] .side-ap { color: var(--muted); }
+  :root[data-theme='light'] .side .aparencia .icon-btn { color: var(--muted) !important; }
+  :root[data-theme='light'] .side .aparencia .icon-btn:hover { background: color-mix(in oklab, var(--brass) 12%, transparent); color: var(--ink) !important; }
+  :root[data-theme='light'] .side-foot .who { color: var(--ink); }
+  :root[data-theme='light'] .side-foot .papel { color: var(--muted); }
+  :root[data-theme='light'] .side-foot { border-image: linear-gradient(90deg, transparent, color-mix(in oklab, var(--brass) 55%, transparent), transparent) 1; }
+  :root[data-theme='light'] .side-instalar { color: var(--ink); border-color: color-mix(in oklab, var(--brass) 55%, transparent); }
+  :root[data-theme='light'] .side-credito, :root[data-theme='light'] .side-credito b { color: var(--muted); }
+  :root[data-theme='light'] .side-credito b { color: var(--ink); }
+  :root[data-theme='light'] .side :focus-visible { outline-color: var(--brass); }
+}

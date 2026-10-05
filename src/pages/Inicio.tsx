@@ -7,7 +7,6 @@ import { DEMO_ESCRITORIOS } from '@/data/seed';
 import Credito from '@/components/Nexutec';
 import { InstalarApp } from '@/components/Aplicativo';
 import { destinoSalvo } from '@/lib/pwa';
-import AuthArte, { AuthSelos } from '@/components/AuthArte';
 
 const K = 'ge.ultimo-escritorio';
 const lerUltimo = () => { try { return localStorage.getItem(K) ?? ''; } catch { return ''; } };
@@ -31,7 +30,6 @@ export default function Inicio() {
     <div className="auth">
       <Stage />
       <section className="auth-side">
-        <AuthArte />
         <div className="auth-card stack passo" style={{ gap: 22 }}>
           <div>
             <h1>Registro de ponto</h1>
@@ -61,7 +59,6 @@ export default function Inicio() {
           </div>
           <Credito className="credito-pagina" />
         </div>
-        <AuthSelos />
       </section>
     </div>
   );
