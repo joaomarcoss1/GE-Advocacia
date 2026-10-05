@@ -26,9 +26,12 @@ Para conferir depois de publicar: `npm run build`, `npx vite preview --port 4173
 > A Vercel está com a *Vercel Authentication* ligada nos endereços `*.vercel.app` do projeto. Enquanto estiver, só quem tem conta no time abre o sistema e o aplicativo não instala para os funcionários. Desligue em *Settings > Deployment Protection* ou use um domínio próprio.
 
 ## Identidade visual
-- **Logo**: pórtico em arco (a porta do fórum) com o monograma "GE" em serifa dourada sobre azul-noite. O desenho das letras vem da fonte do sistema (Cormorant Garamond Bold) e fica em `src/components/logoPaths.ts`.
-- Para ajustar a marca: edite `scripts/gerar-logo.py` (tamanho, posição, espaçamento) e rode `npm run logo:gerar` (precisa de `pip install fonttools`). Isso regrava os contornos e **todos os ícones** (`public/favicon.svg`, `public/icons/*`).
-- **Painel azul** das telas de entrada: monograma em linha que se desenha ao abrir, anéis e colunas sutis. Sem textos de apresentação. Respeita *reduzir movimento*.
+- **Logo**: pórtico em arco (a porta do fórum) com pedra-chave, monograma "GE" em serifa dourada e um pequeno brilho, sobre azul-safira com moldura dourada. As letras vêm da fonte do sistema (Cormorant Garamond Bold). Fonte única do desenho: `src/components/logoPaths.ts`, gerado por `scripts/gerar-logo.py`.
+- Para ajustar a marca (cores, tamanho, posição): edite `scripts/gerar-logo.py` e rode `npm run logo:gerar` (precisa de `pip install fonttools`). Isso regrava o desenho **e todos os ícones** (`public/favicon.svg`, `public/icons/*`, `public/arte/marca-linha.svg`).
+- **Painel azul** das telas de entrada: bisel de relógio que gira devagar, aura dourada, monograma em linha que se desenha ao abrir, quatro peças de vidro com balança, fórum, martelo e livro, pontos de luz, cantos, fio com losango e colunas. Tudo decorativo, sem texto, escondido para leitores de tela e desligado em *reduzir movimento*.
+- **Tela de ponto**: o bisel vira o mostrador do relógio; abaixo da hora há a faixa da semana (hoje em dourado) e a régua do dia com o ponto de luz que acompanha o horário.
+- **Lado direito das telas de entrada**: cartão de vidro com fio dourado, marca-d'água da logo e pontilhado discreto.
+- **Painel do sistema**: menu lateral em azul-safira com item ativo em dourado, títulos com ornamento, cartões e indicadores com relevo e canto dourado, tabelas com realce ao passar, botões com degradê (principal azul, destaque em ouro vivo), janelas com fio dourado e fundo desfocado, barras de progresso e estados vazios com a marca ao fundo. Tudo com versão para o tema escuro.
 - **Crédito "Desenvolvido por Nexutec"**: canto do painel azul (computador), rodapé da página (celular) e rodapé do menu lateral. A marca da Nexutec é **provisória**: para usar a logo oficial, troque só o `<svg>` em `src/components/Nexutec.tsx` (use `currentColor` para acompanhar o tema).
 
 ## Interações e animações

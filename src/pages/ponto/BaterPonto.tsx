@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Check, LockKeyhole, Maximize2, Minimize2 } from 'lucide-react';
 import Stage from '@/components/Stage';
+import { FaixaSemana, ReguaDoDia } from '@/components/RelogioExtras';
 import { dataExtensa } from '@/lib/datetime';
 import PainelPonto from './PainelPonto';
 import PassoPessoa from './PassoPessoa';
@@ -59,6 +60,8 @@ export default function BaterPonto() {
           <div className="dia">{dataExtensa(p.agora.iso)}</div>
           {p.ctx.feriado && <span className="feriado">Feriado · {p.ctx.feriado}</span>}
         </div>
+        <FaixaSemana data={p.agora.data} />
+        <ReguaDoDia minutos={p.agora.minutos} />
       </Stage>
 
       <section className="auth-side">

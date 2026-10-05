@@ -161,7 +161,7 @@ export function Kpi({ label, valor, dica, alerta, icone }: { label: string; valo
   return (
     <div className={`card kpi ${alerta ? 'alert' : ''}`}>
       <div className="top"><div className="label">{label}</div>{icone && <div className="ico">{icone}</div>}</div>
-      <div className="value">{valor}</div>
+      <div className={`value ${typeof valor === 'string' && valor.length > 6 ? 'longo' : ''}`}>{valor}</div>
       {dica && <div className="hint">{dica}</div>}
     </div>
   );

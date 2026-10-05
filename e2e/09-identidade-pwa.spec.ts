@@ -82,4 +82,26 @@ test.describe('identidade visual e aplicativo instalável', () => {
     }
     await ctx.close();
   });
+
+  test('tela de ponto: mostrador com semana, hoje em destaque e régua do dia', async ({ page }) => {
+    await relogio(page, '07:30');                                                    // quarta-feira, 10/06/2026
+    await page.goto('/ponto/silva-ribeiro');
+    const semana = page.getByRole('list', { name: 'Semana atual' });
+    await expect(semana.getByRole('listitem')).toHaveCount(7);
+    await expect(semana.locator('li.hoje')).toHaveText('Qua10');
+    await expect(semana.locator('li').first()).toHaveText('Seg08');
+    await expect(page.getByRole('img', { name: '7 horas e 30 minutos do dia' })).toBeVisible();
+    await expect(page.locator('.stage .arte-bezel')).toBeAttached();                 // bisel do relógio atrás da hora
+    await expect(page.locator('.auth-card')).toBeVisible();
+  });
+
+  test('painel azul tem arte e peças temáticas e nenhum texto de apresentação', async ({ page }) => {
+    await page.goto('/entrar');
+    const arte = page.locator('.stage-arte');
+    await expect(arte.locator('.arte-bezel line')).toHaveCount(120);
+    await expect(arte.locator('.arte-sat')).toHaveCount(4);
+    await expect(arte.locator('.arte-particulas i')).toHaveCount(15);
+    expect((await arte.textContent())?.trim()).toBe('');                              // arte puramente visual
+    await expect(arte).toHaveAttribute('aria-hidden', 'true');
+  });
 });
