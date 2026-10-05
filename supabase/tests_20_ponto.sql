@@ -92,6 +92,7 @@ insert into public.registros_ponto (escritorio_id, funcionario_id, data, tipo, s
   ((select v::uuid from t.ctx where k='escA'), '00000000-0000-0000-0000-00000000a002', current_date - 11, 'entrada', 'aprovado', now() - interval '1 hour');
 \i migrations/0002_ponto.sql
 \i migrations/0006_delegacao.sql
+\i migrations/0007_processos_documentos.sql
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') = 1, 'sobrou uma única marcação ativa');
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and motivo_rejeicao like 'Duplicidade removida%') = 2, 'as duas excedentes foram rejeitadas com motivo explícito');
 select t.ok((select horario_real from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') < now() - interval '2 hours 30 minutes', 'a mantida é a mais antiga');
