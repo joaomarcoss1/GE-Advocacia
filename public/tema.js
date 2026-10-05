@@ -9,6 +9,6 @@
     var cs = document.querySelector('meta[name="color-scheme"]');
     if (cs) cs.setAttribute('content', escuro ? 'dark light' : 'only light');
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', escuro ? '#0b111b' : '#f7f4ec');
+    if (m) m.setAttribute('content', escuro ? '#0b111b' : '#0f2a52');
   } catch (e) { /* segue com o padrão claro */ }
 })();

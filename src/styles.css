@@ -1108,49 +1108,7 @@ button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; 
   .stage.livre .stage-mid { display: none; }
   .forum { position: absolute; left: 50%; translate: -50% 0; width: 128%; bottom: -16px; }
   .stage.com-conteudo .forum { bottom: -16px; }
-  :root[data-theme='light'] .stage { background: linear-gradient(180deg, #fffdf9 0%, #f6f0e3 100%); color: var(--ink); }
-  :root[data-theme='light'] .stage-arte { color: var(--brass); }
-  :root[data-theme='light'] .forum { opacity: .2; }
-  :root[data-theme='light'] .stage.com-conteudo .forum { opacity: .2; animation-name: none; }
-  :root[data-theme='light'] .stage .hora { color: var(--ink); }
-  :root[data-theme='light'] .stage .hora .sep { color: var(--brass); }
-  :root[data-theme='light'] .stage .dia, :root[data-theme='light'] .stage-esc { color: var(--muted); }
-  :root[data-theme='light'] .stage .feriado { background: var(--gold-tint); color: var(--gold-text); }
-  :root[data-theme='dark'] .forum { opacity: .2; }
 
-  /* app: cabeçalho, menu lateral e atalhos em marfim */
-  :root[data-theme='light'] .mobilebar { background: linear-gradient(180deg, #fffdf9, #f8f4ea); color: var(--ink); border-bottom: 1px solid color-mix(in oklab, var(--brass) 40%, var(--line)); box-shadow: 0 8px 22px -18px rgb(15 28 46 / 45%); }
-  :root[data-theme='light'] .mobilebar button { color: var(--ink); }
-  :root[data-theme='light'] .mobilebar :focus-visible { outline-color: var(--brass); }
-  :root[data-theme='light'] .scrim { background: rgb(15 28 46 / 38%); }
-  :root[data-theme='light'] .side { color: var(--ink); background: linear-gradient(180deg, #fffdf9 0%, #f7f2e7 100%); border-right: 1px solid color-mix(in oklab, var(--brass) 32%, var(--line)); }
-  :root[data-theme='light'] .side.open { box-shadow: 30px 0 60px -34px rgb(15 28 46 / 45%); }
-  :root[data-theme='light'] .side-brand { color: var(--ink); }
-  :root[data-theme='light'] .side-brand .logo svg { filter: drop-shadow(0 6px 10px rgb(15 28 46 / 28%)); }
-  :root[data-theme='light'] .side-brand .logo .nome i { color: var(--gold-text); }
-  :root[data-theme='light'] .side .icon-btn { color: var(--ink) !important; }
-  :root[data-theme='light'] .escritorio-card { background: color-mix(in oklab, var(--brass) 9%, #fff); border-color: color-mix(in oklab, var(--brass) 40%, var(--line)); }
-  :root[data-theme='light'] .escritorio-card .rot { color: var(--gold-text); }
-  :root[data-theme='light'] .escritorio-card strong { color: var(--ink); }
-  :root[data-theme='light'] .escritorio-card .slug { color: var(--muted); }
-  :root[data-theme='light'] .nav-group { color: var(--muted); }
-  :root[data-theme='light'] .nav-group::after { background: linear-gradient(90deg, color-mix(in oklab, var(--brass) 70%, transparent), transparent); }
-  :root[data-theme='light'] .nav a { color: color-mix(in oklab, var(--ink) 84%, transparent); }
-  :root[data-theme='light'] .nav a svg { color: var(--muted); }
-  :root[data-theme='light'] .nav a:hover { background: color-mix(in oklab, var(--brass) 11%, transparent); color: var(--ink); }
-  :root[data-theme='light'] .nav a.on { background: linear-gradient(90deg, color-mix(in oklab, var(--brass) 26%, #fff), color-mix(in oklab, var(--brass) 6%, #fff)); color: var(--ink); border-color: color-mix(in oklab, var(--brass) 40%, transparent); box-shadow: none; }
-  :root[data-theme='light'] .nav a.on svg { color: var(--gold-text); }
-  :root[data-theme='light'] .nav a.on::before { background: linear-gradient(180deg, #e9bd55, #b9822c); box-shadow: none; }
-  :root[data-theme='light'] .side-ap { color: var(--muted); }
-  :root[data-theme='light'] .side .aparencia .icon-btn { color: var(--muted) !important; }
-  :root[data-theme='light'] .side .aparencia .icon-btn:hover { background: color-mix(in oklab, var(--brass) 12%, transparent); color: var(--ink) !important; }
-  :root[data-theme='light'] .side-foot .who { color: var(--ink); }
-  :root[data-theme='light'] .side-foot .papel { color: var(--muted); }
-  :root[data-theme='light'] .side-foot { border-image: linear-gradient(90deg, transparent, color-mix(in oklab, var(--brass) 55%, transparent), transparent) 1; }
-  :root[data-theme='light'] .side-instalar { color: var(--ink); border-color: color-mix(in oklab, var(--brass) 55%, transparent); }
-  :root[data-theme='light'] .side-credito, :root[data-theme='light'] .side-credito b { color: var(--muted); }
-  :root[data-theme='light'] .side-credito b { color: var(--ink); }
-  :root[data-theme='light'] .side :focus-visible { outline-color: var(--brass); }
 }
 
 /* ---------- Celular: mais contraste entre o papel marfim e os cartões brancos; selo da marca no cabeçalho ---------- */
@@ -1158,8 +1116,42 @@ button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; 
 @media screen and (max-width: 980px) {
   :root[data-theme='light'] { --bg: #f1ede2; }
   :root[data-theme='light'] .card { border-color: color-mix(in oklab, var(--brass) 18%, var(--line-strong)); box-shadow: inset 0 1px 0 #fff, 0 14px 30px -22px rgb(15 28 46 / 36%), 0 1px 3px rgb(15 28 46 / 8%); }
-  :root[data-theme='light'] .bottomnav { background: #fffdf9; border-top: 1px solid color-mix(in oklab, var(--brass) 30%, var(--line)); box-shadow: 0 -12px 28px -20px rgb(15 28 46 / 40%); }
   .mb-marca { display: grid; place-items: center; flex: none; margin: 0 4px 0 -2px; }
   .mb-marca svg { width: 30px; height: 30px; filter: drop-shadow(0 4px 8px rgb(15 28 46 / 28%)); }
+}
+
+/* =====================================================================
+   PREMIUM MOBILE · dois tons: faixas azul-noite com ouro emoldurando o conteúdo claro
+   ===================================================================== */
+@media screen and (max-width: 980px) {
+  /* topo das telas de entrada */
+  .stage.livre { min-height: 168px; }
+  .stage.livre .stage-mark svg { width: 76px; height: 76px; filter: drop-shadow(0 14px 22px rgb(0 0 0 / 55%)); }
+  .forum { opacity: .36; }
+  .stage.com-conteudo .forum { opacity: .2; animation-name: none; }
+  /* cabeçalho do app */
+  .mobilebar { background: linear-gradient(180deg, #14315c 0%, #0a1b38 100%); color: #fff; border-bottom: 1px solid rgb(243 201 99 / 36%); box-shadow: 0 12px 26px -18px rgb(6 15 32 / 75%); }
+  .mobilebar button { color: #fff; }
+  .mobilebar .chip.alert { background: linear-gradient(160deg, #fff3c4, #e9bd55); color: #1b1306; border-color: transparent; font-weight: 650; }
+  /* atalhos inferiores */
+  .bottomnav { background: linear-gradient(180deg, #102b55 0%, #08172f 100%); border-top: 1px solid rgb(243 201 99 / 32%); box-shadow: 0 -14px 30px -18px rgb(6 15 32 / 65%); backdrop-filter: none; }
+  .bottomnav a, .bottomnav button { color: rgb(255 255 255 / 62%); }
+  .bottomnav a.on { color: #fff; }
+  .bottomnav a.on svg { color: #f6cf6e; }
+  .bottomnav a.on::before { background: linear-gradient(90deg, transparent, #f3c963, transparent); width: 38px; height: 3px; }
+  .bottomnav .badge-n { background: linear-gradient(160deg, #fff3c4, #e9bd55); color: #1b1306; }
+  .bottomnav :focus-visible, .mobilebar :focus-visible { outline-color: #f6cf6e; }
+  /* bloco de título de cada tela */
+  .page-head { background: radial-gradient(280px 170px at 100% 0%, rgb(243 201 99 / 20%), transparent 70%), linear-gradient(145deg, #16355f 0%, #0a1b38 100%);
+    border: 1px solid rgb(243 201 99 / 28%); border-radius: 18px; padding: 18px 18px 16px; margin: 0 0 20px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%), 0 20px 36px -24px rgb(6 15 32 / 75%); }
+  .page-head::before, .page-head::after { display: none; }
+  .page-head .page-title { color: #fff; margin-top: 0; }
+  .page-head .btn.ghost { background: rgb(255 255 255 / 10%); color: #fff; border-color: rgb(255 255 255 / 26%); box-shadow: none; }
+  .page-head .btn:not(.ghost):not(.gold):not(.danger) { background: #fff; color: #0f1c2e; border-color: #fff; box-shadow: none; }
+  .page-head .btn:disabled { opacity: .55; }
+  .page-head :focus-visible { outline-color: #f6cf6e; }
+  /* conteúdo: papel marfim com cartões brancos */
+  :root[data-theme='light'] .toast { background: linear-gradient(135deg, #14305a, #0a1b38); }
 }
 

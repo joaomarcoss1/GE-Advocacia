@@ -11,7 +11,7 @@ export function aplicarTema(t: Tema) {
   const escuro = t === 'escuro' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.setAttribute('data-theme', escuro ? 'dark' : 'light');
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', escuro ? 'dark light' : 'only light');
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b111b' : '#f7f4ec');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', escuro ? '#0b111b' : '#0f2a52');
 }
 export function aplicarDensidade(d: Densidade) {
   if (d === 'compacta') document.documentElement.setAttribute('data-densidade', 'compacta');

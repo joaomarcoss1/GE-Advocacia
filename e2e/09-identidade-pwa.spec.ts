@@ -34,7 +34,7 @@ test.describe('identidade visual e aplicativo instalável', () => {
     await page.goto('/');
     const href = await page.locator('link[rel=manifest]').getAttribute('href');
     const m = await (await request.get(href!)).json();
-    expect(m).toMatchObject({ name: 'GE Advocacia', display: 'standalone', scope: '/', lang: 'pt-BR', theme_color: '#f7f4ec' });
+    expect(m).toMatchObject({ name: 'GE Advocacia', display: 'standalone', scope: '/', lang: 'pt-BR', theme_color: '#0f2a52' });
     const propositos = m.icons.map((i: { sizes: string; purpose: string }) => `${i.sizes}/${i.purpose}`);
     expect(propositos).toEqual(expect.arrayContaining(['192x192/any', '512x512/any', '512x512/maskable']));
     for (const i of m.icons.filter((x: { type: string }) => x.type === 'image/png')) {
@@ -113,7 +113,7 @@ test.describe('identidade visual e aplicativo instalável', () => {
     await ctx.close();
   });
 
-  test('celular: cabeçalho, menu lateral e faixa de marca em tons claros', async ({ browser }) => {
+  test('celular: dois tons, faixas azul-noite emoldurando o conteúdo claro', async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, colorScheme: 'dark' });   // aparelho no tema escuro
     const page = await ctx.newPage();
     await relogio(page, '09:00');
@@ -126,12 +126,17 @@ test.describe('identidade visual e aplicativo instalável', () => {
       return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
     };
     await page.goto('/entrar');
-    expect(await page.locator('.stage').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    expect(await page.locator('.stage').evaluate(luminosidade)).toBeLessThan(0.5);        // faixa de marca escura
+    expect(await page.locator('.auth-side').evaluate(luminosidade)).toBeGreaterThan(0.85); // formulário em papel claro
     await entrar(page, CONTAS.adminA);
-    expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeLessThan(0.5);    // cabeçalho escuro
+    expect(await page.locator('.bottomnav').evaluate(luminosidade)).toBeLessThan(0.5);    // atalhos escuros
+    // bloco de título escuro: o título é branco (o fundo é um degradê azul-noite com brilho dourado no canto)
+    expect(await page.locator('.page-title').evaluate(el => getComputedStyle(el).color)).toBe('rgb(255, 255, 255)');
+    expect(await page.locator('body').evaluate(luminosidade)).toBeGreaterThan(0.8);       // conteúdo claro
+    expect(await page.locator('.card').first().evaluate(luminosidade)).toBeGreaterThan(0.9);   // cartões brancos
     await page.getByRole('button', { name: 'Abrir menu' }).first().click();
-    await expect(page.locator('.side.open')).toBeVisible();
-    expect(await page.locator('.side.open').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    expect(await page.locator('.side.open').evaluate(luminosidade)).toBeLessThan(0.5);    // menu lateral escuro
     await ctx.close();
   });
 

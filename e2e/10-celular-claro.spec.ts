@@ -24,19 +24,21 @@ test.describe('celular com escurecimento automático de sites ligado', () => {
     expect(await page.locator('meta[name=color-scheme]').getAttribute('content')).toBe('only light');
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('light only');   // o navegador normaliza a ordem
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    // a faixa de marca e o papel do formulário seguem claros
-    expect(await page.locator('.stage').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    // faixa de marca escura e papel do formulário claro: se o navegador invertesse a página, o papel ficaria escuro
+    expect(await page.locator('.stage').evaluate(luminosidade)).toBeLessThan(0.5);
     expect(await page.locator('.auth-side').evaluate(luminosidade)).toBeGreaterThan(0.85);
   });
 
-  test('painel e menu lateral continuam claros; tema escuro só quando a pessoa escolhe', async ({ page }) => {
+  test('conteúdo continua claro e as faixas azul-noite; tema escuro só quando a pessoa escolhe', async ({ page }) => {
     await relogio(page, '09:00');
     await semear(page);
     await entrar(page, CONTAS.adminA);
-    expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeGreaterThan(0.85);
-    expect(await page.locator('.bottomnav').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeLessThan(0.5);
+    expect(await page.locator('.bottomnav').evaluate(luminosidade)).toBeLessThan(0.5);
+    expect(await page.locator('body').evaluate(luminosidade)).toBeGreaterThan(0.8);             // o conteúdo continua claro
+    expect(await page.locator('.card').first().evaluate(luminosidade)).toBeGreaterThan(0.9);
     await page.getByRole('button', { name: 'Abrir menu' }).first().click();
-    expect(await page.locator('.side.open').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    expect(await page.locator('.side.open').evaluate(luminosidade)).toBeLessThan(0.5);
     // escolha explícita do escuro: o sistema passa a declarar suporte a escuro
     await page.evaluate(() => localStorage.setItem('ge.tema', 'escuro'));
     await page.reload();
