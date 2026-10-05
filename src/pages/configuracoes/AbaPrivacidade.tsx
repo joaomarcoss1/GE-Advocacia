@@ -86,7 +86,7 @@ export default function AbaPrivacidade({ c, setC }: { c: Config; setC(c: Config)
             <td>{a.usuario}</td><td>{nomeDe(a.funcionario_id)}</td><td><Badge tom="gold">{a.acao === 'abrir' ? 'Abriu o atestado' : a.acao}</Badge></td>
           </tr>
         ))}</tbody>
-      </table>{!visiveis.length && <Vazio tipo="documento" titulo="Nenhum acesso registrado">Quando um administrador abrir um atestado, o acesso aparece aqui.</Vazio>}</div>
+      </table>{!visiveis.length && <Vazio tipo="documento" titulo="Nenhum acesso registrado" />}</div>
     </>
   );
 }

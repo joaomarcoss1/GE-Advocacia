@@ -66,7 +66,7 @@ export default function Feriados() {
             ))}
           </tbody>
         </table>
-        {!doAno.length && <Vazio tipo="calendario" titulo={`Nenhum feriado em ${ano}`}>Feriados e recessos não contam como dia previsto de trabalho.</Vazio>}
+        {!doAno.length && <Vazio tipo="calendario" titulo={`Nenhum feriado em ${ano}`} />}
       </div>
       <p className="hint" style={{ marginTop: 12 }}>Pontos facultativos (Carnaval, Corpus Christi) só valem se o escritório fechar: remova os que não forem adotados. {AVISO_FERIADOS_LOCAIS}</p>
 

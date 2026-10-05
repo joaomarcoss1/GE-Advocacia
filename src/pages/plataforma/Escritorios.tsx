@@ -107,7 +107,7 @@ export default function Escritorios() {
         <Kpi label="Funcionários" valor={totais.funcs} dica="soma dos escritórios ativos" />
       </div>
 
-      {lista && !lista.length && <div className="card"><Vazio tipo="cargos" titulo="Nenhum escritório ainda" acao={{ rotulo: 'Cadastrar o primeiro escritório', onClick: () => setNovo({ ...vazioNovo }) }}>Cadastre o escritório e o administrador que vai gerenciar a equipe dele.</Vazio></div>}
+      {lista && !lista.length && <div className="card"><Vazio tipo="cargos" titulo="Nenhum escritório ainda" acao={{ rotulo: 'Cadastrar o primeiro escritório', onClick: () => setNovo({ ...vazioNovo }) }} /></div>}
       <div className="tenants">
         {lista?.map(e => (
           <article key={e.id} className={`tenant ${e.ativo ? '' : 'off'}`} aria-label={e.nome}>
@@ -179,7 +179,7 @@ export default function Escritorios() {
                   <div className="sum-line" key={u.id} style={{ padding: '10px 14px' }}>
                     <span><strong style={{ fontWeight: 600 }}>{u.nome}</strong><br /><span className="muted" style={{ fontSize: '.82rem' }}>{u.email}</span></span>
                     <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                      <Badge tom={u.papel === 'admin' ? 'gold' : ''}>{u.papel === 'admin' ? 'Administrador' : 'Gerência'}</Badge>
+                      <Badge tom={u.papel === 'admin' ? 'gold' : ''}>{u.papel === 'admin' ? 'Administrador' : u.papel === 'coordenador' ? 'Coordenação' : 'Gerência'}</Badge>
                       {!u.ativo && <Badge tom="mute">Inativo</Badge>}
                       <button className="icon-btn" style={{ width: 32, height: 32 }} aria-label={`Redefinir a senha de ${u.email}`} title="Redefinir senha" onClick={() => setSenhaDe({ u, senha: '' })}><KeyRound size={16} /></button>
                     </span>

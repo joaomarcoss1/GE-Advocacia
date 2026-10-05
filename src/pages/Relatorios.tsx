@@ -74,7 +74,7 @@ export default function Relatorios() {
                   ))}
                 </tbody>
               </table>
-              {!freq.length && <Vazio tipo="busca" titulo="Sem dados no período">Escolha outro intervalo de datas.</Vazio>}
+              {!freq.length && <Vazio tipo="busca" titulo="Sem dados no período" />}
             </div>
           </>
         )}
@@ -106,7 +106,7 @@ export default function Relatorios() {
                   </tbody>
                 </table>
               </div>
-            ) : <Vazio tipo="pessoas" titulo="Escolha um funcionário">O espelho de ponto mostra dia a dia entradas, saídas e faltas.</Vazio>}
+            ) : <Vazio tipo="pessoas" titulo="Escolha um funcionário" />}
           </>
         )}
       </div>

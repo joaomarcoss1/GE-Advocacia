@@ -97,7 +97,7 @@ export default function Folha() {
             </tbody>
             {linhas.length > 0 && <tfoot><tr><td colSpan={8} className="right">TOTAL LÍQUIDO</td><td className="num">{brl(totalLiquido)}</td><td colSpan={2} /></tr></tfoot>}
           </table>
-          {!linhas.length && <Vazio tipo="pessoas" titulo="Ninguém na folha deste período">Funcionários ativos com vínculo no período aparecem aqui.</Vazio>}
+          {!linhas.length && <Vazio tipo="pessoas" titulo="Ninguém na folha deste período" />}
         </div>
       </div>
       <p className="hint" style={{ marginTop: 12 }}>Os valores são de conferência gerencial: encargos legais (INSS, IRRF, FGTS, férias e 13º) não são calculados aqui. Confirme os cálculos com a contabilidade do escritório.</p>

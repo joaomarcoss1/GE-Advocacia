@@ -145,8 +145,8 @@ export default function Funcionarios() {
             </tbody>
           </table>
           {!lista.length && (funcionarios.length
-            ? <Vazio tipo="busca" titulo="Nenhum funcionário encontrado">Ajuste a busca ou o filtro de situação.</Vazio>
-            : <Vazio tipo="pessoas" titulo="Sua equipe começa aqui" acao={{ rotulo: 'Cadastrar o primeiro funcionário', onClick: () => setEd(vazio(agora.data)) }}>Cadastre nome, cargo, escala e salário: o sistema calcula a diária e a folha sozinho.</Vazio>)}
+            ? <Vazio tipo="busca" titulo="Nenhum funcionário encontrado" />
+            : <Vazio tipo="pessoas" titulo="Sua equipe começa aqui" acao={{ rotulo: 'Cadastrar o primeiro funcionário', onClick: () => setEd(vazio(agora.data)) }} />)}
         </div>
       </div>
 

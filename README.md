@@ -1,6 +1,6 @@
 # GE Advocacia
 
-Plataforma administrativa **multiescritório** para escritórios de advocacia: equipe, escalas, ponto por PIN, ocorrências/atestados e folha de conferência por diária. Cada escritório é um espaço totalmente separado dos demais.
+Plataforma administrativa **multiescritório** para escritórios de advocacia: equipe, escalas, ponto por PIN, ocorrências/atestados, folha de conferência por diária e **delegação de tarefas, prazos, audiências e reuniões com Google Agenda**. Cada escritório é um espaço totalmente separado dos demais.
 
 > Projeto independente do "Almeida Advocacia": outro repositório e outro Supabase. Nada daqui toca o sistema do Almeida.
 
@@ -10,6 +10,9 @@ Plataforma administrativa **multiescritório** para escritórios de advocacia: e
 - **Funcionários** não têm login: batem ponto em `/ponto/<slug-do-escritório>` com PIN pessoal, via funções que só enxergam aquele escritório.
 - **Atestados** ficam em Storage privado, com URL assinada de 60 s e registro de quem abriu.
 - **Ressalva honesta:** é isolamento **lógico** (RLS) num único banco, não bancos físicos separados. É o padrão de SaaS multi-tenant e foi provado por testes (abaixo). Se um cliente exigir banco físico próprio, a alternativa é um projeto Supabase por escritório (mais custo e operação); o front-end já fala com um único endpoint por implantação.
+
+## Delegação e Google Agenda
+Administrador, gerência e **coordenação** delegam tarefas, prazos processuais (com número CNJ validado), audiências, diligências, protocolos e reuniões, com responsável, revisor, participantes, prioridade, andamentos e quadro de acompanhamento. O funcionário vê e atualiza as dele pelo PIN. Cada compromisso vai ao Google Agenda por link, arquivo .ics ou, conectando a conta, de forma automática com convite por e-mail. Detalhes e configuração em `docs/GOOGLE-AGENDA.md`.
 
 ## Rodar localmente (modo demonstração)
 ```bash
@@ -23,6 +26,7 @@ Cada escritório demo tem o próprio conjunto de dados no navegador (`ge.v1.e.<s
 | Plataforma (GE) | plataforma@geadvocacia.com.br | GEplataforma2026 |
 | Admin — Silva & Ribeiro | admin@silvaribeiro.adv.br | silva2026admin |
 | Gerência — Silva & Ribeiro | gerencia@silvaribeiro.adv.br | silva2026gerencia |
+| Coordenação — Silva & Ribeiro | coordenacao@silvaribeiro.adv.br | silva2026coord |
 | Admin — Monteiro & Costa | admin@monteirocosta.adv.br | monteiro2026admin |
 
 Ponto: `/ponto/silva-ribeiro` (PINs de demonstração: 482913, 739105, 561847, 902716, 357951). Todos fictícios; não use dados reais no modo demonstração.
@@ -43,11 +47,12 @@ Rode `npm run sql:gerar` após alterar migrações para regenerar `atualizacao_d
 
 ## Documentação
 - `docs/CHECKLIST-PRODUCAO.md` — preparação do Supabase, segredos, proteção de branch
+- `docs/GOOGLE-AGENDA.md` — integração com o Google Agenda (credenciais, segredos e limites)
 - `docs/RESTAURACAO.md` — backup criptografado e restauração
 - `docs/PROPOSTAS-FASES-6-8.md` — folha/encargos, Portaria 671 e integração jurídica (aguardam aprovação)
 
 ## Limitações conhecidas
-- Edge Function `anexos`, Storage privado, `pg_cron` e os workflows de backup/restauração foram escritos, mas **não executados contra um Supabase real** (o projeto do GE ainda não existe). Valide-os no primeiro dia de produção.
+- Edge Functions `anexos` e `google-agenda` (esta depende de credenciais Google suas), Storage privado, `pg_cron` e os workflows de backup/restauração foram escritos, mas **não executados contra um Supabase real** (o projeto do GE ainda não existe). Valide-os no primeiro dia de produção.
 - Fase 5 (tipagem): o acesso a dados usa a interface `Crud` genérica; os tipos gerados do Supabase (`supabase gen types`) ainda não foram integrados.
 - Fases 6, 7 e 8 estão apenas **propostas** em `docs/PROPOSTAS-FASES-6-8.md`, aguardando aprovação.
 

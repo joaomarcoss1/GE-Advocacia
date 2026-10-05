@@ -176,12 +176,12 @@ const ILUSTRACAO: Record<TipoVazio, ReactNode> = {
   cargos: (<><rect className="a" x="26" y="40" width="108" height="66" rx="10" /><rect className="b" x="26" y="40" width="108" height="66" rx="10" /><path className="b" d="M60 40V28a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v12M26 70h108" /><path className="c" d="M72 70v10h16V70" /></>),
 };
 /** Estado vazio com ilustração e, se houver, uma ação clara (ex.: "Cadastrar o primeiro funcionário"). */
-export function Vazio({ children, tipo = 'documento', titulo, acao }: { children: ReactNode; tipo?: TipoVazio; titulo?: string; acao?: { rotulo: string; onClick(): void } }) {
+export function Vazio({ children, tipo = 'documento', titulo, acao }: { children?: ReactNode; tipo?: TipoVazio; titulo?: string; acao?: { rotulo: string; onClick(): void } }) {
   return (
     <div className="vazio" role="status">
       <svg className="ilu" viewBox="0 0 160 124" aria-hidden="true" focusable="false">{ILUSTRACAO[tipo]}</svg>
       {titulo && <strong>{titulo}</strong>}
-      <p>{children}</p>
+      {children && <p>{children}</p>}
       {acao && <button className="btn" onClick={acao.onClick}>{acao.rotulo}</button>}
     </div>
   );

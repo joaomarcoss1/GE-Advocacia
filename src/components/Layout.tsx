@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Briefcase, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, LayoutDashboard, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
+  Briefcase, CalendarClock, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, LayoutDashboard, ListChecks, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
 } from 'lucide-react';
 import sqlAtualizacao from '../../supabase/atualizacao_definitiva.sql?raw';
 import Shell, { type ItemNav } from '@/components/Shell';
@@ -9,16 +9,19 @@ import { useDados } from '@/context/Dados';
 import { filaDeAnalise } from '@/lib/analises';
 import { dataExtensa } from '@/lib/datetime';
 import { SCHEMA_ESPERADO } from '@/lib/regras';
+import { contar } from '@/lib/tarefas';
 
 const ATALHOS = {
-  admin: ['/painel', '/painel/ponto', '/painel/folha', '/painel/funcionarios'],
-  gerente: ['/painel/gerencia', '/painel/ponto', '/painel/ocorrencias', '/painel/escalas'],
+  admin: ['/painel', '/painel/tarefas', '/painel/ponto', '/painel/folha'],
+  gerente: ['/painel/gerencia', '/painel/tarefas', '/painel/ponto', '/painel/ocorrencias'],
+  coordenador: ['/painel/tarefas', '/painel/agenda'],
 };
+const PAPEL_ROTULO = { admin: 'Administrador', gerente: 'Gerência', coordenador: 'Coordenação' } as const;
 
 /** Painel de UM escritório: menus, avisos e dados vêm só do escritório da sessão. */
 export default function Layout() {
   const { sessao, sair, modo } = useAuth();
-  const { registros, ocorrencias, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
+  const { registros, ocorrencias, tarefas, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
   if (!sessao || sessao.papel === 'plataforma') return null;
@@ -26,9 +29,12 @@ export default function Layout() {
   const papel = sessao.papel;
   const pendentes = registros.filter(r => r.status_aprovacao === 'pendente').length;
   const analises = filaDeAnalise(ocorrencias, registros).total;
-  const todos: (ItemNav & { papeis: ('admin' | 'gerente')[] })[] = [
+  const atrasadas = contar(tarefas).atrasadas;
+  const todos: (ItemNav & { papeis: ('admin' | 'gerente' | 'coordenador')[] })[] = [
     { grupo: 'Visão geral', to: '/painel', fim: true, rotulo: 'Painel', icone: LayoutDashboard, papeis: ['admin'] },
-    { to: '/painel/gerencia', rotulo: 'Gerência', icone: ShieldCheck, papeis: ['admin', 'gerente'], contagem: pendentes },
+    { grupo: 'Delegação', to: '/painel/tarefas', rotulo: 'Tarefas', icone: ListChecks, papeis: ['admin', 'gerente', 'coordenador'], contagem: atrasadas },
+    { to: '/painel/agenda', rotulo: 'Agenda', icone: CalendarClock, papeis: ['admin', 'gerente', 'coordenador'] },
+    { grupo: 'Gestão', to: '/painel/gerencia', rotulo: 'Gerência', icone: ShieldCheck, papeis: ['admin', 'gerente'], contagem: pendentes },
     { grupo: 'Equipe', to: '/painel/funcionarios', rotulo: 'Funcionários', curto: 'Equipe', icone: Users, papeis: ['admin'] },
     { to: '/painel/cargos', rotulo: 'Cargos', icone: Briefcase, papeis: ['admin'] },
     { to: '/painel/escalas', rotulo: 'Escalas', icone: CalendarDays, papeis: ['admin', 'gerente'] },
@@ -40,10 +46,12 @@ export default function Layout() {
     { grupo: 'Sistema', to: '/painel/configuracoes', rotulo: 'Configurações', curto: 'Ajustes', icone: Settings, papeis: ['admin'] },
   ];
   const itens: ItemNav[] = todos.filter(i => i.papeis.includes(papel));
-  itens.push({ grupo: 'Acesso', to: `/ponto/${escritorio.slug}`, rotulo: 'Tela de ponto', icone: Smartphone });
-  itens.push({ to: `/privacidade/${escritorio.slug}`, rotulo: 'Privacidade (LGPD)', icone: LockKeyhole });
+  if (papel !== 'coordenador') {
+    itens.push({ grupo: 'Acesso', to: `/ponto/${escritorio.slug}`, rotulo: 'Tela de ponto', icone: Smartphone });
+    itens.push({ to: `/privacidade/${escritorio.slug}`, rotulo: 'Privacidade (LGPD)', icone: LockKeyhole });
+  }
 
-  const inicio = papel === 'admin' ? '/painel' : '/painel/gerencia';
+  const inicio = papel === 'admin' ? '/painel' : papel === 'coordenador' ? '/painel/tarefas' : '/painel/gerencia';
   const ext = dataExtensa(agora.iso);
 
   const avisos = (
@@ -70,10 +78,10 @@ export default function Layout() {
   return (
     <Shell
       itens={itens} atalhos={ATALHOS[papel]} inicio={inicio} sessao={sessao} sair={sair}
-      papelRotulo={papel === 'admin' ? 'Administrador' : 'Gerência'}
+      papelRotulo={PAPEL_ROTULO[papel]}
       cartao={<div className="escritorio-card"><span className="rot">Escritório</span><strong>{escritorio.nome}</strong><span className="slug">/{escritorio.slug}</span></div>}
       avisos={avisos} carregando={carregando} dataExtenso={ext}
-      chipAlerta={pendentes > 0 ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${pendentes} aprovação(ões) pendente(s)` } : undefined}
+      chipAlerta={pendentes > 0 && papel !== 'coordenador' ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${pendentes} aprovação(ões) pendente(s)` } : undefined}
       nomeImpressao={escritorio.nome}
       rodapeImpressao={`${escritorio.nome} · documento gerencial de conferência, gerado pelo GE Advocacia. Autenticidade: use o QR Code dos PDFs oficiais.`}
     />

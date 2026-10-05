@@ -23,3 +23,7 @@ site_url = "http://localhost:5173"
 [functions.anexos]
 # A função faz a própria autorização (PIN no envio; JWT + papel de administrador na abertura).
 verify_jwt = false
+
+[functions.google-agenda]
+# O retorno do Google (GET) chega sem JWT; as demais ações conferem o JWT e o papel dentro da função.
+verify_jwt = false

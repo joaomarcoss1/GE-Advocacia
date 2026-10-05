@@ -4,6 +4,7 @@ import { minParaHoras, iniciais } from '@/lib/format';
 import { previstoDoTipo } from '@/lib/ponto';
 import { ANALISE_LABEL, OCORRENCIA_LABEL, TIPO_MARCACAO_LABEL, type TipoMarcacao } from '@/lib/types';
 import { ConfirmarMarcacao, FormAusencia, FormRetro, STATUS_TXT } from './FormulariosPonto';
+import MinhasTarefas from './MinhasTarefas';
 import StatusLocal from './StatusLocal';
 import type { Ponto } from './usePonto';
 
@@ -72,6 +73,8 @@ export default function PainelPonto({ p }: { p: Ponto }) {
       {p.escolha && <ConfirmarMarcacao p={p} />}
       {p.aus && <FormAusencia p={p} />}
       {p.retro && <FormRetro p={p} />}
+
+      {!ocupado && <MinhasTarefas p={p} />}
 
       <div>
         <div className="section-title"><History size={14} style={{ verticalAlign: 'middle' }} /> Últimos registros</div>

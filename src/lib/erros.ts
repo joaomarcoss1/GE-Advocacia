@@ -7,7 +7,7 @@ export type PontoErro =
   | 'PIN_INVALIDO' | 'PIN_BLOQUEADO' | 'TIPO_INVALIDO' | 'GPS_OBRIGATORIO' | 'FORA_DA_AREA' | 'LOCAL_NAO_CONFIGURADO'
   | 'JA_REGISTRADO' | 'JUSTIFICATIVA_OBRIGATORIA' | 'HORA_INVALIDA' | 'USE_PONTO_NORMAL' | 'DATA_MUITO_ANTIGA'
   | 'ARQUIVO_INVALIDO' | 'LIMITE_ANEXOS' | 'NAO_ENCONTRADO' | 'PERIODO_INVALIDO' | 'PERIODO_FECHADO'
-  | 'ESCRITORIO_SUSPENSO' | 'ESCRITORIO_NAO_ENCONTRADO';
+  | 'ESCRITORIO_SUSPENSO' | 'ESCRITORIO_NAO_ENCONTRADO' | 'STATUS_INVALIDO';
 
 export const PONTO_ERRO_MSG: Record<PontoErro, string> = {
   PIN_INVALIDO: 'PIN incorreto.',
@@ -28,6 +28,7 @@ export const PONTO_ERRO_MSG: Record<PontoErro, string> = {
   PERIODO_FECHADO: 'Esse período já foi fechado na folha. Fale com o administrador.',
   ESCRITORIO_SUSPENSO: 'O acesso deste escritório está suspenso. Fale com o administrador.',
   ESCRITORIO_NAO_ENCONTRADO: 'Escritório não encontrado. Confira o endereço do ponto com o administrador.',
+  STATUS_INVALIDO: 'Situação inválida para esta tarefa.',
 };
 
 /** Erros de gestão (painel): códigos lançados pelo banco ou pelo modo demonstração. */
@@ -62,6 +63,13 @@ export const ERRO_MSG: Record<string, string> = {
   CODIGO_EXISTE: 'Código de documento já utilizado.',
   ESCRITORIO_SUSPENSO: 'O acesso deste escritório está suspenso.',
   ACESSO_INATIVO: 'Este acesso está desativado. Fale com o administrador do escritório.',
+  DATAS_INVALIDAS: 'Confira as datas: prazos, audiências e reuniões exigem data, e o término não pode ser antes do início.',
+  PROCESSO_INVALIDO: 'Número de processo inválido. Confira os 20 dígitos (formato CNJ: 0000000-00.0000.0.00.0000).',
+  RESPONSAVEL_INVALIDO: 'O responsável precisa ser da equipe deste escritório.',
+  PARTICIPANTE_INVALIDO: 'Todos os participantes precisam ser da equipe deste escritório.',
+  ANDAMENTO_IMUTAVEL: 'Andamentos não podem ser alterados nem apagados.',
+  GOOGLE_INDISPONIVEL: 'A integração com o Google Agenda não está disponível nesta instalação.',
+  GOOGLE_NAO_CONECTADO: 'Conecte a sua conta Google para sincronizar com a agenda.',
   SEM_PERFIL: 'Este usuário existe, mas não tem acesso a nenhum escritório. Peça ao administrador para cadastrá-lo.',
 };
 
@@ -84,6 +92,7 @@ export function traduzirErroBanco(bruto: string | undefined | null): string {
   if (baixo.includes('could not find the function') || baixo.includes('schema cache') || (baixo.includes('does not exist') && (baixo.includes('relation') || baixo.includes('function')))) {
     return 'O banco precisa da atualização mais recente. Rode o arquivo atualizacao_definitiva.sql no SQL Editor do Supabase (uma vez) e tente de novo.';
   }
+  if (baixo.includes('tarefas_check')) return ERRO_MSG.DATAS_INVALIDAS;
   if (baixo.includes('row-level security')) return ERRO_MSG.SEM_PERMISSAO;
   if (baixo.includes('permission denied')) return ERRO_MSG.SEM_PERMISSAO;
   if (baixo.includes('violates foreign key') && baixo.includes('delete')) return ERRO_MSG.FUNCIONARIO_COM_HISTORICO;

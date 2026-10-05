@@ -5,11 +5,12 @@
 import { CARGOS_PADRAO, ESCALAS_MODELO, mesclarConfig } from '@/lib/config';
 import { addDays, agoraBR, brParaIso, definirFuso, eachDay, hhmmParaMin, primeiroDoMes, ultimoDoMes } from '@/lib/datetime';
 import { feriadosPadrao } from '@/lib/feriados';
+import { montarCnj } from '@/lib/cnj';
 import { calcularFolha } from '@/lib/folha';
 import { classificar, previstoDoTipo, sequenciaDoDia, turnoDaData } from '@/lib/ponto';
 import { validarMudancaFolha } from '@/lib/regras';
 import type {
-  AjusteFolha, Cargo, Config, Escala, Feriado, Folha, Funcionario, Ocorrencia, RegistroPonto, Usuario,
+  AjusteFolha, Andamento, Cargo, Config, Escala, Feriado, Folha, Funcionario, Ocorrencia, RegistroPonto, Tarefa, Usuario,
 } from '@/lib/types';
 
 export const DEMO_PLATAFORMA = { email: 'plataforma@geadvocacia.com.br', senha: 'GEplataforma2026', nome: 'Equipe GE Advocacia' };
@@ -19,6 +20,7 @@ export interface DemoEscritorio {
   slug: string; nome: string; fuso: string; cidade: string;
   admin: { nome: string; email: string; senha: string };
   gerente: { nome: string; email: string; senha: string };
+  coordenador: { nome: string; email: string; senha: string };
   equipe: DefFunc[];
 }
 
@@ -27,6 +29,7 @@ export const DEMO_ESCRITORIOS: DemoEscritorio[] = [
     slug: 'silva-ribeiro', nome: 'Silva & Ribeiro Advogados', fuso: 'America/Fortaleza', cidade: 'São Luís - MA',
     admin: { nome: 'Carlos Eduardo Silva', email: 'admin@silvaribeiro.adv.br', senha: 'silva2026admin' },
     gerente: { nome: 'Mariana Sousa Lima', email: 'gerencia@silvaribeiro.adv.br', senha: 'silva2026gerencia' },
+    coordenador: { nome: 'Beatriz Almeida Nogueira', email: 'coordenacao@silvaribeiro.adv.br', senha: 'silva2026coord' },
     equipe: [
       { nome: 'Carlos Eduardo Silva', cargo: 'Sócio', escala: 0, vinculo: 'socio', sal: 9000, pin: '482913', oab: 'OAB/MA 10.001', pix: 'carlos@exemplo.com' },
       { nome: 'Mariana Sousa Lima', cargo: 'Gerente Administrativo', escala: 0, vinculo: 'clt', sal: 4500, pin: '739105', pix: '(98) 90000-0002' },
@@ -43,6 +46,7 @@ export const DEMO_ESCRITORIOS: DemoEscritorio[] = [
     slug: 'monteiro-costa', nome: 'Monteiro Costa Advocacia', fuso: 'America/Manaus', cidade: 'Manaus - AM',
     admin: { nome: 'Helena Monteiro Costa', email: 'admin@monteirocosta.adv.br', senha: 'monteiro2026admin' },
     gerente: { nome: 'Marta Cavalcante', email: 'gerencia@monteirocosta.adv.br', senha: 'monteiro2026gerencia' },
+    coordenador: { nome: 'Ricardo Lacerda Pinto', email: 'coordenacao@monteirocosta.adv.br', senha: 'monteiro2026coord' },
     equipe: [
       { nome: 'Helena Monteiro Costa', cargo: 'Sócio', escala: 0, vinculo: 'socio', sal: 12000, pin: '918273', oab: 'OAB/AM 5.510', pix: 'helena@exemplo.com' },
       { nome: 'Otávio Prado Lemos', cargo: 'Advogado', escala: 0, vinculo: 'clt', sal: 6800, pin: '465192', oab: 'OAB/AM 7.804', pix: '000.000.000-11' },
@@ -76,7 +80,7 @@ export async function hashSecreto(chave: string, segredo: string): Promise<strin
 
 export interface SeedEscritorio {
   cargos: Cargo[]; escalas: Escala[]; funcionarios: Funcionario[]; registros: RegistroPonto[]; ocorrencias: Ocorrencia[];
-  feriados: Feriado[]; ajustes: AjusteFolha[]; folhas: Folha[]; config: Config; usuarios: Usuario[];
+  feriados: Feriado[]; ajustes: AjusteFolha[]; folhas: Folha[]; config: Config; usuarios: Usuario[]; tarefas: Tarefa[]; andamentos: Andamento[];
 }
 
 /** Base de um escritório NOVO (criado pela plataforma): cargos, escalas e feriados; nenhum funcionário. */
@@ -197,6 +201,45 @@ export async function gerarSeedEscritorio(def: DemoEscritorio, escritorioId: str
   const usuarios: Usuario[] = [
     { id: `${escritorioId}-admin`, email: def.admin.email, nome: def.admin.nome, papel: 'admin', senha_hash: await hashSecreto(def.admin.email, def.admin.senha), ativo: true },
     { id: `${escritorioId}-gerente`, email: def.gerente.email, nome: def.gerente.nome, papel: 'gerente', senha_hash: await hashSecreto(def.gerente.email, def.gerente.senha), ativo: true },
+    { id: `${escritorioId}-coord`, email: def.coordenador.email, nome: def.coordenador.nome, papel: 'coordenador', senha_hash: await hashSecreto(def.coordenador.email, def.coordenador.senha), ativo: true },
   ];
-  return { cargos, escalas, funcionarios, registros, ocorrencias, feriados, ajustes, folhas, config, usuarios };
+  const { tarefas, andamentos } = gerarTarefas(def, escritorioId, hoje, funcionarios);
+  return { cargos, escalas, funcionarios, registros, ocorrencias, feriados, ajustes, folhas, config, usuarios, tarefas, andamentos };
+}
+
+/** Tarefas, prazos, audiências e reuniões de demonstração (datas relativas a hoje, no fuso do escritório). */
+function gerarTarefas(def: DemoEscritorio, escritorioId: string, hoje: string, funcs: Funcionario[]): { tarefas: Tarefa[]; andamentos: Andamento[] } {
+  const f = (n: number) => funcs[n - 1]?.id ?? null;
+  const agoraIso = new Date().toISOString();
+  const dia = (n: number, hhmm = '00:00') => brParaIso(addDays(hoje, n), hhmm);
+  const quem = { gerente: { id: `${escritorioId}-gerente`, nome: def.gerente.nome }, admin: { id: `${escritorioId}-admin`, nome: def.admin.nome }, coord: { id: `${escritorioId}-coord`, nome: def.coordenador.nome } };
+  let n = 0;
+  const mk = (p: Partial<Tarefa> & Pick<Tarefa, 'titulo'>, por: keyof typeof quem): Tarefa => ({
+    id: id('tarefa', ++n), tipo: 'tarefa', descricao: null, prioridade: 'normal', status: 'a_fazer', area: null, processo_numero: null, cliente: null, inicio: null, fim: null,
+    dia_inteiro: false, prazo_fatal: false, lembrete_min: 60, local: null, responsavel_id: null, revisor_id: null, participantes: [], concluida_em: null,
+    criado_por: quem[por].id, criado_por_nome: quem[por].nome, created_at: agoraIso, updated_at: agoraIso, ...p,
+  });
+  const lista: Tarefa[] = def.slug === DEMO_ESCRITORIOS[0].slug ? [
+    mk({ tipo: 'prazo', titulo: 'Contestação — ação de cobrança', prazo_fatal: true, prioridade: 'urgente', status: 'em_andamento', area: 'civel', cliente: 'Indústria Beta Ltda',
+      processo_numero: montarCnj('12345', '2025', '810', '0001'), inicio: dia(2), fim: dia(2), dia_inteiro: true, lembrete_min: 1440, responsavel_id: f(3), revisor_id: f(1) }, 'admin'),
+    mk({ tipo: 'audiencia', titulo: 'Audiência de instrução', prioridade: 'alta', area: 'trabalhista', cliente: 'Transportes Gama S.A.', processo_numero: montarCnj('7788', '2024', '510', '0002'),
+      inicio: dia(4, '14:00'), fim: dia(4, '15:30'), local: 'Fórum Trabalhista — Sala 3', lembrete_min: 1440, responsavel_id: f(4), participantes: [f(5)!] }, 'gerente'),
+    mk({ tipo: 'reuniao', titulo: 'Reunião de sócios', inicio: dia(1, '10:00'), fim: dia(1, '11:00'), local: 'Sala de reuniões', responsavel_id: f(1), participantes: [f(2)!, f(3)!, f(4)!] }, 'admin'),
+    mk({ tipo: 'prazo', titulo: 'Recurso de apelação', prazo_fatal: true, prioridade: 'alta', status: 'em_revisao', area: 'civel', cliente: 'Comercial Delta', processo_numero: montarCnj('99001', '2023', '810', '0003'),
+      inicio: dia(-1), fim: dia(-1), dia_inteiro: true, responsavel_id: f(4), revisor_id: f(1) }, 'gerente'),
+    mk({ tipo: 'protocolo', titulo: 'Protocolar petição inicial', area: 'familia', cliente: 'Maria Souza', inicio: dia(0, '16:00'), fim: dia(0, '16:30'), responsavel_id: f(5) }, 'coord'),
+    mk({ titulo: 'Organizar documentos do cliente Gama', prioridade: 'baixa', responsavel_id: f(6), cliente: 'Transportes Gama S.A.' }, 'coord'),
+    mk({ tipo: 'diligencia', titulo: 'Diligência em cartório', inicio: dia(3, '09:00'), fim: dia(3, '10:00'), local: 'Cartório do 2º Ofício', responsavel_id: f(7) }, 'gerente'),
+    mk({ titulo: 'Atualizar procurações da carteira', status: 'concluida', concluida_em: dia(-3, '17:00'), responsavel_id: f(7) }, 'gerente'),
+  ] : [
+    mk({ tipo: 'prazo', titulo: 'Réplica à contestação', prazo_fatal: true, prioridade: 'urgente', area: 'empresarial', cliente: 'Amazônia Log', processo_numero: montarCnj('4410', '2025', '804', '0001'),
+      inicio: dia(3), fim: dia(3), dia_inteiro: true, responsavel_id: f(2), revisor_id: f(1) }, 'admin'),
+    mk({ tipo: 'reuniao', titulo: 'Atendimento — novo cliente', inicio: dia(1, '15:00'), fim: dia(1, '16:00'), local: 'Escritório', responsavel_id: f(3), participantes: [f(1)!] }, 'coord'),
+    mk({ titulo: 'Revisar contrato social', status: 'em_andamento', prioridade: 'alta', responsavel_id: f(3) }, 'admin'),
+  ];
+  const andamentos: Andamento[] = lista.slice(0, 2).flatMap((t, i) => [
+    { id: id('and', i * 2 + 1), tarefa_id: t.id, tipo: 'sistema' as const, texto: 'Tarefa delegada', autor_nome: t.criado_por_nome ?? '', created_at: agoraIso },
+    ...(t.status === 'em_andamento' ? [{ id: id('and', i * 2 + 2), tarefa_id: t.id, tipo: 'status' as const, texto: 'Status: a fazer → em andamento', autor_nome: funcs[2]?.nome ?? '', created_at: agoraIso }] : []),
+  ]);
+  return { tarefas: lista, andamentos };
 }

@@ -1,6 +1,7 @@
 import type {
   AcessoSensivel, AjusteDia, AjusteFolha, AnexoMeta, Auditoria, Cargo, Config, ConfigPonto, EscritorioInfo, EscritorioPlataforma, Escala, Feriado,
   Folha, Funcionario, FuncionarioBasico, Ocorrencia, Papel, PapelSessao, RegistroPonto, StatusAnalise, TipoMarcacao, TipoOcorrencia, Usuario,
+  Andamento, GoogleStatus, StatusTarefa, SyncGoogle, Tarefa, TarefaFunc,
 } from '@/lib/types';
 import type { PontoErro } from '@/lib/erros';
 
@@ -64,6 +65,10 @@ export interface PontoApi {
   /** Anexa PDF/foto a uma justificativa de falta ou a um atraso do próprio funcionário. */
   anexar(a: AnexarArgs): Promise<PontoResp<{ id: string }>>;
   retroativo(a: RetroativoArgs): Promise<PontoResp>;
+  /** Tarefas, prazos e reuniões delegados ao funcionário (consulta por PIN). */
+  tarefas(funcionarioId: string, pin: string): Promise<PontoResp<{ tarefas: TarefaFunc[] }>>;
+  /** O responsável atualiza o andamento (a fazer, em andamento, em revisão, concluída), com nota opcional. */
+  atualizarTarefa(a: { funcionario_id: string; pin: string; id: string; status: Exclude<StatusTarefa, 'cancelada'>; nota?: string }): Promise<PontoResp>;
 }
 
 export interface ResumoExpurgo {
@@ -101,6 +106,19 @@ export interface Db {
     remover(id: string): Promise<void>;
   };
   auditoria: Crud<Auditoria>;
+  /** Delegação: tarefas, prazos, audiências e reuniões do escritório (administrador, gerência e coordenação). */
+  tarefas: Crud<Tarefa>;
+  andamentos: { list(tarefaId: string): Promise<Andamento[]>; add(tarefaId: string, texto: string): Promise<void> };
+  /** Google Agenda: cada pessoa conecta a própria conta; os compromissos vão para a agenda dela e os envolvidos recebem o convite. */
+  google: {
+    status(): Promise<GoogleStatus>;
+    /** Endereço de autorização do Google (a pessoa é levada até lá e volta para o sistema). */
+    conectar(): Promise<string>;
+    desconectar(): Promise<void>;
+    sincronizar(tarefaId: string): Promise<void>;
+    remover(tarefaId: string): Promise<void>;
+    estados(): Promise<SyncGoogle[]>;
+  };
   /** Atestados: o arquivo fica no Storage privado. `listar` traz só metadados; `abrir` (só administrador) registra o acesso e devolve um endereço de 60 s. */
   anexos: {
     listar(): Promise<AnexoMeta[]>;

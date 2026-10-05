@@ -260,3 +260,137 @@ describe('integridade (espelho do banco)', () => {
     definirFuso('America/Fortaleza');
   });
 });
+
+describe('delegação: tarefas, prazos e reuniões (espelho da migração 0006)', () => {
+  const coord = (e: typeof A) => db.auth.entrar(e.coordenador.email, e.coordenador.senha);
+  const pontoA = () => db.ponto.para(A.slug);
+  const rafael = () => `func-0003`;
+  const nova = { tipo: 'tarefa' as const, titulo: 'Revisar minuta', responsavel_id: 'func-0003' };
+
+  it('cada escritório só enxerga as próprias tarefas e andamentos', async () => {
+    await entrar(A);
+    const tA = await db.tarefas.list();
+    expect(tA.length).toBeGreaterThan(3);
+    const secreta = await db.tarefas.insert({ ...nova, titulo: 'Só do escritório A' });       // id novo (único no navegador)
+    await db.andamentos.add(secreta.id, 'andamento de A');
+    await db.auth.sair(); await entrar(B);
+    const tB = await db.tarefas.list();
+    expect(tB.length).toBeGreaterThan(0);
+    expect(tB.some(t => t.titulo === 'Só do escritório A')).toBe(false);
+    expect(tB.some(t => tA.some(a => a.titulo === t.titulo))).toBe(false);
+    expect(await db.andamentos.list(secreta.id)).toEqual([]);                                // andamento de A não aparece em B
+    await expect(db.tarefas.update(secreta.id, { titulo: 'invasão' })).rejects.toThrow();     // nem se altera por id
+    await expect(db.andamentos.add(secreta.id, 'invasão')).rejects.toThrow();
+    await db.tarefas.remove(secreta.id);                                                      // sem efeito em A
+    await db.auth.sair(); await entrar(A);
+    const volta = await db.tarefas.list();
+    expect(volta.find(t => t.id === secreta.id)!.titulo).toBe('Só do escritório A');
+    expect((await db.andamentos.list(secreta.id)).map(a => a.texto)).toEqual(['andamento de A']);
+  });
+
+  it('criar grava a autoria e normaliza o número do processo; valida processo, equipe e datas', async () => {
+    await entrar(A);
+    const t = await db.tarefas.insert({ ...nova, titulo: '  Contestação  ', processo_numero: '00012347720248260001' });
+    expect(t.titulo).toBe('Contestação');
+    expect(t.criado_por_nome).toBe(A.admin.nome);
+    expect(t.processo_numero).toBe('0001234-77.2024.8.26.0001');
+    await expect(db.tarefas.insert({ ...nova, processo_numero: '0001234-78.2024.8.26.0001' })).rejects.toThrow(/processo inválido/i);
+    await expect(db.tarefas.insert({ ...nova, responsavel_id: 'func-9999' })).rejects.toThrow(/equipe/i);
+    await expect(db.tarefas.insert({ ...nova, participantes: ['func-9999'] })).rejects.toThrow(/participantes/i);
+    await expect(db.tarefas.insert({ ...nova, tipo: 'audiencia' })).rejects.toThrow(/datas/i);
+    await expect(db.tarefas.insert({ ...nova, tipo: 'reuniao', inicio: '2026-10-08T15:00:00.000Z', fim: '2026-10-08T14:00:00.000Z' })).rejects.toThrow(/datas/i);
+    await expect(db.tarefas.insert({ ...nova, responsavel_id: 'func-0001' } as never)).resolves.toBeTruthy();
+  });
+
+  it('coordenador vê e delega, mas só altera o que criou e não lê dados pessoais', async () => {
+    await coord(A);
+    expect((await db.tarefas.list()).length).toBeGreaterThan(3);
+    expect(await db.funcionarios.list()).toEqual([]);
+    expect(await db.registros.list()).toEqual([]);
+    expect(await db.ocorrencias.list()).toEqual([]);
+    expect((await db.equipe()).length).toBeGreaterThan(3);
+    const euId = (await db.auth.sessao())!.id;
+    const de = (await db.tarefas.list()).find(t => t.criado_por !== euId)!;
+    await expect(db.tarefas.update(de.id, { prioridade: 'baixa' })).rejects.toThrow(/permissão/);
+    await expect(db.tarefas.remove(de.id)).rejects.toThrow(/permissão/);
+    const minha = await db.tarefas.insert(nova);
+    await expect(db.tarefas.update(minha.id, { prioridade: 'alta' })).resolves.toMatchObject({ prioridade: 'alta' });
+    await db.tarefas.remove(minha.id);
+    await expect(db.definirPin('func-0003', '482913')).rejects.toThrow();
+    await expect(db.acessos.criar({ nome: 'X', email: 'x@y.com', papel: 'admin', senha: 'abc1234567' })).rejects.toThrow(/permissão/);
+  });
+
+  it('gerência e administração alteram qualquer tarefa do escritório', async () => {
+    await entrar(A);
+    const t = await db.tarefas.insert(nova);
+    await db.auth.sair(); await entrar(A, 'gerente');
+    await expect(db.tarefas.update(t.id, { prioridade: 'urgente' })).resolves.toMatchObject({ prioridade: 'urgente' });
+    expect(t.criado_por_nome).toBe(A.admin.nome);                                       // autoria não muda
+    expect((await db.tarefas.list()).find(x => x.id === t.id)!.criado_por_nome).toBe(A.admin.nome);
+  });
+
+  it('mudanças de situação e de responsável viram andamentos; andamento só se acrescenta', async () => {
+    await entrar(A);
+    const t = await db.tarefas.insert(nova);
+    await db.tarefas.update(t.id, { status: 'em_andamento' });
+    await db.tarefas.update(t.id, { status: 'concluida' });
+    await db.tarefas.update(t.id, { responsavel_id: 'func-0004' });
+    await db.andamentos.add(t.id, 'Protocolo conferido');
+    const ands = await db.andamentos.list(t.id);
+    expect(ands.map(a => a.texto)).toEqual(['Status: a fazer → em andamento', 'Status: em andamento → concluída', expect.stringContaining('Responsável:'), 'Protocolo conferido']);
+    expect((await db.tarefas.list()).find(x => x.id === t.id)!.concluida_em).not.toBeNull();
+    await db.tarefas.update(t.id, { status: 'a_fazer' });
+    expect((await db.tarefas.list()).find(x => x.id === t.id)!.concluida_em).toBeNull();
+    await expect(db.andamentos.add(t.id, '   ')).rejects.toThrow();
+    await db.tarefas.remove(t.id);
+    expect(await db.andamentos.list(t.id)).toEqual([]);                                  // sai junto com a tarefa
+  });
+
+  it('funcionário (PIN) vê só as suas tarefas e atualiza só as que é responsável', async () => {
+    await entrar(A);
+    const r = await pontoA().tarefas(rafael(), '561847');
+    expect(r.ok).toBe(true);
+    const minhas = (r as { tarefas: { id: string; papel: string; titulo: string }[] }).tarefas;
+    expect(minhas.length).toBeGreaterThan(0);
+    expect(minhas.every(t => ['responsavel', 'revisor', 'participante'].includes(t.papel))).toBe(true);
+    expect(await pontoA().tarefas(rafael(), '000000')).toMatchObject({ ok: false, erro: 'PIN_INVALIDO' });
+    const dele = minhas.find(t => t.papel === 'responsavel')!;
+    const ok = await pontoA().atualizarTarefa({ funcionario_id: rafael(), pin: '561847', id: dele.id, status: 'concluida', nota: 'Protocolada' });
+    expect(ok.ok).toBe(true);
+    const ands = await db.andamentos.list(dele.id);
+    expect(ands.at(-1)!.texto).toContain('Protocolada');
+    expect(ands.at(-1)!.autor_nome).toBe('Rafael Costa Ribeiro');
+    // quem não é responsável (revisor/participante) e outro funcionário não atualizam; status inválido é recusado
+    const dOutro = (await db.tarefas.list()).find(t => t.responsavel_id !== rafael() && t.status !== 'cancelada')!;
+    expect(await pontoA().atualizarTarefa({ funcionario_id: rafael(), pin: '561847', id: dOutro.id, status: 'concluida' })).toMatchObject({ ok: false, erro: 'NAO_ENCONTRADO' });
+    expect(await pontoA().atualizarTarefa({ funcionario_id: rafael(), pin: '561847', id: dele.id, status: 'cancelada' as never })).toMatchObject({ ok: false, erro: 'STATUS_INVALIDO' });
+  });
+
+  it('o PIN de B não abre as tarefas de A nem o endereço de A mostra tarefas de B', async () => {
+    const pontoB = db.ponto.para(B.slug);
+    expect(await pontoB.tarefas('func-0003', '561847')).toMatchObject({ ok: false });                // func-0003 de B tem outro PIN
+    const rB = await pontoB.tarefas('func-0002', '465192');                                          // Otávio (B)
+    expect(rB.ok).toBe(true);
+    await entrar(A);
+    const titulosA = new Set((await db.tarefas.list()).map(t => t.titulo));
+    expect((rB as { tarefas: { titulo: string }[] }).tarefas.length).toBeGreaterThan(0);
+    expect((rB as { tarefas: { titulo: string }[] }).tarefas.some(t => titulosA.has(t.titulo))).toBe(false);
+  });
+
+  it('funcionário com tarefa delegada não pode ser excluído; Google fica indisponível no modo demonstração', async () => {
+    await entrar(A);
+    await expect(db.funcionarios.remove('func-0003')).rejects.toThrow(/histórico/);
+    expect(await db.google.status()).toEqual({ disponivel: false, conectado: false });
+    await expect(db.google.conectar()).rejects.toThrow(/não está disponível/);
+    await expect(db.google.sincronizar('x')).rejects.toThrow();
+  });
+
+  it('a delegação entra na auditoria do escritório', async () => {
+    await entrar(A);
+    const t = await db.tarefas.insert(nova);
+    await db.tarefas.update(t.id, { prioridade: 'alta' });
+    const audit = (await db.auditoria.list()).filter(a => a.tabela === 'tarefas');
+    expect(audit.map(a => a.acao)).toEqual(expect.arrayContaining(['Criado · tarefas', 'Alterado · tarefas']));
+    expect(agoraBR().data >= addDays(agoraBR().data, -1)).toBe(true);
+  });
+});

@@ -13,6 +13,9 @@ begin
   perform t.ok(public.cnj_normalizar(n) = substr(n,1,7) || '-' || dd || '.2024.8.26.0001', 'CNJ válido é normalizado com máscara');
   perform t.ok(public.cnj_normalizar(substr(n,1,7) || lpad(((dd::int + 1) % 100)::text, 2, '0') || substr(n, 10)) is null, 'dígito verificador errado é recusado');
   perform t.ok(public.cnj_normalizar('123') is null, 'número curto é recusado');
+  -- paridade com src/lib/cnj.ts (o app gera 0001234-77.2024.8.26.0001 para os mesmos campos)
+  perform t.ok(dd = '77' and public.cnj_normalizar('0001234-77.2024.8.26.0001') = '0001234-77.2024.8.26.0001', 'SQL e TypeScript calculam o mesmo dígito verificador');
+  perform t.ok(public.cnj_normalizar('0012345-68.2025.8.10.0001') = '0012345-68.2025.8.10.0001', 'número de demonstração do app é válido no banco');
 end $$;
 
 \echo == D2. Coordenador criado pelo administrador do escritório A

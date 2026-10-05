@@ -6,6 +6,7 @@
 - [ ] Criar o primeiro usuário em *Authentication* e promovê-lo a administrador da plataforma:
   `insert into public.plataforma_admins (id, nome, email) values ('<uuid do usuário>', 'Nome', 'email');`
 - [ ] Publicar a Edge Function: `supabase functions deploy anexos`. A `service_role` fica **só** nos segredos da função.
+- [ ] (Opcional) Google Agenda automático: seguir `docs/GOOGLE-AGENDA.md` (credenciais OAuth, segredos `GOOGLE_*` e `ALLOWED_ORIGINS`, `supabase functions deploy google-agenda`).
 - [ ] Criar o bucket **privado** `anexos` (nunca público) e conferir a política de acesso.
 - [ ] Habilitar a extensão **pg_cron** (Database → Extensions) e rodar a migração 0005 de novo: ela agenda sozinha a limpeza diária de tentativas de PIN. O expurgo de anexos/geolocalização é executado pelo administrador em Configurações → Privacidade (com prévia).
 - [ ] Variáveis do front-end (Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, opcional `VITE_SENTRY_DSN`. **Nunca** a `service_role`.

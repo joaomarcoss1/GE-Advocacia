@@ -42,7 +42,7 @@ export function TabelaOcorrencias({ lista, admin, nome, metasDe, travado, onEdit
           })}
         </tbody>
       </table>
-      {!lista.length && <Vazio tipo="documento" titulo="Nenhuma ocorrência">Atestados, audiências externas, férias e outras ausências aparecem aqui.</Vazio>}
+      {!lista.length && <Vazio tipo="documento" titulo="Nenhuma ocorrência" />}
     </div>
   );
 }

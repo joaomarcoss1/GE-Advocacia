@@ -4,6 +4,7 @@ export const CONTAS = {
   plataforma: { email: 'plataforma@geadvocacia.com.br', senha: 'GEplataforma2026' },
   adminA: { email: 'admin@silvaribeiro.adv.br', senha: 'silva2026admin' },
   gerenteA: { email: 'gerencia@silvaribeiro.adv.br', senha: 'silva2026gerencia' },
+  coordA: { email: 'coordenacao@silvaribeiro.adv.br', senha: 'silva2026coord' },
   adminB: { email: 'admin@monteirocosta.adv.br', senha: 'monteiro2026admin' },
 };
 /** Funcionários de demonstração (PIN em src/data/seed.ts). */
@@ -38,5 +39,5 @@ export async function digitarPin(page: Page, pin: string) {
 /** Abre o app e espera os dados de demonstração nascerem (com o relógio atual) antes de o teste mexer na hora. */
 export async function semear(page: Page) {
   await page.goto('/');
-  await page.waitForFunction(() => localStorage.getItem('ge.v1.seeded') === 'v2');
+  await page.waitForFunction(() => localStorage.getItem('ge.v1.seeded') === 'v3');
 }

@@ -15,9 +15,11 @@ import { classificar, distanciaMetros, exigeJustificativa, previstoDoTipo, turno
 import { RETENCAO_TENTATIVAS_DIAS, SCHEMA_ESPERADO, periodoFechado, temHistorico, validarMudancaFolha } from '@/lib/regras';
 import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
 import { base64ParaBlob } from '@/lib/anexos';
+import { normalizarCnj } from '@/lib/cnj';
+import { STATUS_ROTULO } from '@/lib/tarefas';
 import type {
-  AcessoSensivel, AjusteDia, AjusteFolha, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
-  Funcionario, Ocorrencia, Papel, RegistroPonto, Usuario,
+  AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
+  Funcionario, Ocorrencia, Papel, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
 } from '@/lib/types';
 import type {
   AnexarArgs, AnexoAberto, BaterArgs, Crud, Db, DocumentoVerificado, FolhasRepo, JustificarAusenciaArgs, JustificativaFunc, MarcacaoHistorico,
@@ -143,6 +145,7 @@ export function criarDbLocal(): Db {
     le: ['admin'], ins: ['admin'], upd: ['admin'], del: ['admin'],
     antes(op, velho, _n, a) {
       if (op !== 'del' || !velho) return;
+      if (lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.responsavel_id === velho.id || t.revisor_id === velho.id)) throw erro('FUNCIONARIO_COM_HISTORICO');   // FK restrict do banco
       const anexos = lerTab<AnexoLocal>(a.slug, 'anexos');
       if (temHistorico(velho.id, {
         registros: lerTab<RegistroPonto>(a.slug, 'registros'), ocorrencias: lerTab<Ocorrencia>(a.slug, 'ocorrencias'),
@@ -209,6 +212,69 @@ export function criarDbLocal(): Db {
     antes(op, _v, novo, a) {
       if (op !== 'del' && novo && lerTab<Feriado>(a.slug, 'feriados').some(f => f.id !== novo.id && f.data === novo.data)) throw erro('DATA_EXISTE', 'Já existe um feriado nessa data.');
     },
+  });
+
+
+  // ---------------------------------------------------------------- delegação (espelha a migração 0006)
+  const DELEGA: Papel[] = ['admin', 'gerente', 'coordenador'];
+  const andamentosDe = (slug: string) => lerTab<Andamento>(slug, 'andamentos');
+  function novoAndamento(slug: string, tarefaId: string, tipo: Andamento['tipo'], texto: string, autor: string) {
+    gravarTab(slug, 'andamentos', [...andamentosDe(slug), { id: uuid(), tarefa_id: tarefaId, tipo, texto, autor_nome: autor, created_at: agoraIso() }]);
+  }
+  const tarefas = crud<Tarefa>('tarefas', {
+    le: DELEGA, ins: DELEGA, upd: DELEGA, del: DELEGA,
+    antes(op, velho, novo, a) {
+      // coordenador altera e exclui somente o que ele mesmo criou
+      if ((op === 'upd' || op === 'del') && a.papel === 'coordenador' && velho?.criado_por !== a.sessao.id) throw erro('SEM_PERMISSAO');
+      if (op === 'del' || !novo) return;
+      novo.titulo = (novo.titulo ?? '').trim();
+      if (novo.titulo.length < 1 || novo.titulo.length > 200) throw erro('NOME_OBRIGATORIO', 'Informe o título (até 200 caracteres).');
+      Object.assign(novo, {
+        tipo: novo.tipo ?? 'tarefa', prioridade: novo.prioridade ?? 'normal', status: novo.status ?? 'a_fazer', descricao: novo.descricao?.trim() || null,
+        area: novo.area ?? null, cliente: novo.cliente?.trim() || null, local: novo.local?.trim() || null, inicio: novo.inicio ?? null, fim: novo.fim ?? null,
+        dia_inteiro: !!novo.dia_inteiro, prazo_fatal: !!novo.prazo_fatal, lembrete_min: novo.lembrete_min ?? 60, responsavel_id: novo.responsavel_id ?? null,
+        revisor_id: novo.revisor_id ?? null, participantes: [...new Set(novo.participantes ?? [])], updated_at: agoraIso(),
+      });
+      if (novo.processo_numero && novo.processo_numero.trim()) {
+        const n = normalizarCnj(novo.processo_numero);
+        if (!n) throw erro('PROCESSO_INVALIDO');
+        novo.processo_numero = n;
+      } else novo.processo_numero = null;
+      if (novo.tipo !== 'tarefa' && !novo.inicio) throw erro('DATAS_INVALIDAS');
+      if (novo.inicio && novo.fim && novo.fim < novo.inicio) throw erro('DATAS_INVALIDAS');
+      if (novo.dia_inteiro && novo.inicio && !novo.fim) novo.fim = novo.inicio;
+      const equipe = new Set(lerTab<Funcionario>(a.slug, 'funcionarios').map(f => f.id));
+      if (novo.responsavel_id && !equipe.has(novo.responsavel_id)) throw erro('RESPONSAVEL_INVALIDO');
+      if (novo.revisor_id && !equipe.has(novo.revisor_id)) throw erro('RESPONSAVEL_INVALIDO');
+      if (novo.participantes.some(p => !equipe.has(p))) throw erro('PARTICIPANTE_INVALIDO');
+      if (op === 'ins') { novo.criado_por = a.sessao.id; novo.criado_por_nome = a.sessao.nome; novo.created_at = novo.created_at ?? agoraIso(); }
+      else if (velho) { novo.criado_por = velho.criado_por; novo.criado_por_nome = velho.criado_por_nome; }
+      if (novo.status === 'concluida') novo.concluida_em = velho?.status === 'concluida' ? velho.concluida_em : agoraIso();
+      else novo.concluida_em = null;
+    },
+    depois(op, velho, novo, a) {
+      const quem = a.sessao.nome;
+      if (op === 'ins' && novo) auditarLocal(a, 'Criado · tarefas', novo.titulo, 'tarefas', novo.id);
+      if (op === 'upd' && velho && novo) {
+        if (velho.status !== novo.status) novoAndamento(a.slug, novo.id, 'status', `Status: ${STATUS_ROTULO[velho.status].toLowerCase()} → ${STATUS_ROTULO[novo.status].toLowerCase()}`, quem);
+        if (velho.responsavel_id !== novo.responsavel_id) {
+          const nome = (id: string | null) => lerTab<Funcionario>(a.slug, 'funcionarios').find(f => f.id === id)?.nome ?? 'ninguém';
+          novoAndamento(a.slug, novo.id, 'sistema', `Responsável: ${nome(velho.responsavel_id)} → ${nome(novo.responsavel_id)}`, quem);
+        }
+        auditarLocal(a, 'Alterado · tarefas', novo.titulo, 'tarefas', novo.id);
+      }
+      if (op === 'del' && velho) {
+        gravarTab(a.slug, 'andamentos', andamentosDe(a.slug).filter(x => x.tarefa_id !== velho.id));
+        auditarLocal(a, 'Excluído · tarefas', velho.titulo, 'tarefas', velho.id);
+      }
+    },
+  });
+  const paraFuncionario = (t: Tarefa, fid: string, slug: string): TarefaFunc => ({
+    id: t.id, tipo: t.tipo, titulo: t.titulo, descricao: t.descricao, prioridade: t.prioridade, status: t.status, area: t.area, processo_numero: t.processo_numero,
+    cliente: t.cliente, inicio: t.inicio, fim: t.fim, dia_inteiro: t.dia_inteiro, prazo_fatal: t.prazo_fatal, local: t.local, delegado_por: t.criado_por_nome,
+    papel: t.responsavel_id === fid ? 'responsavel' : t.revisor_id === fid ? 'revisor' : 'participante',
+    andamentos: andamentosDe(slug).filter(x => x.tarefa_id === t.id).sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 10)
+      .map(x => ({ texto: x.texto, autor: x.autor_nome, em: x.created_at, tipo: x.tipo })),
   });
 
   const folhasBase = crud<Folha>('folhas', {
@@ -427,12 +493,42 @@ export function criarDbLocal(): Db {
           return { ok: true as const };
         }) as ReturnType<PontoApi['retroativo']>;
       },
+      async tarefas(fid, pin) {
+        return comAlvo(async () => {
+          const pv = await validarPin(slug, fid, pin);
+          if (pv !== 'ok') return errP(pv);
+          const corte = Date.now() - 14 * 86400_000;
+          const lista = lerTab<Tarefa>(slug, 'tarefas')
+            .filter(t => t.status !== 'cancelada' && (t.responsavel_id === fid || t.revisor_id === fid || t.participantes.includes(fid))
+              && (t.status !== 'concluida' || (t.concluida_em && Date.parse(t.concluida_em) > corte)))
+            .sort((x, y) => Number(x.status === 'concluida') - Number(y.status === 'concluida') || (x.inicio ?? x.created_at).localeCompare(y.inicio ?? y.created_at))
+            .map(t => paraFuncionario(t, fid, slug));
+          return { ok: true as const, tarefas: lista };
+        }) as ReturnType<PontoApi['tarefas']>;
+      },
+      async atualizarTarefa(a) {
+        return comAlvo(async () => {
+          const pv = await validarPin(slug, a.funcionario_id, a.pin);
+          if (pv !== 'ok') return errP(pv);
+          if (!['a_fazer', 'em_andamento', 'em_revisao', 'concluida'].includes(a.status)) return errP('STATUS_INVALIDO');
+          const todas = lerTab<Tarefa>(slug, 'tarefas');
+          const i = todas.findIndex(t => t.id === a.id && t.responsavel_id === a.funcionario_id && t.status !== 'cancelada');
+          if (i < 0) return errP('NAO_ENCONTRADO');
+          const velho = todas[i];
+          todas[i] = { ...velho, status: a.status as StatusTarefa, concluida_em: a.status === 'concluida' ? agoraIso() : null, updated_at: agoraIso() };
+          gravarTab(slug, 'tarefas', todas);
+          const nome = lerTab<Funcionario>(slug, 'funcionarios').find(f => f.id === a.funcionario_id)?.nome ?? 'Funcionário';
+          const nota = (a.nota ?? '').trim().slice(0, 1500);
+          novoAndamento(slug, velho.id, 'status', `Status: ${STATUS_ROTULO[velho.status].toLowerCase()} → ${STATUS_ROTULO[a.status as StatusTarefa].toLowerCase()}${nota ? ` · ${nota}` : ''}`, nome);
+          return { ok: true as const };
+        }) as ReturnType<PontoApi['atualizarTarefa']>;
+      },
     };
   }
 
   // ---------------------------------------------------------------- inicialização (dados de demonstração)
   const init = async () => {
-    if (ls().getItem(K.seeded) === 'v2') return;
+    if (ls().getItem(K.seeded) === 'v3') return;
     const esc: EscritorioLocal[] = [];
     for (const def of DEMO_ESCRITORIOS) {
       const e: EscritorioLocal = { id: `esc-${def.slug}`, nome: def.nome, slug: def.slug, ativo: true, fuso: def.fuso, created_at: agoraIso() };
@@ -442,11 +538,12 @@ export function criarDbLocal(): Db {
       gravarTab(e.slug, 'registros', s.registros); gravarTab(e.slug, 'ocorrencias', s.ocorrencias); gravarTab(e.slug, 'feriados', s.feriados);
       gravarTab(e.slug, 'ajustes', s.ajustes); gravarTab(e.slug, 'folhas', s.folhas); gravarTab(e.slug, 'usuarios', s.usuarios);
       gravarJson(kt(e.slug, 'config'), s.config);
+      gravarTab(e.slug, 'tarefas', s.tarefas); gravarTab(e.slug, 'andamentos', s.andamentos);
     }
     gravarJson(K.esc, esc);
     gravarJson(K.plat, [{ id: 'plat-1', email: DEMO_PLATAFORMA.email, nome: DEMO_PLATAFORMA.nome, papel: 'admin', ativo: true, senha_hash: await hashSecreto(DEMO_PLATAFORMA.email, DEMO_PLATAFORMA.senha) }]);
     definirFuso('America/Fortaleza');
-    ls().setItem(K.seeded, 'v2');
+    ls().setItem(K.seeded, 'v3');
   };
 
   // ---------------------------------------------------------------- Db
@@ -511,6 +608,27 @@ export function criarDbLocal(): Db {
         gravarTab(a.slug, 'usuarios', us.filter(u => u.id !== id));
         auditarLocal(a, 'Acesso removido', alvo.email);
       },
+    },
+    tarefas,
+    andamentos: {
+      async list(tarefaId) { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? andamentosDe(a.slug).filter(x => x.tarefa_id === tarefaId).sort((x, y) => x.created_at.localeCompare(y.created_at)) : []; },
+      async add(tarefaId, texto) {
+        const a = ator();
+        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+        if (!lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.id === tarefaId)) throw erro('NAO_ENCONTRADO');
+        const t = texto.trim();
+        if (t.length < 1 || t.length > 2000) throw erro('MOTIVO_OBRIGATORIO', 'Escreva o andamento (até 2000 caracteres).');
+        novoAndamento(a.slug, tarefaId, 'comentario', t, a.sessao.nome);
+      },
+    },
+    google: {
+      // O Google Agenda depende do servidor (OAuth e tokens): no modo demonstração fica indisponível; o link e o .ics continuam funcionando.
+      async status() { return { disponivel: false, conectado: false }; },
+      async conectar(): Promise<string> { throw erro('GOOGLE_INDISPONIVEL'); },
+      async desconectar() { /* nada a desconectar */ },
+      async sincronizar() { throw erro('GOOGLE_INDISPONIVEL'); },
+      async remover() { /* nada a remover */ },
+      async estados() { return []; },
     },
     auditoria: {
       async list() { const a = tentaAtor(); return a && a.papel === 'admin' ? lerTab<Auditoria>(a.slug, 'auditoria') : []; },
@@ -647,7 +765,7 @@ export function criarDbLocal(): Db {
         definirFuso(e.fuso);
         const modelo = baseEscritorioNovo();
         gravarTab(slug, 'cargos', modelo.cargos); gravarTab(slug, 'escalas', modelo.escalas);
-        for (const t of ['funcionarios', 'registros', 'ocorrencias', 'ajustes', 'ajustes_dia', 'folhas', 'auditoria', 'anexos']) gravarTab(slug, t, []);
+        for (const t of ['funcionarios', 'registros', 'ocorrencias', 'ajustes', 'ajustes_dia', 'folhas', 'auditoria', 'anexos', 'tarefas', 'andamentos']) gravarTab(slug, t, []);
         gravarTab(slug, 'feriados', modelo.feriados);
         gravarJson(kt(slug, 'config'), mesclarConfig({ escritorio: { ...CONFIG_PADRAO.escritorio, nome: e.nome } }));
         gravarTab(slug, 'usuarios', [{ id: uuid(), nome: x.adminNome.trim(), email, papel: 'admin', ativo: true, senha_hash: await hashSecreto(email, x.adminSenha) }]);

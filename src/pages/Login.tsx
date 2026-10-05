@@ -59,6 +59,7 @@ export default function Login() {
                   <div key={e.slug} className="row" style={{ gap: 6 }}>
                     <button type="button" className="btn ghost sm grow" onClick={() => { setEmail(e.admin.email); setSenha(e.admin.senha); }}>{e.nome} · administrador</button>
                     <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.gerente.email); setSenha(e.gerente.senha); }}>gerência</button>
+                    <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.coordenador.email); setSenha(e.coordenador.senha); }}>coordenação</button>
                   </div>
                 ))}
               </div>

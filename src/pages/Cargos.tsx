@@ -51,7 +51,7 @@ export default function Cargos() {
             ))}
           </tbody>
         </table>
-        {!cargos.length && <Vazio tipo="cargos" titulo="Nenhum cargo ainda">Cargos organizam a equipe e definem a função de cada pessoa.</Vazio>}
+        {!cargos.length && <Vazio tipo="cargos" titulo="Nenhum cargo ainda" />}
       </div>
       {ed && (
         <Modal titulo={ed.id ? 'Editar cargo' : 'Novo cargo'} onClose={() => setEd(null)}

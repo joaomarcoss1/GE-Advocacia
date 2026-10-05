@@ -38,7 +38,7 @@ export default function AbaAuditoria() {
               </div></td></tr>
             )}
           </Fragment>))}</tbody>
-      </table>{!visiveis.length && <Vazio tipo="documento" titulo="Nenhuma ação registrada">As alterações feitas no sistema aparecem aqui automaticamente.</Vazio>}</div>
+      </table>{!visiveis.length && <Vazio tipo="documento" titulo="Nenhuma ação registrada" />}</div>
     </>
   );
 }

@@ -9,7 +9,7 @@ import type { Papel, Usuario } from '@/lib/types';
 
 /** Acessos ao painel DESTE escritório (administrador e gerência). */
 export default function AbaAcessos() {
-  const { db, usuarios, recarregar, auditar, escritorio } = useDados();
+  const { db, usuarios, recarregar, auditar } = useDados();
   const { sessao } = useAuth();
   const toast = useToast();
   const confirmar = useConfirm();
@@ -47,7 +47,6 @@ export default function AbaAcessos() {
   return (
     <>
       <div className="row between">
-        <p className="muted" style={{ maxWidth: '62ch' }}>Quem pode entrar no painel de <strong>{escritorio.nome}</strong>. <strong>Administrador</strong> tem acesso total ao escritório, inclusive a salários, folha e a esta tela. <strong>Gerência</strong> acompanha ponto, escalas e ocorrências, sem salários nem atestados. Os acessos valem só para este escritório.</p>
         <button className="btn" onClick={() => { setNovo({ nome: '', email: '', papel: 'gerente', senha: '' }); setVerSenha(false); }}>Novo acesso</button>
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
@@ -59,7 +58,7 @@ export default function AbaAcessos() {
               <td className="muted">{u.email}</td>
               <td>
                 <select className="select" style={{ minHeight: 38, maxWidth: 170 }} value={u.papel} aria-label={`Papel de ${u.nome}`} onChange={e => salvarAcesso(u, { papel: e.target.value as Papel })}>
-                  <option value="admin">Administrador</option><option value="gerente">Gerência</option>
+                  <option value="admin">Administrador</option><option value="gerente">Gerência</option><option value="coordenador">Coordenação</option>
                 </select>
               </td>
               <td><button className={`btn sm ${u.ativo ? 'ghost' : ''}`} onClick={() => salvarAcesso(u, { ativo: !u.ativo })}>{u.ativo ? 'Ativo' : 'Inativo'}</button></td>
@@ -69,7 +68,7 @@ export default function AbaAcessos() {
               </td>
             </tr>
           ))}</tbody>
-        </table>{!usuarios.length && <Vazio>Nenhum acesso cadastrado.</Vazio>}</div>
+        </table>{!usuarios.length && <Vazio titulo="Nenhum acesso cadastrado" />}</div>
       </div>
 
       {novo && (
@@ -81,6 +80,7 @@ export default function AbaAcessos() {
               <label>Papel</label>
               <label className={`role-opt ${novo.papel === 'admin' ? 'on' : ''}`}><input type="radio" name="papel" checked={novo.papel === 'admin'} onChange={() => setNovo({ ...novo, papel: 'admin' })} /><span><strong>Administrador</strong><br /><span className="muted">Acesso total ao escritório: salários, folha, atestados, configurações e acessos.</span></span></label>
               <label className={`role-opt ${novo.papel === 'gerente' ? 'on' : ''}`}><input type="radio" name="papel" checked={novo.papel === 'gerente'} onChange={() => setNovo({ ...novo, papel: 'gerente' })} /><span><strong>Gerência</strong><br /><span className="muted">Aprova ponto, registra ocorrências e vê escalas. Não vê salários, folha nem atestados.</span></span></label>
+              <label className={`role-opt ${novo.papel === 'coordenador' ? 'on' : ''}`}><input type="radio" name="papel" checked={novo.papel === 'coordenador'} onChange={() => setNovo({ ...novo, papel: 'coordenador' })} /><span><strong>Coordenação</strong><br /><span className="muted">Delega e acompanha tarefas, prazos e reuniões. Não vê ponto, salários, folha nem atestados.</span></span></label>
             </div>
             <Field label="Senha inicial (mín. 10 caracteres)" dica="Use letras e números; quanto mais longa, melhor. Anote e repasse com segurança.">
               <div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}>

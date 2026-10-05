@@ -302,8 +302,8 @@ export interface AcessoSensivel {
   id: string; usuario: string; anexo_id: string; funcionario_id: string | null; acao: string; origem: string | null; created_at: string;
 }
 
-export type Papel = 'admin' | 'gerente';
-/** Perfil de quem entra no sistema: administrador ou gerência de um escritório, ou a plataforma (dono do GE Advocacia). */
+export type Papel = 'admin' | 'gerente' | 'coordenador';
+/** Perfil de quem entra no sistema: administrador, gerência ou coordenação de um escritório, ou a plataforma (dono do GE Advocacia). */
 export type PapelSessao = Papel | 'plataforma';
 export interface Usuario {
   id: string;
@@ -327,4 +327,52 @@ export interface Auditoria {
   registro_id?: string | null;
   antes?: Record<string, unknown> | null;
   depois?: Record<string, unknown> | null;
+}
+
+// ---------------------------------------------------------------- delegação (tarefas, prazos, audiências, reuniões)
+export type TipoTarefa = 'tarefa' | 'prazo' | 'audiencia' | 'reuniao' | 'diligencia' | 'protocolo' | 'atendimento';
+export type StatusTarefa = 'a_fazer' | 'em_andamento' | 'em_revisao' | 'concluida' | 'cancelada';
+export type PrioridadeTarefa = 'baixa' | 'normal' | 'alta' | 'urgente';
+export type AreaJuridica = 'civel' | 'trabalhista' | 'tributario' | 'criminal' | 'familia' | 'empresarial' | 'previdenciario' | 'administrativo' | 'outro';
+export interface Tarefa {
+  id: string;
+  tipo: TipoTarefa;
+  titulo: string;
+  descricao: string | null;
+  prioridade: PrioridadeTarefa;
+  status: StatusTarefa;
+  area: AreaJuridica | null;
+  /** Número CNJ já normalizado (NNNNNNN-DD.AAAA.J.TR.OOOO). */
+  processo_numero: string | null;
+  cliente: string | null;
+  /** Instantes ISO (UTC). Em compromisso de dia inteiro, `inicio` é o começo do dia no fuso do escritório. */
+  inicio: string | null;
+  fim: string | null;
+  dia_inteiro: boolean;
+  prazo_fatal: boolean;
+  lembrete_min: number;
+  local: string | null;
+  responsavel_id: string | null;
+  revisor_id: string | null;
+  participantes: string[];
+  criado_por: string | null;
+  criado_por_nome: string | null;
+  concluida_em: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface Andamento {
+  id: string; tarefa_id: string; tipo: 'comentario' | 'status' | 'sistema'; texto: string; autor_nome: string; created_at: string;
+}
+/** Estado da sincronização de uma tarefa com o Google Agenda (preenchido só pela Edge Function). */
+export interface SyncGoogle { tarefa_id: string; event_id: string | null; sync_em: string | null; erro: string | null }
+export interface GoogleStatus {
+  /** O Google Agenda está disponível nesta instalação (modo Supabase com a função publicada). */
+  disponivel: boolean; conectado: boolean; email?: string | null;
+}
+/** Tarefa vista pelo funcionário (PIN): sem dados internos além do necessário. */
+export interface TarefaFunc extends Pick<Tarefa, 'id' | 'tipo' | 'titulo' | 'descricao' | 'prioridade' | 'status' | 'area' | 'processo_numero' | 'cliente' | 'inicio' | 'fim' | 'dia_inteiro' | 'prazo_fatal' | 'local'> {
+  delegado_por: string | null;
+  papel: 'responsavel' | 'revisor' | 'participante';
+  andamentos: { texto: string; autor: string; em: string; tipo: string }[];
 }

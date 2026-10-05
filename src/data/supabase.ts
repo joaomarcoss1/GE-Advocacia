@@ -10,7 +10,7 @@ import { base64ParaBlob } from '@/lib/anexos';
 import { mesclarConfig } from '@/lib/config';
 import { ErroNegocio, PONTO_ERRO_MSG, traduzirErroBanco, type PontoErro } from '@/lib/erros';
 import type {
-  AcessoSensivel, AnexoMeta, Config, Escala, EscritorioPlataforma, Folha, FuncionarioBasico, Usuario,
+  AcessoSensivel, Andamento, AnexoMeta, Config, Escala, EscritorioPlataforma, Folha, FuncionarioBasico, GoogleStatus, SyncGoogle, Tarefa, Usuario,
 } from '@/lib/types';
 import type { AnexoAberto, ArquivoAnexo, Crud, Db, DocumentoVerificado, FolhasRepo, PeriodoFechado, PessoaPonto, PontoApi, PontoResp, ResumoExpurgo, Sessao } from './db';
 
@@ -103,6 +103,27 @@ export function criarDbSupabase(url: string, key: string): Db {
     return data as T;
   }
 
+  /** Campos preenchidos pelo servidor (autoria, datas, conclusão): o app nunca os envia. */
+  const SO_SERVIDOR = new Set(['criado_por', 'criado_por_nome', 'concluida_em', 'created_at', 'updated_at']);
+  const semCamposDoServidor = <R extends object>(r: R): R => Object.fromEntries(Object.entries(r).filter(([k]) => !SO_SERVIDOR.has(k))) as R;
+  const tarefasBase = crud<Tarefa>('tarefas', 'inicio');
+  const tarefas: Crud<Tarefa> = {
+    ...tarefasBase,
+    insert: r => tarefasBase.insert(semCamposDoServidor(r)),
+    update: (id, p) => tarefasBase.update(id, semCamposDoServidor(p)),
+  };
+
+  /** Edge Function "google-agenda" (OAuth e tokens ficam só no servidor; o app apenas pede). */
+  async function funcaoGoogle<T>(corpo: Record<string, unknown>): Promise<T> {
+    const { data, error } = await sb.functions.invoke('google-agenda', { body: corpo });
+    if (error) {
+      let msg = error.message;
+      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
+      throw new Error(traduzirErroBanco(msg));
+    }
+    return data as T;
+  }
+
   function pontoApi(slugBruto: string): PontoApi {
     const slug = (slugBruto ?? '').trim().toLowerCase();
     return {
@@ -141,6 +162,10 @@ export function criarDbSupabase(url: string, key: string): Db {
           return { ok: false, erro: codigo ?? 'ARQUIVO_INVALIDO', detalhe: codigo ? null : msg };
         }
       },
+      tarefas: (fid, pin) => rpc('ponto_tarefas', { p_func_id: fid, p_pin: pin }) as ReturnType<PontoApi['tarefas']>,
+      atualizarTarefa: a => rpc('ponto_tarefa_atualizar', {
+        p_func_id: a.funcionario_id, p_pin: a.pin, p_id: a.id, p_status: a.status, p_nota: a.nota ?? null,
+      }) as ReturnType<PontoApi['atualizarTarefa']>,
       retroativo: a => rpc('ponto_retroativo', {
         p_func_id: a.funcionario_id, p_pin: a.pin, p_data: a.data, p_tipo: a.tipo, p_hora: a.hora, p_justificativa: a.justificativa,
       }) as ReturnType<PontoApi['retroativo']>,
@@ -177,6 +202,37 @@ export function criarDbSupabase(url: string, key: string): Db {
       },
     },
     auditoria: crud('auditoria'),
+    tarefas,
+    andamentos: {
+      async list(tarefaId) {
+        const { data, error } = await sb.from('tarefa_andamentos').select('id,tarefa_id,tipo,texto,autor_nome,created_at').eq('tarefa_id', tarefaId).order('created_at');
+        if (error) falha(error);
+        return (data ?? []) as Andamento[];
+      },
+      async add(tarefaId, texto) {
+        const quem = sessaoCache ?? (await lerSessao()).sessao;
+        if (!quem) throw new ErroNegocio('SEM_PERMISSAO');
+        const { error } = await sb.from('tarefa_andamentos').insert({ tarefa_id: tarefaId, texto: texto.trim(), autor_nome: quem.nome, autor_usuario: quem.id });
+        if (error) falha(error);
+      },
+    },
+    google: {
+      async status() {
+        const { data, error } = await sb.rpc('google_status');
+        if (error) { if (funcaoAusente(error)) return { disponivel: false, conectado: false }; falha(error); }
+        const r = (data ?? {}) as { conectado?: boolean; email?: string | null };
+        return { disponivel: true, conectado: !!r.conectado, email: r.email ?? null } satisfies GoogleStatus;
+      },
+      async conectar() { return (await funcaoGoogle<{ url: string }>({ acao: 'conectar', retorno: `${location.origin}/painel/agenda` })).url; },
+      async desconectar() { await rpc('google_desconectar'); },
+      async sincronizar(tarefaId) { await funcaoGoogle({ acao: 'sincronizar', tarefa_id: tarefaId }); },
+      async remover(tarefaId) { await funcaoGoogle({ acao: 'remover', tarefa_id: tarefaId }); },
+      async estados() {
+        const { data, error } = await sb.from('tarefa_google').select('tarefa_id,event_id,sync_em,erro');
+        if (error) { if (funcaoAusente(error)) return []; falha(error); }
+        return (data ?? []) as SyncGoogle[];
+      },
+    },
     anexos: {
       async listar() {
         const { data, error } = await sb.from('anexos').select('id,funcionario_id,ocorrencia_id,registro_id,nome,mime,tamanho,created_at').order('created_at', { ascending: false });

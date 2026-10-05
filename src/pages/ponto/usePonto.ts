@@ -256,7 +256,7 @@ export function usePonto(slug: string) {
   const cancelarEscolha = () => { setEscolha(null); setJust(''); setArqAtraso([]); };
 
   return {
-    slug, modo, ctx, falhaEsc, carregando: !ctx && !falhaEsc,
+    slug, modo, api, ctx, falhaEsc, carregando: !ctx && !falhaEsc,
     busca, setBusca, tentou, setTentou, termo, buscando, filtradas, buscar, escolherPessoa,
     etapa, pessoa, escala, pin, setPin, erro, hist, justs, agora, voltar,
     escolha, previa, just, setJust, enviando, sucesso, volta, setVolta, confirmar, escolherTipo, cancelarEscolha,

@@ -23,9 +23,11 @@ const Feriados = lazy(() => import('@/pages/Feriados'));
 const Folha = lazy(() => import('@/pages/Folha'));
 const Relatorios = lazy(() => import('@/pages/Relatorios'));
 const Configuracoes = lazy(() => import('@/pages/Configuracoes'));
+const Tarefas = lazy(() => import('@/pages/Tarefas'));
+const Agenda = lazy(() => import('@/pages/Agenda'));
 const Escritorios = lazy(() => import('@/pages/plataforma/Escritorios'));
 
-type Papel = 'admin' | 'gerente' | 'plataforma';
+type Papel = 'admin' | 'gerente' | 'coordenador' | 'plataforma';
 
 /** Só entra quem tem sessão e um dos papéis permitidos; a plataforma e os escritórios têm áreas separadas. */
 function Protegido({ papeis, children }: { papeis: Papel[]; children: React.ReactNode }) {
@@ -38,11 +40,14 @@ function Protegido({ papeis, children }: { papeis: Papel[]; children: React.Reac
 
 function InicioPainel() {
   const { sessao } = useAuth();
-  return sessao?.papel === 'admin' ? <Dashboard /> : <Navigate to="/painel/gerencia" replace />;
+  if (sessao?.papel === 'admin') return <Dashboard />;
+  return <Navigate to={sessao?.papel === 'coordenador' ? '/painel/tarefas' : '/painel/gerencia'} replace />;
 }
 const carregando = <PaginaEsqueleto />;
 const pagina = (el: React.ReactNode) => <Suspense fallback={carregando}>{el}</Suspense>;
 const soAdmin = (el: React.ReactNode) => <Protegido papeis={['admin']}>{pagina(el)}</Protegido>;
+/** Administrador e gerência (a coordenação só vê Tarefas e Agenda). */
+const gestao = (el: React.ReactNode) => <Protegido papeis={['admin', 'gerente']}>{pagina(el)}</Protegido>;
 
 export default function App() {
   return (
@@ -60,17 +65,19 @@ export default function App() {
               <Route path="/privacidade" element={<Privacidade />} />
               <Route path="/privacidade/:slug" element={<Privacidade />} />
 
-              <Route path="/painel" element={<Protegido papeis={['admin', 'gerente']}><DadosProvider><Layout /></DadosProvider></Protegido>}>
+              <Route path="/painel" element={<Protegido papeis={['admin', 'gerente', 'coordenador']}><DadosProvider><Layout /></DadosProvider></Protegido>}>
                 <Route index element={pagina(<InicioPainel />)} />
-                <Route path="gerencia" element={pagina(<Gerencia />)} />
+                <Route path="tarefas" element={pagina(<Tarefas />)} />
+                <Route path="agenda" element={pagina(<Agenda />)} />
+                <Route path="gerencia" element={gestao(<Gerencia />)} />
                 <Route path="funcionarios" element={soAdmin(<Funcionarios />)} />
                 <Route path="cargos" element={soAdmin(<Cargos />)} />
-                <Route path="escalas" element={pagina(<Escalas />)} />
-                <Route path="ponto" element={pagina(<Registros />)} />
-                <Route path="ocorrencias" element={pagina(<Ocorrencias />)} />
-                <Route path="feriados" element={pagina(<Feriados />)} />
+                <Route path="escalas" element={gestao(<Escalas />)} />
+                <Route path="ponto" element={gestao(<Registros />)} />
+                <Route path="ocorrencias" element={gestao(<Ocorrencias />)} />
+                <Route path="feriados" element={gestao(<Feriados />)} />
                 <Route path="folha" element={soAdmin(<Folha />)} />
-                <Route path="relatorios" element={pagina(<Relatorios />)} />
+                <Route path="relatorios" element={gestao(<Relatorios />)} />
                 <Route path="configuracoes" element={soAdmin(<Configuracoes />)} />
               </Route>
 
