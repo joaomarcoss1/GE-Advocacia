@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Check, LockKeyhole, Maximize2, Minimize2 } from 'lucide-react';
 import Stage from '@/components/Stage';
@@ -6,6 +7,9 @@ import PainelPonto from './PainelPonto';
 import PassoPessoa from './PassoPessoa';
 import PassoPin from './PassoPin';
 import { usePonto } from './usePonto';
+import Credito from '@/components/Nexutec';
+import { InstalarApp } from '@/components/Aplicativo';
+import { lembrarDestino } from '@/lib/pwa';
 
 function Etapas({ atual }: { atual: 1 | 2 | 3 }) {
   const itens = ['Identificação', 'PIN', 'Registro'];
@@ -24,6 +28,7 @@ function Etapas({ atual }: { atual: 1 | 2 | 3 }) {
 export default function BaterPonto() {
   const { slug = '' } = useParams();
   const p = usePonto(slug);
+  useEffect(() => { if (slug) lembrarDestino(`/ponto/${slug}`); }, [slug]);
   const [hh, mm] = p.agora.hhmm.split(':');
 
   if (p.falhaEsc) {
@@ -68,7 +73,9 @@ export default function BaterPonto() {
         <div className="row" style={{ gap: 4, justifyContent: 'center' }}>
           <Link to="/entrar" className="auth-link">Acesso administrativo <ArrowRight size={15} /></Link>
           <Link to={`/privacidade/${slug}`} className="auth-link"><LockKeyhole size={14} />Privacidade</Link>
+          <InstalarApp />
         </div>
+        <Credito className="credito-pagina" />
       </section>
     </div>
   );

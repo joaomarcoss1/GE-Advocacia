@@ -12,6 +12,7 @@ import Diagnostico from '@/pages/Diagnostico';
 import Verificar from '@/pages/Verificar';
 import Privacidade from '@/pages/Privacidade';
 import EnviarDocumentos from '@/pages/EnviarDocumentos';
+import { AvisoAtualizacao, AvisoConexao } from '@/components/Aplicativo';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Gerencia = lazy(() => import('@/pages/Gerencia'));
@@ -58,6 +59,8 @@ export default function App() {
       <ToastProvider>
         <ConfirmProvider>
           <PerguntaProvider>
+            <AvisoConexao />
+            <AvisoAtualizacao />
             <Routes>
               <Route path="/" element={<Inicio />} />
               <Route path="/ponto/:slug" element={<BaterPonto />} />

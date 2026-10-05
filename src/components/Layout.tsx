@@ -13,6 +13,7 @@ import { SCHEMA_ESPERADO } from '@/lib/regras';
 import { autoLigado, backupVencido, marcarBackup, montarArquivo, salvarNaPasta } from '@/lib/backup';
 import { contar } from '@/lib/tarefas';
 import { useToast } from '@/components/ui';
+import { lembrarDestino } from '@/lib/pwa';
 
 const ATALHOS = {
   admin: ['/painel', '/painel/tarefas', '/painel/processos', '/painel/documentos'],
@@ -25,6 +26,7 @@ const PAPEL_ROTULO = { admin: 'Administrador', gerente: 'Gerência', coordenador
 export default function Layout() {
   const { sessao, sair, modo } = useAuth();
   const toast = useToast();
+  useEffect(() => { lembrarDestino('/painel'); }, []);
   const { db, registros, ocorrencias, tarefas, novidades, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
@@ -104,7 +106,7 @@ export default function Layout() {
       papelRotulo={PAPEL_ROTULO[papel]}
       cartao={<div className="escritorio-card"><span className="rot">Escritório</span><strong>{escritorio.nome}</strong><span className="slug">/{escritorio.slug}</span></div>}
       avisos={avisos} carregando={carregando} dataExtenso={ext}
-      chipAlerta={pendentes > 0 && papel !== 'coordenador' ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${pendentes} aprovação(ões) pendente(s)` } : undefined}
+      chipAlerta={pendentes > 0 && papel !== 'coordenador' ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${pendentes} aprovação(ões) pendente(s)`, curto: `${pendentes} pendente(s)` } : undefined}
       nomeImpressao={escritorio.nome}
       rodapeImpressao={`${escritorio.nome} · documento gerencial de conferência, gerado pelo GE Advocacia. Autenticidade: use o QR Code dos PDFs oficiais.`}
     />

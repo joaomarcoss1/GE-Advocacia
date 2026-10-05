@@ -8,6 +8,8 @@ import type { Sessao } from '@/data/db';
 import { iniciais } from '@/lib/format';
 import { travarRolagem } from '@/lib/rolagem';
 import { useState } from 'react';
+import Credito from '@/components/Nexutec';
+import { InstalarApp } from '@/components/Aplicativo';
 
 export interface ItemNav {
   grupo?: string; to: string; fim?: boolean; rotulo: string; curto?: string; icone: LucideIcon; contagem?: number;
@@ -41,7 +43,7 @@ function useRotulosDeTabela() {
 export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotulo, cartao, avisos, carregando, dataExtenso, chipAlerta, nomeImpressao, rodapeImpressao }: {
   itens: ItemNav[]; atalhos: string[]; inicio: string; sessao: Sessao; sair(): Promise<void>; papelRotulo: string;
   cartao?: ReactNode; avisos?: ReactNode; carregando: boolean; dataExtenso: string;
-  chipAlerta?: { to: string; texto: string }; nomeImpressao: string; rodapeImpressao: string;
+  chipAlerta?: { to: string; texto: string; curto?: string }; nomeImpressao: string; rodapeImpressao: string;
 }) {
   const [aberto, setAberto] = useState(false);
   const nav = useNavigate();
@@ -59,7 +61,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
       <header className="mobilebar">
         <button onClick={() => setAberto(true)} aria-label="Abrir menu"><Menu size={22} /></button>
         <span className="titulo">{atual?.rotulo ?? 'GE Advocacia'}</span>
-        {chipAlerta && <NavLink to={chipAlerta.to} className="chip alert" style={{ marginRight: 6 }}>{chipAlerta.texto}</NavLink>}
+        {chipAlerta && <NavLink to={chipAlerta.to} className="chip alert" style={{ marginRight: 6 }} aria-label={chipAlerta.texto}>{chipAlerta.curto ?? chipAlerta.texto}</NavLink>}
       </header>
       <div className={`scrim ${aberto ? 'on' : ''}`} onClick={() => setAberto(false)} aria-hidden="true" />
 
@@ -81,6 +83,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
           ))}
         </nav>
         <div className="side-ap"><span>Aparência</span><Aparencia /></div>
+        <InstalarApp className="side-instalar" />
         <div className="side-foot">
           <span className="avatar">{iniciais(sessao.nome)}</span>
           <div style={{ minWidth: 0 }}>
@@ -89,6 +92,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
           </div>
           <button className="icon-btn" aria-label="Sair" title="Sair" onClick={async () => { await sair(); nav('/entrar'); }}><LogOut size={18} /></button>
         </div>
+        <Credito className="side-credito" />
       </aside>
 
       <div className="main">
@@ -102,7 +106,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
         <main className="content" id="conteudo" tabIndex={-1}>
           <div className="cab-impressao so-impressao"><Logo /><div className="t"><strong>{atual?.rotulo ?? 'GE Advocacia'}</strong>{nomeImpressao}<br />Impresso em {dataExtenso}<br />por {sessao.nome}</div></div>
           {avisos}
-          {carregando ? <PaginaEsqueleto /> : <Outlet />}
+          {carregando ? <PaginaEsqueleto /> : <div key={loc.pathname} className="rota"><Outlet /></div>}
           <div className="rodape-impressao so-impressao">{rodapeImpressao}</div>
         </main>
       </div>

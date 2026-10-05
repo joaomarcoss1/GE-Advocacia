@@ -1,9 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, BadgeCheck, Clock, LogIn } from 'lucide-react';
 import Stage from '@/components/Stage';
 import { useAuth } from '@/context/Auth';
 import { DEMO_ESCRITORIOS } from '@/data/seed';
+import Credito from '@/components/Nexutec';
+import { InstalarApp } from '@/components/Aplicativo';
+import { destinoSalvo } from '@/lib/pwa';
 
 const K = 'ge.ultimo-escritorio';
 const lerUltimo = () => { try { return localStorage.getItem(K) ?? ''; } catch { return ''; } };
@@ -14,6 +17,7 @@ export default function Inicio() {
   const nav = useNavigate();
   const [slug, setSlug] = useState(lerUltimo);
   const limpo = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  useEffect(() => { const d = destinoSalvo(); if (d) nav(d, { replace: true }); }, [nav]);     // aplicativo instalado: abre onde a pessoa estava
 
   function ir(e: FormEvent) {
     e.preventDefault();
@@ -51,7 +55,9 @@ export default function Inicio() {
           <div className="stack" style={{ gap: 4 }}>
             <Link to="/entrar" className="auth-link"><LogIn size={15} />Acesso administrativo <ArrowRight size={15} /></Link>
             <Link to="/verificar" className="auth-link"><BadgeCheck size={15} />Verificar a autenticidade de um documento</Link>
+            <InstalarApp />
           </div>
+          <Credito className="credito-pagina" />
         </div>
       </section>
     </div>

@@ -17,6 +17,9 @@ Administrador, gerência e **coordenação** delegam tarefas, prazos processuais
 ## Processos, documentos e backup
 Cadastro de clientes e processos (número CNJ validado) com consulta automática de andamentos (DataJud), que viram tarefas com prazo sugerido em dias úteis. Cada cliente/processo tem uma checklist de documentos; os arquivos entram pelo painel ou por um link de envio do cliente, ficam em Storage privado e são organizados no Google Drive (Cliente/Processo). Backup semanal do sistema, criptografado. Detalhes, configuração e limites em `docs/PROCESSOS-E-DOCUMENTOS.md`.
 
+## Aplicativo instalável e identidade
+O sistema instala como aplicativo no Android, iPhone e computador, abre sem internet (só a casca; os dados exigem conexão) e tem logo, ícones e animações próprios. Passo a passo, publicação e como trocar a marca da Nexutec em `docs/APLICATIVO-E-IDENTIDADE.md`.
+
 ## Rodar localmente (modo demonstração)
 ```bash
 npm ci
@@ -52,6 +55,7 @@ Rode `npm run sql:gerar` após alterar migrações para regenerar `atualizacao_d
 - `docs/CHECKLIST-PRODUCAO.md` — preparação do Supabase, segredos, proteção de branch
 - `docs/GOOGLE-AGENDA.md` — integração com o Google Agenda (credenciais, segredos e limites)
 - `docs/PROCESSOS-E-DOCUMENTOS.md` — processos, documentos, Google Drive e backup semanal
+- `docs/APLICATIVO-E-IDENTIDADE.md` — instalação como aplicativo, logo, animações e responsividade
 - `docs/RESTAURACAO.md` — backup criptografado e restauração
 - `docs/PROPOSTAS-FASES-6-8.md` — folha/encargos, Portaria 671 e integração jurídica (aguardam aprovação)
 

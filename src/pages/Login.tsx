@@ -4,6 +4,8 @@ import { ArrowLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import Stage from '@/components/Stage';
 import { useAuth } from '@/context/Auth';
 import { DEMO_ESCRITORIOS, DEMO_PLATAFORMA } from '@/data/seed';
+import Credito from '@/components/Nexutec';
+import { InstalarApp } from '@/components/Aplicativo';
 
 export default function Login() {
   const { sessao, carregando, entrar, modo } = useAuth();
@@ -67,6 +69,8 @@ export default function Login() {
           )}
         </form>
         <Link to="/" className="auth-link"><ArrowLeft size={15} />Voltar ao início</Link>
+        <InstalarApp />
+        <Credito className="credito-pagina" />
       </section>
     </div>
   );
