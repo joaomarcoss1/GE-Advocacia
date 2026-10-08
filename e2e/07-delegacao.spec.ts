@@ -44,7 +44,7 @@ test.describe('delegação: tarefas, prazos, agenda e Google Agenda', () => {
     // aparece na agenda da semana
     await page.goto('/painel/agenda');
     await expect(page.locator('.evento', { hasText: 'Embargos de declaração' })).toBeVisible();
-    await expect(page.getByText('Indisponível nesta instalação')).toBeVisible();      // Google real só com Supabase + função publicada
+    await expect(page.getByRole('region', { name: 'Google Agenda' }).getByText('Indisponível')).toBeVisible();      // Google real só com Supabase + função publicada
 
     // funcionário vê e envia para revisão
     await identificar(page, 'silva-ribeiro', 'rafael', PIN.rafael);

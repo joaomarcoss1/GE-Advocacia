@@ -94,15 +94,27 @@ export function criarDbSupabase(url: string, key: string): Db {
     return { sessao: { id: s.id!, email: s.email!, nome: s.nome!, papel: s.papel!, escritorio: s.escritorio ?? null } };
   }
 
-  /** Chama a Edge Function "anexos" (service_role dentro dela): envio com PIN, abertura por URL assinada e limpeza. */
-  async function funcaoAnexos<T>(corpo: FormData | Record<string, unknown>): Promise<T> {
-    const { data, error } = await sb.functions.invoke('anexos', { body: corpo });
+  /**
+   * Chama uma Edge Function. Distingue "função não publicada / sem rede" (erro de conexão) de uma recusa da própria função,
+   * para a tela explicar o que falta em vez de mostrar o texto técnico do navegador.
+   */
+  async function chamarFuncao<T>(nome: string, corpo: FormData | Record<string, unknown>, cabecalhos?: Record<string, string>): Promise<T> {
+    const { data, error } = await sb.functions.invoke(nome, { body: corpo, headers: cabecalhos });
     if (error) {
+      const resp = (error as { context?: Response }).context;
+      const naoPublicada = error.name === 'FunctionsFetchError' || error.name === 'FunctionsRelayError' || resp?.status === 404
+        || /failed to send a request|requested function was not found/i.test(error.message ?? '');
+      if (naoPublicada) throw new ErroNegocio('FUNCAO_NAO_PUBLICADA');
       let msg = error.message;
-      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
-      throw new Error(traduzirErroBanco(msg));
+      try { const j = await resp?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
+      throw new ErroNegocio(msg, traduzirErroBanco(msg));
     }
     return data as T;
+  }
+
+  /** Chama a Edge Function "anexos" (service_role dentro dela): envio com PIN, abertura por URL assinada e limpeza. */
+  async function funcaoAnexos<T>(corpo: FormData | Record<string, unknown>): Promise<T> {
+    return chamarFuncao<T>('anexos', corpo);
   }
 
   /** Campos preenchidos pelo servidor (autoria, datas, conclusão): o app nunca os envia. */
@@ -117,13 +129,7 @@ export function criarDbSupabase(url: string, key: string): Db {
 
   /** Edge Function "google-agenda" (OAuth e tokens ficam só no servidor; o app apenas pede). */
   async function funcaoGoogle<T>(corpo: Record<string, unknown>): Promise<T> {
-    const { data, error } = await sb.functions.invoke('google-agenda', { body: corpo });
-    if (error) {
-      let msg = error.message;
-      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
-      throw new Error(traduzirErroBanco(msg));
-    }
-    return data as T;
+    return chamarFuncao<T>('google-agenda', corpo);
   }
 
   /** Campos que só o servidor preenche (o app nunca os envia). */
@@ -136,13 +142,7 @@ export function criarDbSupabase(url: string, key: string): Db {
 
   /** Edge Function "processos": consulta ao tribunal (DataJud) e criação das tarefas, com a service_role só dentro dela. */
   async function funcaoProcessos<T>(corpo: Record<string, unknown>): Promise<T> {
-    const { data, error } = await sb.functions.invoke('processos', { body: corpo });
-    if (error) {
-      let msg = error.message;
-      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
-      throw new Error(traduzirErroBanco(msg));
-    }
-    return data as T;
+    return chamarFuncao<T>('processos', corpo);
   }
   const processos: ProcessosRepo = {
     ...processosBase,
@@ -185,13 +185,7 @@ export function criarDbSupabase(url: string, key: string): Db {
 
   /** Edge Function "documentos": envio ao Storage privado, abertura por URL assinada, Google Drive e página pública do cliente. */
   async function funcaoDocumentos<T>(corpo: FormData | Record<string, unknown>, cabecalhos?: Record<string, string>): Promise<T> {
-    const { data, error } = await sb.functions.invoke('documentos', { body: corpo, headers: cabecalhos });
-    if (error) {
-      let msg = error.message;
-      try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
-      throw new Error(traduzirErroBanco(msg));
-    }
-    return data as T;
+    return chamarFuncao<T>('documentos', corpo, cabecalhos);
   }
   const formArquivo = (campos: Record<string, string | null | undefined>, a: ArquivoAnexo) => {
     const f = new FormData();

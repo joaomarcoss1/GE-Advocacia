@@ -75,6 +75,7 @@ export const ERRO_MSG: Record<string, string> = {
   PARTICIPANTE_INVALIDO: 'Todos os participantes precisam ser da equipe deste escritório.',
   ANDAMENTO_IMUTAVEL: 'Andamentos não podem ser alterados nem apagados.',
   GOOGLE_INDISPONIVEL: 'A integração com o Google Agenda não está disponível nesta instalação.',
+  FUNCAO_NAO_PUBLICADA: 'O serviço de integração ainda não foi ativado neste servidor. Um administrador precisa publicá-lo uma única vez (veja o passo a passo na tela).',
   GOOGLE_NAO_CONECTADO: 'Conecte a sua conta Google para sincronizar com a agenda.',
   SEM_PERFIL: 'Este usuário existe, mas não tem acesso a nenhum escritório. Peça ao administrador para cadastrá-lo.',
 };

@@ -5,6 +5,11 @@ name: Supabase — aplicar banco e funções
 #                          os runners do GitHub não têm IPv6 e a conexão direta (db.<ref>.supabase.co) é só IPv6.
 #   SUPABASE_ACCESS_TOKEN  (opcional) token pessoal, só para publicar as Edge Functions.
 #   SUPABASE_PROJECT_REF   (opcional) zkyxvwdxyocgneizcfiz
+# Segredos das integrações (opcionais; só os que existirem são enviados às funções, nunca aparecem no log):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET   credencial OAuth do Google Cloud (Agenda e Drive)
+#   ALLOWED_ORIGINS                          endereço(s) do site, ex.: https://ge-advocacia.vercel.app
+#   DATAJUD_API_KEY, CRON_SECRET             acompanhamento de processos
+# A chave de cifra dos tokens (GOOGLE_TOKEN_KEY) é criada sozinha na primeira vez e NUNCA é trocada depois.
 # Nada aqui usa a service_role no front-end; os segredos só existem neste workflow.
 on:
   workflow_dispatch:
@@ -70,3 +75,28 @@ jobs:
           supabase functions deploy google-agenda --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
           supabase functions deploy processos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
           supabase functions deploy documentos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+      - name: Cadastra os segredos das funções (só os informados) e cria a chave de cifra
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          DATAJUD_API_KEY: ${{ secrets.DATAJUD_API_KEY }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          args=()
+          for n in GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET ALLOWED_ORIGINS DATAJUD_API_KEY CRON_SECRET; do
+            if [ -n "${!n}" ]; then args+=("$n=${!n}"); else echo "• $n não informado (pulado)"; fi
+          done
+          # chave de cifra dos tokens do Google: criada uma única vez; trocar invalidaria as contas já conectadas
+          if supabase secrets list --project-ref "$REF" | grep -q "GOOGLE_TOKEN_KEY"; then
+            echo "✓ GOOGLE_TOKEN_KEY já existe (mantida)"
+          else
+            args+=("GOOGLE_TOKEN_KEY=$(openssl rand -base64 32)")
+            echo "✓ GOOGLE_TOKEN_KEY criada"
+          fi
+          if [ ${#args[@]} -gt 0 ]; then supabase secrets set "${args[@]}" --project-ref "$REF" >/dev/null && echo "✓ segredos enviados"; fi
+          echo "Endereço de retorno para o Google Cloud (URIs de redirecionamento autorizados):"
+          echo "  https://$REF.supabase.co/functions/v1/google-agenda"
+          echo "  https://$REF.supabase.co/functions/v1/documentos"

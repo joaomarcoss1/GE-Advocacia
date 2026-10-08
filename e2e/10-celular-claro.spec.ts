@@ -14,7 +14,9 @@ test.use({
 const luminosidade = (el: Element) => {
   const cs = getComputedStyle(el);
   const fonte = /rgba?\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(cs.backgroundColor) ? cs.backgroundImage : cs.backgroundColor;
-  const c = fonte.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/)!.slice(1).map(Number);
+  const m = fonte.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!m) return Number.NaN;                 // ainda em transição (cor ainda não resolvida): quem chama espera
+  const c = m.slice(1).map(Number);
   return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
 };
 
@@ -25,20 +27,20 @@ test.describe('celular com escurecimento automático de sites ligado', () => {
     expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe('light only');   // o navegador normaliza a ordem
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     // faixa de marca escura e papel do formulário claro: se o navegador invertesse a página, o papel ficaria escuro
-    expect(await page.locator('.stage').evaluate(luminosidade)).toBeLessThan(0.5);
-    expect(await page.locator('.auth-side').evaluate(luminosidade)).toBeGreaterThan(0.85);
+    await expect.poll(() => page.locator('.stage').evaluate(luminosidade)).toBeLessThan(0.5);
+    await expect.poll(() => page.locator('.auth-side').evaluate(luminosidade)).toBeGreaterThan(0.85);
   });
 
   test('conteúdo continua claro e as faixas azul-noite; tema escuro só quando a pessoa escolhe', async ({ page }) => {
     await relogio(page, '09:00');
     await semear(page);
     await entrar(page, CONTAS.adminA);
-    expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeLessThan(0.5);
-    expect(await page.locator('.bottomnav').evaluate(luminosidade)).toBeLessThan(0.5);
-    expect(await page.locator('body').evaluate(luminosidade)).toBeGreaterThan(0.8);             // o conteúdo continua claro
-    expect(await page.locator('.card').first().evaluate(luminosidade)).toBeGreaterThan(0.9);
+    await expect.poll(() => page.locator('.mobilebar').evaluate(luminosidade)).toBeLessThan(0.5);
+    await expect.poll(() => page.locator('.bottomnav').evaluate(luminosidade)).toBeLessThan(0.5);
+    await expect.poll(() => page.locator('body').evaluate(luminosidade)).toBeGreaterThan(0.8);             // o conteúdo continua claro
+    await expect.poll(() => page.locator('.card').first().evaluate(luminosidade)).toBeGreaterThan(0.9);
     await page.getByRole('button', { name: 'Abrir menu' }).first().click();
-    expect(await page.locator('.side.open').evaluate(luminosidade)).toBeLessThan(0.5);
+    await expect.poll(() => page.locator('.side.open').evaluate(luminosidade)).toBeLessThan(0.5);
     // escolha explícita do escuro: o sistema passa a declarar suporte a escuro
     await page.evaluate(() => localStorage.setItem('ge.tema', 'escuro'));
     await page.reload();

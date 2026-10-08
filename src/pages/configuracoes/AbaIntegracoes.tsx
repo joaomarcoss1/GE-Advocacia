@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Cloud, Link2, Unlink } from 'lucide-react';
 import { Badge, useConfirm, useToast } from '@/components/ui';
+import { CartaoIntegracao, PassosAtivacao } from '@/components/Integracao';
+import { ErroNegocio } from '@/lib/erros';
 import { useDados } from '@/context/Dados';
 import type { Config, DriveStatus } from '@/lib/types';
 
@@ -15,6 +17,7 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
   const [drive, setDrive] = useState<DriveStatus>({ disponivel: false, conectado: false });
   const [fonte, setFonte] = useState<{ disponivel: boolean; simulada: boolean } | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [ativacao, setAtivacao] = useState<'FUNCAO_NAO_PUBLICADA' | 'GOOGLE_INDISPONIVEL' | null>(null);
   const carregar = () => db.arquivos.drive.status().then(setDrive).catch(() => undefined);
   useEffect(() => { void carregar(); db.processos.fonte().then(setFonte).catch(() => setFonte({ disponivel: false, simulada: false })); }, [db]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -24,7 +27,13 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
     void carregar(); nav('/painel/configuracoes?aba=integracoes', { replace: true });
   }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function conectar() { try { setOcupado(true); window.location.href = await db.arquivos.drive.conectar(); } catch (e) { toast.erro((e as Error).message); setOcupado(false); } }
+  async function conectar() {
+    try { setOcupado(true); setAtivacao(null); window.location.href = await db.arquivos.drive.conectar(); } catch (e) {
+      const cod = e instanceof ErroNegocio ? e.codigo : '';
+      if (cod === 'FUNCAO_NAO_PUBLICADA' || cod === 'GOOGLE_INDISPONIVEL') setAtivacao(cod); else toast.erro((e as Error).message);
+      setOcupado(false);
+    }
+  }
   async function desconectar() {
     if (!(await confirmar('Desconectar o Google Drive? Os arquivos já enviados continuam lá; os novos ficam só no sistema.', { rotulo: 'Desconectar', perigo: true }))) return;
     try { await db.arquivos.drive.desconectar(); toast.ok('Google Drive desconectado.'); await carregar(); } catch (e) { toast.erro((e as Error).message); }
@@ -37,24 +46,20 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
 
   return (
     <div className="stack">
-      <section className="integracao">
-        <div className="row between" style={{ flexWrap: 'wrap' }}>
-          <div className="row" style={{ gap: 12 }}>
-            <span className="g-ic" aria-hidden="true"><Cloud size={20} /></span>
-            <div>
-              <strong>Google Drive</strong>
-              <div className="muted mono" style={{ fontSize: '.84rem' }}>GE Advocacia / {escritorio.nome} / Cliente / Processo</div>
-            </div>
-          </div>
-          <div className="row" style={{ gap: 8 }}>
-            <Badge tom={drive.conectado ? 'ok' : 'mute'}>{!drive.disponivel ? 'Indisponível' : drive.conectado ? `Conectado${drive.email ? ` · ${drive.email}` : ''}` : 'Não conectado'}</Badge>
-            {drive.disponivel && (drive.conectado
-              ? <><button className="btn ghost sm" onClick={reenviar} disabled={ocupado}>Enviar pendentes</button><button className="btn ghost sm" onClick={desconectar}><Unlink size={15} />Desconectar</button></>
-              : <button className="btn sm" onClick={conectar} disabled={ocupado}><Link2 size={15} />Conectar</button>)}
-          </div>
-        </div>
+      <CartaoIntegracao
+        icone={<Cloud size={20} />}
+        titulo="Google Drive"
+        descricao={`Cada documento recebido é arquivado em GE Advocacia / ${escritorio.nome} / Cliente / Processo.`}
+        situacao={!drive.disponivel ? 'Indisponível' : drive.conectado ? 'Conectado' : ativacao ? 'Ativação necessária' : 'Não conectado'}
+        tom={drive.conectado ? 'ok' : ativacao ? 'warn' : 'mute'}
+        acoes={drive.disponivel && (drive.conectado
+          ? <><button className="btn ghost sm" onClick={reenviar} disabled={ocupado}>Enviar pendentes</button><button className="btn ghost sm" onClick={desconectar}><Unlink size={15} />Desconectar</button></>
+          : <button className="btn sm" onClick={conectar} disabled={ocupado}><Link2 size={15} />Conectar</button>)}
+      >
+        {drive.conectado && drive.email && <p className="ci-conta">Conta conectada: <b>{drive.email}</b></p>}
+        {ativacao && <PassosAtivacao motivo={ativacao} servico="documentos" />}
         <label className="check" style={{ marginTop: 12 }}><input type="checkbox" checked={c.automacao.enviar_drive} onChange={e => auto({ enviar_drive: e.target.checked })} />Enviar sozinho para o Drive cada documento recebido</label>
-      </section>
+      </CartaoIntegracao>
 
       <section className="integracao">
         <div className="row between" style={{ flexWrap: 'wrap' }}>

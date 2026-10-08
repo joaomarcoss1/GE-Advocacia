@@ -15,7 +15,15 @@ Como funciona por dentro (e por que é seguro):
 - Cada ação confere o JWT do chamador, o papel e que a tarefa é do escritório dele. Um escritório nunca sincroniza tarefa de outro.
 - A pessoa pode **Desconectar** quando quiser (apaga o token) e também revogar em myaccount.google.com/permissions.
 
-### Configuração (uma vez, por instalação)
+### Caminho mais curto (sem terminal)
+1. No Google Cloud, crie a credencial OAuth (passos 1 a 3 abaixo) e copie o *Client ID* e o *Client secret*.
+2. No GitHub → *Settings → Secrets and variables → Actions*, cadastre `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `ALLOWED_ORIGINS` (endereço do site).
+3. *Actions → Supabase — aplicar banco e funções → Run workflow*, marcando **Publicar as Edge Functions**. O workflow publica as funções, envia os segredos e **cria sozinho** a chave de cifra (`GOOGLE_TOKEN_KEY`, nunca trocada depois). No fim, o log mostra o endereço de retorno a liberar no Google Cloud.
+4. Em *Agenda → Conectar*, autorize a conta Google.
+
+Se **Conectar** mostrar "Ativação necessária", é porque o passo 3 ainda não foi feito (a função não está publicada) ou faltam as credenciais do Google.
+
+### Configuração manual (uma vez, por instalação)
 1. **Google Cloud Console** → criar um projeto → *APIs e serviços* → ativar **Google Calendar API**.
 2. *Tela de consentimento OAuth*: tipo **Externo**; adicionar o escopo `.../auth/calendar.events`; enquanto estiver em "Teste", cadastre os e-mails de quem vai usar. Para uso aberto, publique o app (o Google pode pedir verificação).
 3. *Credenciais* → **ID do cliente OAuth** (aplicativo da Web). Em **URIs de redirecionamento autorizados** coloque exatamente:

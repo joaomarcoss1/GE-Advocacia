@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Link2, Plus, Unlink } from 'lucide-react';
 import { Badge, PageHeader, useToast } from '@/components/ui';
+import { CartaoIntegracao, PassosAtivacao } from '@/components/Integracao';
+import { ErroNegocio } from '@/lib/erros';
 import TarefaDetalhe, { quando } from '@/components/TarefaDetalhe';
 import TarefaModal from '@/components/TarefaModal';
 import { useDados } from '@/context/Dados';
@@ -27,6 +29,7 @@ export default function Agenda() {
   const [aberta, setAberta] = useState<string | null>(null);
   const [nova, setNova] = useState<string | null>(null);
   const [edicao, setEdicao] = useState<Tarefa | null>(null);
+  const [ativacao, setAtivacao] = useState<'FUNCAO_NAO_PUBLICADA' | 'GOOGLE_INDISPONIVEL' | null>(null);
 
   // Retorno do consentimento do Google (?google=ok | erro)
   useEffect(() => {
@@ -43,7 +46,10 @@ export default function Agenda() {
   const nomeDe = (id: string | null) => funcionarios.find(f => f.id === id)?.nome ?? null;
 
   async function conectar() {
-    try { window.location.href = await db.google.conectar(); } catch (e) { toast.erro((e as Error).message); }
+    try { setAtivacao(null); window.location.href = await db.google.conectar(); } catch (e) {
+      const cod = e instanceof ErroNegocio ? e.codigo : '';
+      if (cod === 'FUNCAO_NAO_PUBLICADA' || cod === 'GOOGLE_INDISPONIVEL') setAtivacao(cod); else toast.erro((e as Error).message);
+    }
   }
   async function desconectar() {
     try { await db.google.desconectar(); toast.ok('Google Agenda desconectado.'); await google.recarregar(); } catch (e) { toast.erro((e as Error).message); }
@@ -65,22 +71,19 @@ export default function Agenda() {
         <button className="btn gold" onClick={() => setNova(hoje)}><Plus size={18} />Novo compromisso</button>
       </PageHeader>
 
-      <div className="card google-card">
-        <div className="row between" style={{ flexWrap: 'wrap' }}>
-          <div className="row" style={{ gap: 12 }}>
-            <span className="g-ic" aria-hidden="true"><CalendarDays size={20} /></span>
-            <div>
-              <strong>Google Agenda</strong>
-              <div className="muted" style={{ fontSize: '.88rem' }}>
-                {!google.status.disponivel ? 'Indisponível nesta instalação' : google.status.conectado ? `Conectado${google.status.email ? ` · ${google.status.email}` : ''}` : 'Não conectado'}
-              </div>
-            </div>
-          </div>
-          {google.status.disponivel && (google.status.conectado
-            ? <button className="btn ghost sm" onClick={desconectar}><Unlink size={15} />Desconectar</button>
-            : <button className="btn sm" onClick={conectar}><Link2 size={15} />Conectar</button>)}
-        </div>
-      </div>
+      <CartaoIntegracao
+        icone={<CalendarDays size={20} />}
+        titulo="Google Agenda"
+        descricao="Prazos, audiências e reuniões vão para a sua agenda, com lembrete e convite por e-mail aos envolvidos."
+        situacao={!google.status.disponivel ? 'Indisponível' : google.status.conectado ? 'Conectado' : ativacao ? 'Ativação necessária' : 'Não conectado'}
+        tom={google.status.conectado ? 'ok' : ativacao ? 'warn' : 'mute'}
+        acoes={google.status.disponivel && (google.status.conectado
+          ? <button className="btn ghost sm" onClick={desconectar}><Unlink size={15} />Desconectar</button>
+          : <button className="btn sm" onClick={conectar}><Link2 size={15} />Conectar</button>)}
+      >
+        {google.status.conectado && google.status.email && <p className="ci-conta">Conta conectada: <b>{google.status.email}</b></p>}
+        {ativacao && <PassosAtivacao motivo={ativacao} servico="google-agenda" />}
+      </CartaoIntegracao>
 
       <div className="row between" style={{ margin: '18px 0 12px' }}>
         <div className="row" style={{ gap: 6 }}>
