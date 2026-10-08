@@ -122,7 +122,7 @@ export interface ArquivosRepo {
     /** Reenvia ao Drive o que ficou pendente ou com erro. */
     sincronizar(): Promise<{ enviados: number; erros: number }>;
     /** Endereço da pasta do cliente (ou do processo) no Drive; cria a pasta se ainda não existir. */
-    pasta(alvo: { cliente_id: string; processo_id?: string | null }): Promise<string>;
+    pasta(alvo: { cliente_id: string; processo_id?: string | null; estrutura?: boolean }): Promise<string>;
   };
   /** Página pública do cliente (sem login): confere o token e recebe os arquivos. */
   publico: {

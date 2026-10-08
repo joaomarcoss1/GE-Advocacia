@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Field, Modal, useToast } from '@/components/ui';
 import { useDados } from '@/context/Dados';
 import type { Cliente, TipoPessoa } from '@/lib/types';
+import { prepararPastaNoDrive } from '@/lib/documentos';
 
 /** Cadastro de cliente (nome, tipo, contato). CPF/CNPJ e contatos ficam fora da trilha de auditoria. */
 export default function ClienteModal({ cliente, onClose, onSalvo }: { cliente: Cliente | null; onClose(): void; onSalvo(c: Cliente): void }) {
@@ -17,7 +18,9 @@ export default function ClienteModal({ cliente, onClose, onSalvo }: { cliente: C
     setSalvando(true);
     try {
       const dados: Partial<Cliente> = { nome: f.nome.trim(), tipo: f.tipo, documento: f.documento.trim() || null, email: f.email.trim() || null, telefone: f.telefone.trim() || null, observacoes: f.observacoes.trim() || null, ativo: f.ativo };
-      onSalvo(cliente ? await db.clientes.update(cliente.id, dados) : await db.clientes.insert(dados));
+      const salvo = cliente ? await db.clientes.update(cliente.id, dados) : await db.clientes.insert(dados);
+      if (!cliente) prepararPastaNoDrive(db, { cliente_id: salvo.id });
+      onSalvo(salvo);
     } catch (e) { toast.erro((e as Error).message); setSalvando(false); }
   }
   return (

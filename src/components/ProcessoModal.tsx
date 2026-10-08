@@ -7,6 +7,7 @@ import { mascararCnj, normalizarCnj } from '@/lib/cnj';
 import { tribunalDeCnj } from '@/lib/processos';
 import { AREAS } from '@/lib/tarefas';
 import type { AreaJuridica, FaseProcesso, PoloProcesso, Processo, SituacaoProcesso } from '@/lib/types';
+import { prepararPastaNoDrive } from '@/lib/documentos';
 
 const SITUACOES: [SituacaoProcesso, string][] = [['ativo', 'Ativo'], ['suspenso', 'Suspenso'], ['arquivado', 'Arquivado'], ['encerrado', 'Encerrado']];
 const FASES: [FaseProcesso, string][] = [['conhecimento', 'Conhecimento'], ['recursal', 'Recursal'], ['execucao', 'Execução'], ['encerramento', 'Encerramento']];
@@ -64,6 +65,7 @@ export default function ProcessoModal({ processo, padrao, onClose, onSalvo }: { 
       const salvo = processo ? await db.processos.update(processo.id, dados) : await db.processos.insert(dados);
       if (!processo) {
         if (modeloEscolhido) { try { await db.checklist.aplicar(modeloEscolhido, { processo_id: salvo.id }); } catch { /* a lista pode ser aplicada depois */ } }
+        if (salvo.cliente_id) prepararPastaNoDrive(db, { cliente_id: salvo.cliente_id, processo_id: salvo.id });
         if (salvo.monitorar) { try { await db.processos.consultar(salvo.id); } catch { /* a primeira consulta roda de novo na próxima atualização */ } }
       }
       toast.ok(processo ? 'Processo atualizado.' : 'Processo cadastrado.');

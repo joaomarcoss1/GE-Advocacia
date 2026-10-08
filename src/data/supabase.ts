@@ -249,7 +249,7 @@ export function criarDbSupabase(url: string, key: string): Db {
       async conectar() { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_conectar', retorno: `${location.origin}/painel/configuracoes?aba=integracoes` })).url; },
       async desconectar() { await rpc('drive_desconectar'); },
       sincronizar: () => funcaoDocumentos<{ enviados: number; erros: number }>({ acao: 'drive_sincronizar' }),
-      async pasta(alvo) { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_pasta', cliente_id: alvo.cliente_id, processo_id: alvo.processo_id ?? null })).url; },
+      async pasta(alvo) { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_pasta', cliente_id: alvo.cliente_id, processo_id: alvo.processo_id ?? null, estrutura: alvo.estrutura === true })).url; },
     },
     publico: {
       async info(token) {

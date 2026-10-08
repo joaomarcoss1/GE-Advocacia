@@ -1,4 +1,4 @@
-import type { ArquivoAnexo } from '@/data/db';
+import type { ArquivoAnexo, Db } from '@/data/db';
 import { MAX_DOCUMENTO_BYTES, MAX_DOCUMENTO_DEMO, mimeDoNome, nomeSeguroArquivo } from './checklist';
 import { fmtTamanho } from './anexos';
 
@@ -57,4 +57,12 @@ export function abrirNovaAba(url: string, nome: string, baixar = false) {
   a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
   if (baixar) a.download = nome;
   document.body.appendChild(a); a.click(); a.remove();
+}
+
+/**
+ * Ao cadastrar um cliente ou processo, deixa a pasta (e as subpastas por categoria) já pronta no Drive do escritório.
+ * Silencioso: sem Drive conectado, ou se o Google falhar, nada acontece — a pasta é criada quando chegar o primeiro documento.
+ */
+export function prepararPastaNoDrive(db: Db, alvo: { cliente_id: string; processo_id?: string | null }): void {
+  void db.arquivos.drive.status().then(s => (s.conectado ? db.arquivos.drive.pasta({ ...alvo, estrutura: true }) : undefined)).catch(() => undefined);
 }

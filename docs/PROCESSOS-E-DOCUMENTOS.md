@@ -59,6 +59,7 @@ GE Advocacia – <Escritório>/
 - **Duas cópias**: a do sistema (bucket privado) e a do Drive. Se o Drive falhar, o documento já está guardado e o envio é refeito sozinho (botão e rotina de 6 em 6 horas, até 8 tentativas).
 - **Integridade**: depois do envio o sistema confere o tamanho que o Drive guardou; se vier diferente, descarta aquela cópia e refaz.
 - **Mudar a categoria** move o arquivo para a subpasta certa no Drive (primeiro no Drive; se falhar, nada muda).
+- **Ao cadastrar** um cliente ou processo (com o Drive conectado), a pasta e as 8 subpastas por categoria já são criadas, na ordem. Sem Drive ou se o Google falhar, a pasta nasce com o primeiro documento.
 - **Pasta no Drive**: botão no dossiê abre (e cria, se preciso) a pasta do cliente ou do processo.
 - Excluir no sistema envia a cópia do Drive para a **lixeira do Drive** (o Google a mantém por 30 dias).
 - Sugestão de segurança: conecte uma conta Google **do escritório** (não pessoal), com verificação em duas etapas.

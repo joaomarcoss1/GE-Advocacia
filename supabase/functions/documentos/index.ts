@@ -17,7 +17,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { criarCripto, segredoConfere } from '../_shared/cripto.ts';
 import { criarLimitador, ipDe } from '../_shared/limite.ts';
-import { ehCategoria, nomeNoDrive, pastaDaCategoria, sugerirCategoria, urlPastaDrive, type CategoriaDoc } from '../_shared/organizacao.ts';
+import { CATEGORIA_IDS, ehCategoria, nomeNoDrive, pastaDaCategoria, sugerirCategoria, urlPastaDrive, type CategoriaDoc } from '../_shared/organizacao.ts';
 import { conferirArquivo, escaparConsultaDrive, MAX_BYTES, nomeSeguro, sha256Hex, sha256Texto } from '../_shared/arquivos.ts';
 
 const URL_BASE = Deno.env.get('SUPABASE_URL')!;
@@ -435,7 +435,9 @@ Deno.serve(async (req: Request) => {
       if (processo && !(await sbUser.from('processos').select('id').eq('id', processo).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
       const c = await tokenDrive(sb, escId);
       if (!c) return falha('Conecte o Google Drive em Configurações > Integrações.');
-      return json({ url: urlPastaDrive(await destinoDrive(sb, c, escId, cliente, processo, null)) });
+      const pasta = await destinoDrive(sb, c, escId, cliente, processo, null);
+      if (corpo.estrutura === true) for (const cat of CATEGORIA_IDS) await destinoDrive(sb, c, escId, cliente, processo, cat);   // deixa as subpastas prontas, na ordem
+      return json({ url: urlPastaDrive(pasta) });
     }
     if (acao === 'abrir') {
       const { sbUser } = await chamador(req);
