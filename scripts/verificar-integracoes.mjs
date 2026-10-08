@@ -45,20 +45,38 @@ if (chave && process.env.TODOS_TRIBUNAIS === '1' && lib?.TRIBUNAIS_DATAJUD) {
   console.log('\n== DataJud: todos os tribunais');
   const resultado = [];
   const fila = [...lib.TRIBUNAIS_DATAJUD];
-  await Promise.all(Array.from({ length: 6 }, async () => {
-    while (fila.length) {
-      const x = fila.shift();
+  const pausa = ms => new Promise(r => setTimeout(r, ms));
+  // até 3 tentativas: o DataJud limita o ritmo (HTTP 429) e alguns tribunais demoram a responder
+  async function sonda(x) {
+    let ultimo = { status: 0, erro: 'sem resposta' };
+    for (let t = 1; t <= 3; t++) {
       try {
-        const r = await tempo(lib.urlDatajud(x.alias), { method: 'POST', headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ size: 1, query: { match_all: {} } }) });
+        const r = await fetch(lib.urlDatajud(x.alias), { method: 'POST', signal: AbortSignal.timeout(45_000), headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ size: 1, query: { match_all: {} } }) });
         const j = r.ok ? await r.json() : null;
-        resultado.push({ x, status: r.status, total: j?.hits?.total?.value ?? null });
-      } catch (e) { resultado.push({ x, status: 0, erro: e.message }); }
+        ultimo = { status: r.status, total: j?.hits?.total?.value ?? null };
+        if (r.ok || (r.status !== 429 && r.status < 500)) return ultimo;
+      } catch (e) { ultimo = { status: 0, erro: e.message }; }
+      await pausa(3000 * t);
     }
+    return ultimo;
+  }
+  await Promise.all(Array.from({ length: 3 }, async () => {
+    while (fila.length) { const x = fila.shift(); resultado.push({ x, ...(await sonda(x)) }); }
   }));
   resultado.sort((a, b) => a.x.alias.localeCompare(b.x.alias));
   const bons = resultado.filter(r => r.status === 200);
   bons.length === resultado.length ? ok(`${bons.length}/${resultado.length} tribunais responderam.`) : falha(`${bons.length}/${resultado.length} tribunais responderam.`);
   for (const r of resultado) console.log(`  ${r.status === 200 ? '✓' : '✗'} ${r.x.sigla.padEnd(8)} ${String(r.status).padEnd(4)} ${r.total != null ? `${r.total} processo(s) na base` : (r.erro ?? '')}  — ${r.x.nome}`);
+}
+
+if (chave && process.env.TODOS_TRIBUNAIS === '1') {
+  console.log('\n== DataJud: nomes alternativos (TRE do Distrito Federal)');
+  for (const alias of ['tre-dft', 'tre-df', 'tredft', 'tre-dfd']) {
+    try {
+      const r = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_${alias}/_search`, { method: 'POST', signal: AbortSignal.timeout(45_000), headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ size: 1, query: { match_all: {} } }) });
+      console.log(`  api_publica_${alias}: HTTP ${r.status}`);
+    } catch (e) { console.log(`  api_publica_${alias}: ${e.message}`); }
+  }
 }
 
 // ---------------------------------------------------------------- DJEN
