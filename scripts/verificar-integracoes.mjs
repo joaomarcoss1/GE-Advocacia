@@ -84,7 +84,9 @@ if (chave && process.env.TODOS_TRIBUNAIS === '1') {
 console.log('\n== DJEN (comunicações processuais)');
 const oab = (process.env.OAB_NUMERO || '').trim(), uf = (process.env.OAB_UF || '').trim().toUpperCase();
 const params = new URLSearchParams({ itensPorPagina: '3', pagina: '1' });
+const sigla = (process.env.DJEN_TRIBUNAL || '').trim().toUpperCase();
 if (oab && uf) { params.set('numeroOab', oab); params.set('ufOab', uf); } else if (cnj) params.set('numeroProcesso', cnj.replace(/\D/g, ''));
+else if (sigla) { params.set('siglaTribunal', sigla); params.set('dataDisponibilizacaoInicio', new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10)); params.set('dataDisponibilizacaoFim', new Date().toISOString().slice(0, 10)); }
 else aviso('Sem OAB nem processo informados: faz só um teste de conectividade.');
 try {
   const r = await tempo(`https://comunicaapi.pje.jus.br/api/v1/comunicacao?${params}`, { headers: { Accept: 'application/json' } });
@@ -145,6 +147,19 @@ try {
     else if (r.status === 503) falha(`DataJud não configurado dentro da função: ${j?.erro ?? ''}`);
     else if (j?.ok) ok(`DataJud pelo Supabase (${seg} s): ${j.tribunal} · ${j.encontrado ? `${j.classe ?? 'processo'} · ${j.orgao_julgador ?? ''} · ${j.andamentos} andamento(s)` : 'número não encontrado na base pública (esperado para um número de exemplo)'}.`);
     else falha(`Varredura/teste respondeu HTTP ${r.status} em ${seg} s: ${j?.erro ?? r.status}`);
+    if (process.env.DJEN_TRIBUNAL) {
+      for (const regiao of ['', 'sa-east-1']) {
+        try {
+          const rr = await fetch(`${url}/functions/v1/processos`, { method: 'POST', signal: AbortSignal.timeout(110_000), headers: { ...cab, 'x-cron-secret': process.env.CRON_SECRET, ...(regiao ? { 'x-region': regiao } : {}) }, body: JSON.stringify({ acao: 'varredura', teste_djen: { sigla: process.env.DJEN_TRIBUNAL } }) });
+          const jj = await rr.json().catch(() => null);
+          const rot = regiao || 'região padrão';
+          if (!jj?.ok) { falha(`DJEN pelo Supabase (${rot}): HTTP ${rr.status} ${jj?.erro ?? ''}`); continue; }
+          const o = jj.origem ?? {};
+          console.log(`  [${rot}] a chamada saiu de: ${o.cidade ?? '?'}, ${o.regiao ?? '?'}, ${o.pais ?? '?'} (${o.org ?? '?'}) · função: ${jj.regiao_funcao ?? '?'}`);
+          jj.djen.status === 200 ? ok(`DJEN pelo Supabase (${rot}): HTTP 200 — ${jj.djen.trecho.slice(0, 200)}`) : falha(`DJEN pelo Supabase (${rot}): HTTP ${jj.djen.status} — ${jj.djen.trecho.slice(0, 200)}`);
+        } catch (e) { falha(`DJEN pelo Supabase (${regiao || 'região padrão'}): ${e.message}`); }
+      }
+    }
   } else aviso('CRON_SECRET não informado: a varredura automática de processos (a cada 6 horas) ainda não pode rodar.');
 } catch (e) { falha(`Não foi possível falar com o Supabase: ${e.message}`); }
 console.log(process.exitCode ? '\nHá itens a corrigir (marcados com ✗).' : '\nTudo respondeu como esperado.');

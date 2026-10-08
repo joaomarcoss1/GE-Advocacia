@@ -13,6 +13,11 @@ on:
         required: false
         default: true
         type: boolean
+      djen_tribunal:
+        description: 'Sigla do tribunal para testar o DJEN (ex.: TJMA)'
+        required: false
+        default: 'TJMA'
+        type: string
       oab_numero:
         description: 'Número da OAB (opcional) para testar o DJEN'
         required: false
@@ -36,6 +41,7 @@ jobs:
       CRON_SECRET: ${{ secrets.CRON_SECRET }}
       PROCESSO: ${{ inputs.processo }}
       TODOS_TRIBUNAIS: ${{ inputs.todos_tribunais && '1' || '0' }}
+      DJEN_TRIBUNAL: ${{ inputs.djen_tribunal }}
       OAB_NUMERO: ${{ inputs.oab_numero }}
       OAB_UF: ${{ inputs.oab_uf }}
     steps:

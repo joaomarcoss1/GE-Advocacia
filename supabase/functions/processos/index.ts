@@ -145,6 +145,19 @@ Deno.serve(async (req: Request) => {
     if (acao === 'varredura') {
       if (!segredoConfere(req.headers.get('x-cron-secret'), CRON)) return falha('Não autorizado.', 401);
       if (!CHAVE) return falha('DATAJUD_API_KEY não configurada.', 503);
+      // diagnóstico do DJEN (só com o segredo): tenta a API de comunicações de DENTRO do servidor e diz de onde a chamada saiu
+      if (corpo.teste_djen && typeof corpo.teste_djen === 'object') {
+        const sigla = String((corpo.teste_djen as { sigla?: string }).sigla ?? 'TJMA').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12);
+        const hoje = new Date(), ini = new Date(Date.now() - 7 * 86_400_000);
+        const dia = (d: Date) => d.toISOString().slice(0, 10);
+        const origem = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(8000) }).then(r => r.json()).catch(() => ({}));
+        let djen: { status: number; trecho: string };
+        try {
+          const r = await fetch(`https://comunicaapi.pje.jus.br/api/v1/comunicacao?siglaTribunal=${sigla}&dataDisponibilizacaoInicio=${dia(ini)}&dataDisponibilizacaoFim=${dia(hoje)}&itensPorPagina=3&pagina=1`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30_000) });
+          djen = { status: r.status, trecho: (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400) };
+        } catch (e) { djen = { status: 0, trecho: (e as Error).message }; }
+        return json({ ok: true, origem: { pais: origem.country ?? null, regiao: origem.region ?? null, cidade: origem.city ?? null, org: origem.org ?? null }, regiao_funcao: Deno.env.get('SB_REGION') ?? Deno.env.get('DENO_REGION') ?? null, djen });
+      }
       // teste de ponta a ponta (só com o segredo): consulta UM número no DataJud, de dentro do servidor, sem gravar nada
       if (typeof corpo.teste_numero === 'string') {
         const t = tribunalDeCnj(corpo.teste_numero);
