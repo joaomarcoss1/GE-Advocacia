@@ -40,6 +40,27 @@ else {
   }
 }
 
+// Testa TODOS os endpoints da API pública (91 tribunais) com uma consulta mínima. Ligado por TODOS_TRIBUNAIS=1.
+if (chave && process.env.TODOS_TRIBUNAIS === '1' && lib?.TRIBUNAIS_DATAJUD) {
+  console.log('\n== DataJud: todos os tribunais');
+  const resultado = [];
+  const fila = [...lib.TRIBUNAIS_DATAJUD];
+  await Promise.all(Array.from({ length: 6 }, async () => {
+    while (fila.length) {
+      const x = fila.shift();
+      try {
+        const r = await tempo(lib.urlDatajud(x.alias), { method: 'POST', headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ size: 1, query: { match_all: {} } }) });
+        const j = r.ok ? await r.json() : null;
+        resultado.push({ x, status: r.status, total: j?.hits?.total?.value ?? null });
+      } catch (e) { resultado.push({ x, status: 0, erro: e.message }); }
+    }
+  }));
+  resultado.sort((a, b) => a.x.alias.localeCompare(b.x.alias));
+  const bons = resultado.filter(r => r.status === 200);
+  bons.length === resultado.length ? ok(`${bons.length}/${resultado.length} tribunais responderam.`) : falha(`${bons.length}/${resultado.length} tribunais responderam.`);
+  for (const r of resultado) console.log(`  ${r.status === 200 ? '✓' : '✗'} ${r.x.sigla.padEnd(8)} ${String(r.status).padEnd(4)} ${r.total != null ? `${r.total} processo(s) na base` : (r.erro ?? '')}  — ${r.x.nome}`);
+}
+
 // ---------------------------------------------------------------- DJEN
 console.log('\n== DJEN (comunicações processuais)');
 const oab = (process.env.OAB_NUMERO || '').trim(), uf = (process.env.OAB_UF || '').trim().toUpperCase();

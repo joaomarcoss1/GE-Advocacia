@@ -76,7 +76,7 @@ export default function ProcessoModal({ processo, padrao, onClose, onSalvo }: { 
       <Modal titulo={processo ? 'Editar processo' : 'Novo processo'} onClose={onClose} largo
         rodape={<><button className="btn ghost" onClick={onClose}>Cancelar</button><button className="btn" onClick={salvar} disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar'}</button></>}>
         <div className="stack">
-          <Field label="Número do processo" dica={cnj && tribunal ? `Tribunal: ${tribunal.sigla}` : cnj ? 'Tribunal sem consulta automática' : undefined}>
+          <Field label="Número do processo" dica={cnj && tribunal ? `${tribunal.nome} (${tribunal.sigla})` : cnj ? 'Tribunal sem consulta automática' : undefined}>
             <div className="row" style={{ flexWrap: 'nowrap', gap: 8 }}>
               <input className="input mono" inputMode="numeric" autoFocus value={f.numero} placeholder="0000000-00.0000.0.00.0000" aria-invalid={!!f.numero && !cnj} onChange={e => set('numero', mascararCnj(e.target.value))} />
               <button type="button" className="btn ghost" onClick={preencher} disabled={buscando || !cnj}><Search size={16} />{buscando ? 'Buscando…' : 'Buscar dados'}</button>

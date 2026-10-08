@@ -27,7 +27,7 @@ test.describe('processos, documentos e backup', () => {
     await expect(page.getByRole('dialog', { name: 'Novo processo' })).toBeVisible();            // não salvou
     await form.getByLabel('Número do processo').fill('00012347720248260001');
     await expect(form.getByLabel('Número do processo')).toHaveValue('0001234-77.2024.8.26.0001');
-    await expect(form.getByText('Tribunal: TJSP')).toBeVisible();
+    await expect(form.getByText('Tribunal de Justiça de São Paulo (TJSP)')).toBeVisible();
     await form.getByLabel('Apelido do processo').fill('Teste x Exemplo');
     await form.getByLabel('Cliente', { exact: true }).selectOption({ label: 'Maria Souza' });
     await form.getByRole('button', { name: 'Salvar' }).click();

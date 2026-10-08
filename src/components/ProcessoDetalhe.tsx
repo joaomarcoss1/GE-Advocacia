@@ -8,7 +8,7 @@ import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { useGoogle } from '@/context/useGoogle';
 import { addDays, agoraBR, fmtData, isoParaBR } from '@/lib/datetime';
-import { CATEGORIA_ROTULO, TIPO_MARCO_ROTULO, calcularPrazo, diasPadraoPorJustica, type Categoria, type RegimePrazo, type TipoMarco } from '@/lib/processos';
+import { CATEGORIA_ROTULO, TIPO_MARCO_ROTULO, calcularPrazo, diasPadraoPorJustica, tribunalPorAlias, type Categoria, type RegimePrazo, type TipoMarco } from '@/lib/processos';
 import { AREA_ROTULO, STATUS_ROTULO } from '@/lib/tarefas';
 import type { Movimento, Processo } from '@/lib/types';
 
@@ -114,7 +114,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
         <div className="stack">
           <div className="row" style={{ gap: 8 }}>
             <span className="mono">{processo.numero}</span>
-            {processo.tribunal && <Badge tom="gold">{processo.tribunal.toUpperCase()}</Badge>}
+            {processo.tribunal && <span title={tribunalPorAlias(processo.tribunal)?.nome}><Badge tom="gold">{processo.tribunal.toUpperCase()}</Badge></span>}
             {processo.situacao !== 'ativo' && <Badge tom="mute">{processo.situacao}</Badge>}
             {processo.area && <Badge tom="mute">{AREA_ROTULO[processo.area]}</Badge>}
             {!processo.monitorar && <Badge tom="mute">Sem acompanhamento</Badge>}

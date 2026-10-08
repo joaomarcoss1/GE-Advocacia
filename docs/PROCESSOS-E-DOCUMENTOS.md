@@ -60,3 +60,9 @@ Fora do escopo desta versão: leitura do Diário de Justiça (DJEN) e peticionam
 - O envio do cliente usa o cabeçalho `x-envio-token`; o servidor confere o link **antes** de ler o arquivo (um estranho não consegue forçar o processamento de um upload grande).
 - Limite por IP: 60 requisições/minuto e 8 tentativas inválidas/minuto (depois disso, resposta de "muitas tentativas"). O limite é por instância da função — protege contra abuso simples; para proteção forte, use também as regras de firewall do Supabase/Cloudflare.
 - Links são guardados só como hash e expiram.
+
+
+## Tribunais cobertos (DataJud)
+Todos os 91 endpoints da API pública (https://datajud-wiki.cnj.jus.br/api-publica/endpoints): STJ, TST, TSE e STM; TRF1–TRF6; os 27 Tribunais de Justiça; TRT1–TRT24; os 27 TREs; e os Tribunais de Justiça Militar de MG, RS e SP. O tribunal é descoberto pelo próprio número CNJ (dígitos J e TR). O STF e o CNJ não constam na API pública, então esses números pedem preenchimento manual. O catálogo está em `TRIBUNAIS_DATAJUD` (`supabase/functions/_shared/processos.ts`) e um teste garante que todo número válido resolve para um item dele.
+
+Para conferir os 91 endpoints com a sua chave: GitHub → Actions → **Verificar integrações** → Run workflow (opção "Testar os 91 endpoints do DataJud"), com o segredo `DATAJUD_API_KEY` cadastrado (a chave pública publicada pelo CNJ na página acima). O relatório lista tribunal por tribunal.

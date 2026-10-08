@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { montarCnj } from './cnj';
 import {
-  calcularPrazo, calcularVencimento, chaveMovimento, diasPadraoPorJustica, segmentoDeCnj, classificarMovimento, corpoConsultaDatajud, dataDatajud, diaUtil, emRecesso, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, urlDatajud,
+  calcularPrazo, calcularVencimento, chaveMovimento, diasPadraoPorJustica, segmentoDeCnj, classificarMovimento, corpoConsultaDatajud, dataDatajud, diaUtil, emRecesso, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, tribunalPorAlias, TRIBUNAIS_DATAJUD, urlDatajud,
 } from './processos';
 
 describe('tribunal pelo número CNJ', () => {
@@ -21,6 +21,29 @@ describe('tribunal pelo número CNJ', () => {
   it('endereço e corpo da consulta do DataJud', () => {
     expect(urlDatajud('tjsp')).toBe('https://api-publica.datajud.cnj.jus.br/api_publica_tjsp/_search');
     expect(corpoConsultaDatajud('0001234-77.2024.8.26.0001').query.match.numeroProcesso).toBe('00012347720248260001');
+  });
+});
+
+describe('catálogo de endpoints do DataJud', () => {
+  it('tem os 91 tribunais da API pública, sem repetição, com nome e ramo', () => {
+    expect(TRIBUNAIS_DATAJUD).toHaveLength(91);
+    expect(new Set(TRIBUNAIS_DATAJUD.map(x => x.alias)).size).toBe(91);
+    const por = (r: string) => TRIBUNAIS_DATAJUD.filter(x => x.ramo === r).length;
+    expect([por('superior'), por('federal'), por('estadual'), por('trabalho'), por('eleitoral'), por('militar')]).toEqual([4, 6, 27, 24, 27, 3]);
+    expect(tribunalPorAlias('tjma')?.nome).toBe('Tribunal de Justiça do Maranhão');
+    expect(tribunalPorAlias('TRT2')?.nome).toBe('Tribunal Regional do Trabalho da 2ª Região');
+    expect(tribunalPorAlias('tre-dft')?.nome).toBe('Tribunal Regional Eleitoral do Distrito Federal e Territórios');
+  });
+  it('todo número CNJ válido (ramo × tribunal) resolve para um item do catálogo, e todo item é alcançável por um número', () => {
+    const achados = new Set<string>();
+    for (let j = 1; j <= 9; j++) for (let tr = 0; tr <= 99; tr++) {
+      const r = tribunalDeCnj('0001234002024' + String(j) + String(tr).padStart(2, '0') + '0001');
+      if (r) { expect(tribunalPorAlias(r.alias)).toEqual(r); achados.add(r.alias); }
+    }
+    expect(achados.size).toBe(91);
+  });
+  it('o endereço de cada tribunal segue o padrão da API pública', () => {
+    for (const x of TRIBUNAIS_DATAJUD) expect(urlDatajud(x.alias)).toBe(`https://api-publica.datajud.cnj.jus.br/api_publica_${x.alias}/_search`);
   });
 });
 

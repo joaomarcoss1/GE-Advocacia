@@ -8,6 +8,11 @@ on:
         description: 'Número CNJ de um processo seu (opcional) para testar a leitura de andamentos'
         required: false
         type: string
+      todos_tribunais:
+        description: 'Testar os 91 endpoints do DataJud (precisa de DATAJUD_API_KEY)'
+        required: false
+        default: true
+        type: boolean
       oab_numero:
         description: 'Número da OAB (opcional) para testar o DJEN'
         required: false
@@ -28,6 +33,7 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       PROCESSO: ${{ inputs.processo }}
+      TODOS_TRIBUNAIS: ${{ inputs.todos_tribunais && '1' || '0' }}
       OAB_NUMERO: ${{ inputs.oab_numero }}
       OAB_UF: ${{ inputs.oab_uf }}
     steps:

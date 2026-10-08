@@ -13,7 +13,34 @@ const UF: Record<string, string> = {
   '14': 'pa', '15': 'pb', '16': 'pr', '17': 'pe', '18': 'pi', '19': 'rj', '20': 'rn', '21': 'rs', '22': 'ro', '23': 'rr', '24': 'sc', '25': 'se', '26': 'sp', '27': 'to',
 };
 
-export interface Tribunal { alias: string; sigla: string }
+export type Ramo = 'superior' | 'federal' | 'estadual' | 'trabalho' | 'eleitoral' | 'militar';
+export interface Tribunal { alias: string; sigla: string; nome: string; ramo: Ramo }
+
+const NOME_UF: Record<string, string> = {
+  ac: 'do Acre', al: 'de Alagoas', ap: 'do Amapá', am: 'do Amazonas', ba: 'da Bahia', ce: 'do Ceará', dft: 'do Distrito Federal e Territórios', es: 'do Espírito Santo', go: 'de Goiás',
+  ma: 'do Maranhão', mt: 'de Mato Grosso', ms: 'de Mato Grosso do Sul', mg: 'de Minas Gerais', pa: 'do Pará', pb: 'da Paraíba', pr: 'do Paraná', pe: 'de Pernambuco', pi: 'do Piauí',
+  rj: 'do Rio de Janeiro', rn: 'do Rio Grande do Norte', rs: 'do Rio Grande do Sul', ro: 'de Rondônia', rr: 'de Roraima', sc: 'de Santa Catarina', se: 'de Sergipe', sp: 'de São Paulo', to: 'do Tocantins',
+};
+const UFS = Object.values(UF);
+const t = (alias: string, nome: string, ramo: Ramo): Tribunal => ({ alias, sigla: alias.toUpperCase(), nome, ramo });
+
+/**
+ * TODOS os endpoints da API pública do DataJud (https://datajud-wiki.cnj.jus.br/api-publica/endpoints): 91 tribunais.
+ * O STF e o CNJ não constam na API pública. Conferido por teste: cada número CNJ válido resolve para um item daqui.
+ */
+export const TRIBUNAIS_DATAJUD: readonly Tribunal[] = [
+  t('stj', 'Superior Tribunal de Justiça', 'superior'), t('tst', 'Tribunal Superior do Trabalho', 'superior'),
+  t('tse', 'Tribunal Superior Eleitoral', 'superior'), t('stm', 'Superior Tribunal Militar', 'superior'),
+  ...[1, 2, 3, 4, 5, 6].map(n => t(`trf${n}`, `Tribunal Regional Federal da ${n}ª Região`, 'federal')),
+  ...UFS.map(uf => t(`tj${uf}`, `Tribunal de Justiça ${NOME_UF[uf]}`, 'estadual')),
+  ...Array.from({ length: 24 }, (_, i) => t(`trt${i + 1}`, `Tribunal Regional do Trabalho da ${i + 1}ª Região`, 'trabalho')),
+  ...UFS.map(uf => t(`tre-${uf}`, `Tribunal Regional Eleitoral ${NOME_UF[uf]}`, 'eleitoral')),
+  t('tjmmg', 'Tribunal de Justiça Militar de Minas Gerais', 'militar'), t('tjmrs', 'Tribunal de Justiça Militar do Rio Grande do Sul', 'militar'), t('tjmsp', 'Tribunal de Justiça Militar de São Paulo', 'militar'),
+];
+export const RAMO_ROTULO: Record<Ramo, string> = { superior: 'Tribunais superiores', federal: 'Justiça Federal', estadual: 'Justiça Estadual', trabalho: 'Justiça do Trabalho', eleitoral: 'Justiça Eleitoral', militar: 'Justiça Militar estadual' };
+const POR_ALIAS = new Map(TRIBUNAIS_DATAJUD.map(x => [x.alias, x]));
+export const tribunalPorAlias = (alias: string | null | undefined): Tribunal | null => (alias ? POR_ALIAS.get(alias.toLowerCase()) ?? null : null);
+
 /** Tribunal (nome usado na API pública do DataJud) a partir dos 20 dígitos. Null se o ramo não é consultável (STF, CNJ) ou o número é inválido. */
 export function tribunalDeCnj(numero: string): Tribunal | null {
   const d = (numero ?? '').replace(/\D/g, '');
@@ -23,11 +50,11 @@ export function tribunalDeCnj(numero: string): Tribunal | null {
   if (j === '3' && tr === '00') alias = 'stj';
   else if (j === '4' && /^0[1-6]$/.test(tr)) alias = `trf${Number(tr)}`;
   else if (j === '5') alias = tr === '00' ? 'tst' : Number(tr) >= 1 && Number(tr) <= 24 ? `trt${Number(tr)}` : null;
-  else if (j === '6') alias = tr === '00' ? 'tse' : UF[tr] && tr !== '07' ? `tre-${UF[tr]}` : tr === '07' ? 'tre-dft' : null;
+  else if (j === '6') alias = tr === '00' ? 'tse' : UF[tr] ? `tre-${UF[tr]}` : null;
   else if (j === '7' && tr === '00') alias = 'stm';
   else if (j === '8') alias = UF[tr] ? `tj${UF[tr]}` : null;
   else if (j === '9') alias = ({ '13': 'tjmmg', '21': 'tjmrs', '26': 'tjmsp' } as Record<string, string>)[tr] ?? null;
-  return alias ? { alias, sigla: alias.toUpperCase() } : null;
+  return tribunalPorAlias(alias);
 }
 
 export const urlDatajud = (alias: string) => `https://api-publica.datajud.cnj.jus.br/api_publica_${alias}/_search`;
