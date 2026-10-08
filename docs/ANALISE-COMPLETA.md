@@ -71,6 +71,9 @@ Comprovado por teste: isolamento entre escritórios (RLS + chaves compostas), `a
 
 Para fechar essa lacuna foi criado o workflow **Verificar integrações** (GitHub → Actions → Run workflow) e o script `scripts/verificar-integracoes.mjs`: ele consulta DataJud, DJEN e as funções publicadas com a internet do GitHub e mostra o resultado e os campos reais retornados. A saída dele é o que permite implementar a captura automática de intimações com segurança.
 
+### Atualização (08/10/2026): o DJEN funciona a partir de São Paulo
+Testado com o TJMA: da região padrão do Supabase (Califórnia/EUA) o DJEN responde HTTP 403 (bloqueio por país); **da região `sa-east-1` (São Paulo) responde HTTP 200** com as comunicações (intimações) do tribunal. Caminho adotado: toda chamada ao DJEN sai de uma Edge Function chamada com o cabeçalho `x-region: sa-east-1`. A caixa de intimações automáticas deixa de depender de intermediário.
+
 ### Resultado da primeira verificação real (08/10/2026, executada no GitHub Actions)
 - **DJEN (comunicaapi.pje.jus.br): HTTP 403, "CloudFront … configured to block access from your country".** O serviço bloqueia acessos de fora do Brasil. Os servidores do GitHub e, provavelmente, as Edge Functions do Supabase (fora do Brasil) são bloqueados. **Consequência:** a captura automática de intimações precisa sair de um IP brasileiro. Caminhos a testar, do mais simples ao mais robusto: (1) executar a função do Supabase fixada na região de São Paulo (cabeçalho `x-region: sa-east-1`) e repetir este teste; (2) um pequeno serviço próprio em hospedagem brasileira que consulta o DJEN e entrega ao sistema; (3) runner próprio do GitHub em máquina no Brasil. Até lá, a captura automática de intimações **não deve ser prometida**.
 - **DataJud:** não testado (falta `DATAJUD_API_KEY` nos segredos do GitHub). Ele também pode ter restrição regional; o mesmo teste mostrará.
