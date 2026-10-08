@@ -49,7 +49,7 @@ else aviso('Sem OAB nem processo informados: faz só um teste de conectividade.'
 try {
   const r = await tempo(`https://comunicaapi.pje.jus.br/api/v1/comunicacao?${params}`, { headers: { Accept: 'application/json' } });
   const texto = await r.text();
-  if (!r.ok) falha(`DJEN respondeu HTTP ${r.status}: ${texto.slice(0, 200)}`);
+  if (!r.ok) falha(`DJEN respondeu HTTP ${r.status}: ${texto.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 300)} (cabeçalhos: server=${r.headers.get("server")}, via=${r.headers.get("via")}, x-cache=${r.headers.get("x-cache")})`);
   else {
     let j = null; try { j = JSON.parse(texto); } catch { /* resposta não é JSON */ }
     ok(`DJEN respondeu HTTP ${r.status}${j ? ` (JSON; campos de topo: ${Object.keys(j).join(', ')})` : ' (não é JSON)'}.`);
