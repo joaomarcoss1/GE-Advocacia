@@ -98,17 +98,41 @@ try {
   }
 } catch (e) { falha(`Não foi possível falar com o DJEN: ${e.message}`); }
 
-// ---------------------------------------------------------------- Supabase
-console.log('\n== Supabase');
-const url = (process.env.SUPABASE_URL || '').replace(/\/$/, ''), anon = process.env.SUPABASE_ANON_KEY;
-if (!url || !anon) aviso('SUPABASE_URL / SUPABASE_ANON_KEY não informados: pulando.');
-else {
-  try {
-    const r = await tempo(`${url}/auth/v1/health`, { headers: { apikey: anon } });
-    r.ok ? ok('Autenticação do Supabase no ar.') : falha(`Autenticação respondeu HTTP ${r.status}.`);
-    const f = await tempo(`${url}/functions/v1/documentos`, { method: 'POST', headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ acao: 'publico_info', token: '0'.repeat(48) }) });
-    const corpo = await f.json().catch(() => null);
-    f.status === 200 && corpo && corpo.ok === false ? ok('Função "documentos" publicada e recusando link inválido, como esperado.') : falha(`Função "documentos": HTTP ${f.status} ${JSON.stringify(corpo)?.slice(0, 120)}`);
-  } catch (e) { falha(`Não foi possível falar com o Supabase: ${e.message}`); }
+// ---------------------------------------------------------------- Supabase (funções publicadas e configuração do Google)
+console.log('\n== Supabase e Google');
+const url = (process.env.SUPABASE_URL || 'https://zkyxvwdxyocgneizcfiz.supabase.co').replace(/\/$/, ''), anon = process.env.SUPABASE_ANON_KEY || '';
+const cab = { 'Content-Type': 'application/json', ...(anon ? { apikey: anon, Authorization: `Bearer ${anon}` } : {}) };
+async function chama(funcao, corpo) {
+  const r = await tempo(`${url}/functions/v1/${funcao}`, { method: 'POST', headers: cab, body: JSON.stringify(corpo) });
+  const texto = await r.text(); let json = null; try { json = JSON.parse(texto); } catch { /* não é JSON */ }
+  return { status: r.status, json, texto: texto.slice(0, 160) };
 }
+try {
+  const auth = await tempo(`${url}/auth/v1/health`, { headers: anon ? { apikey: anon } : {} });
+  auth.ok ? ok('Autenticação do Supabase no ar.') : aviso(`Autenticação respondeu HTTP ${auth.status}${anon ? '' : ' (sem a chave anon informada)'}.`);
+
+  // 1) as quatro funções estão publicadas? (404 = não publicada; qualquer resposta JSON = no ar)
+  for (const [nome, corpo] of [['anexos', { acao: 'x' }], ['google-agenda', { acao: 'x' }], ['processos', { acao: 'x' }], ['documentos', { acao: 'publico_info', token: '0'.repeat(48) }]]) {
+    const r = await chama(nome, corpo);
+    r.status === 404 || (r.status >= 500 && !r.json) ? falha(`Função "${nome}" NÃO está publicada ou caiu (HTTP ${r.status}): ${r.texto}`) : ok(`Função "${nome}" publicada (HTTP ${r.status}).`);
+  }
+
+  // 2) o Google está configurado nas funções? (a função responde 503 GOOGLE_INDISPONIVEL enquanto faltarem as credenciais)
+  for (const [funcao, acao, rotulo] of [['google-agenda', 'conectar', 'Google Agenda'], ['documentos', 'drive_conectar', 'Google Drive']]) {
+    const r = await chama(funcao, { acao, retorno: 'https://exemplo.invalid/' });
+    if (r.json?.erro === 'GOOGLE_INDISPONIVEL') falha(`${rotulo}: faltam GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET nos segredos (a função está no ar, mas sem as credenciais do Google).`);
+    else ok(`${rotulo}: credenciais do Google presentes nas funções (resposta: HTTP ${r.status} ${r.json?.erro ?? ''}).`);
+  }
+
+  // 3) rotina de acompanhamento: o segredo CRON_SECRET existe e confere?
+  if (process.env.CRON_SECRET) {
+    const teste = cnj || '0000832-35.2018.4.01.3202';       // sem processo informado, usa um número público de exemplo só para testar o caminho
+    const r = await tempo(`${url}/functions/v1/processos`, { method: 'POST', headers: { ...cab, 'x-cron-secret': process.env.CRON_SECRET }, body: JSON.stringify({ acao: 'varredura', teste_numero: teste }) });
+    const j = await r.json().catch(() => null);
+    if (r.status === 401) falha('CRON_SECRET do GitHub não confere com o do Supabase (cadastre o mesmo valor nos dois lugares e rode a publicação de novo).');
+    else if (r.status === 503) falha(`DataJud não configurado dentro da função: ${j?.erro ?? ''}`);
+    else if (j?.ok) ok(`DataJud pelo Supabase: ${j.tribunal} · ${j.encontrado ? `${j.classe ?? 'processo'} · ${j.orgao_julgador ?? ''} · ${j.andamentos} andamento(s)` : 'número não encontrado na base pública (esperado para um número de exemplo)'}.`);
+    else falha(`Varredura/teste respondeu HTTP ${r.status}: ${j?.erro ?? r.status}`);
+  } else aviso('CRON_SECRET não informado: a varredura automática de processos (a cada 6 horas) ainda não pode rodar.');
+} catch (e) { falha(`Não foi possível falar com o Supabase: ${e.message}`); }
 console.log(process.exitCode ? '\nHá itens a corrigir (marcados com ✗).' : '\nTudo respondeu como esperado.');

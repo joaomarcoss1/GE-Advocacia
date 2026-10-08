@@ -138,6 +138,13 @@ Deno.serve(async (req: Request) => {
     if (acao === 'varredura') {
       if (!segredoConfere(req.headers.get('x-cron-secret'), CRON)) return falha('Não autorizado.', 401);
       if (!CHAVE) return falha('DATAJUD_API_KEY não configurada.', 503);
+      // teste de ponta a ponta (só com o segredo): consulta UM número no DataJud, de dentro do servidor, sem gravar nada
+      if (typeof corpo.teste_numero === 'string') {
+        const t = tribunalDeCnj(corpo.teste_numero);
+        if (!t) return json({ ok: false, erro: 'Número sem tribunal consultável.' });
+        const d = await consultarDatajud(corpo.teste_numero);
+        return json({ ok: true, tribunal: t.sigla, encontrado: !!d, classe: d?.classe ?? null, orgao_julgador: d?.orgao_julgador ?? null, andamentos: d?.movimentos.length ?? 0 });
+      }
       const { data } = await sb.from('processos').select(COLS).eq('monitorar', true).eq('situacao', 'ativo').order('ultima_consulta', { ascending: true, nullsFirst: true }).limit(LIMITE_VARREDURA);
       const { data: ativos } = await sb.from('escritorios').select('id').eq('ativo', true);              // escritório suspenso não é consultado
       const vivos = new Set<string>((ativos ?? []).map((e: { id: string }) => e.id));
