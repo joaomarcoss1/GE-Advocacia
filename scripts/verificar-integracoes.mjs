@@ -128,12 +128,23 @@ try {
   // 3) rotina de acompanhamento: o segredo CRON_SECRET existe e confere?
   if (process.env.CRON_SECRET) {
     const teste = cnj || '0000832-35.2018.4.01.3202';       // sem processo informado, usa um número público de exemplo só para testar o caminho
-    const r = await tempo(`${url}/functions/v1/processos`, { method: 'POST', headers: { ...cab, 'x-cron-secret': process.env.CRON_SECRET }, body: JSON.stringify({ acao: 'varredura', teste_numero: teste }) });
+    // 1) o mesmo número direto no DataJud (a partir do GitHub), só para medir a demora
+    if (lib && chave) {
+      const t0 = Date.now(); const alias = lib.tribunalDeCnj(teste)?.alias;
+      try {
+        const rd = await fetch(lib.urlDatajud(alias), { method: 'POST', signal: AbortSignal.timeout(100_000), headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify(lib.corpoConsultaDatajud(teste)) });
+        aviso(`Consulta direta ao DataJud (${alias}): HTTP ${rd.status} em ${((Date.now() - t0) / 1000).toFixed(1)} s.`);
+      } catch (e) { aviso(`Consulta direta ao DataJud (${alias}) falhou depois de ${((Date.now() - t0) / 1000).toFixed(1)} s: ${e.message}`); }
+    }
+    // 2) o mesmo número pela função do Supabase (espera até 110 s, sem repetir)
+    const t1 = Date.now();
+    const r = await fetch(`${url}/functions/v1/processos`, { method: 'POST', signal: AbortSignal.timeout(110_000), headers: { ...cab, 'x-cron-secret': process.env.CRON_SECRET }, body: JSON.stringify({ acao: 'varredura', teste_numero: teste }) });
     const j = await r.json().catch(() => null);
+    const seg = ((Date.now() - t1) / 1000).toFixed(1);
     if (r.status === 401) falha('CRON_SECRET do GitHub não confere com o do Supabase (cadastre o mesmo valor nos dois lugares e rode a publicação de novo).');
     else if (r.status === 503) falha(`DataJud não configurado dentro da função: ${j?.erro ?? ''}`);
-    else if (j?.ok) ok(`DataJud pelo Supabase: ${j.tribunal} · ${j.encontrado ? `${j.classe ?? 'processo'} · ${j.orgao_julgador ?? ''} · ${j.andamentos} andamento(s)` : 'número não encontrado na base pública (esperado para um número de exemplo)'}.`);
-    else falha(`Varredura/teste respondeu HTTP ${r.status}: ${j?.erro ?? r.status}`);
+    else if (j?.ok) ok(`DataJud pelo Supabase (${seg} s): ${j.tribunal} · ${j.encontrado ? `${j.classe ?? 'processo'} · ${j.orgao_julgador ?? ''} · ${j.andamentos} andamento(s)` : 'número não encontrado na base pública (esperado para um número de exemplo)'}.`);
+    else falha(`Varredura/teste respondeu HTTP ${r.status} em ${seg} s: ${j?.erro ?? r.status}`);
   } else aviso('CRON_SECRET não informado: a varredura automática de processos (a cada 6 horas) ainda não pode rodar.');
 } catch (e) { falha(`Não foi possível falar com o Supabase: ${e.message}`); }
 console.log(process.exitCode ? '\nHá itens a corrigir (marcados com ✗).' : '\nTudo respondeu como esperado.');
