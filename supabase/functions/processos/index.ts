@@ -154,7 +154,13 @@ Deno.serve(async (req: Request) => {
         let djen: { status: number; trecho: string; amostra?: unknown };
         try {
           const r = await fetch(`https://comunicaapi.pje.jus.br/api/v1/comunicacao?siglaTribunal=${sigla}&dataDisponibilizacaoInicio=${dia(ini)}&dataDisponibilizacaoFim=${dia(hoje)}&itensPorPagina=3&pagina=1`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30_000) });
-          djen = { status: r.status, trecho: (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400) };
+          const bruto = await r.text();
+          djen = { status: r.status, trecho: bruto.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400) };
+          try {
+            const j = JSON.parse(bruto) as { items?: Record<string, unknown>[] };
+            const it = j.items?.[0];
+            if (it) djen.amostra = { chaves_topo: Object.keys(j), chaves_item: Object.fromEntries(Object.entries(it).map(([k, v]) => [k, Array.isArray(v) ? `array(${v.length})${v[0] && typeof v[0] === 'object' ? ' ' + JSON.stringify(Object.keys(v[0] as object)) : ''}` : typeof v === 'string' ? `string(${v.length})` : typeof v])), exemplo_curto: { tipoComunicacao: it.tipoComunicacao, tipoDocumento: it.tipoDocumento, meio: it.meio, nomeClasse: it.nomeClasse, numero_processo: it.numero_processo, numeroprocessocommascara: it.numeroprocessocommascara, link: it.link, destinatarioadvogados: it.destinatarioadvogados } };
+          } catch { /* não era JSON */ }
         } catch (e) { djen = { status: 0, trecho: (e as Error).message }; }
         return json({ ok: true, origem: { pais: origem.country ?? null, regiao: origem.region ?? null, cidade: origem.city ?? null, org: origem.org ?? null }, regiao_funcao: Deno.env.get('SB_REGION') ?? Deno.env.get('DENO_REGION') ?? null, djen });
       }
