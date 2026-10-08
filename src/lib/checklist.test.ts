@@ -32,3 +32,17 @@ describe('arquivos', () => {
     expect(nomeSeguroArquivo('x'.repeat(300)).length).toBe(120);
   });
 });
+
+import { pontuarLista } from './checklist';
+describe('sugestão de lista pelo processo', () => {
+  const trab = { nome: 'Reclamação trabalhista – empregado', tipo: 'Reclamação trabalhista', area: 'trabalhista' as const };
+  const geral = { nome: 'Geral', tipo: null, area: null };
+  it('prefere a lista do mesmo tipo e da mesma área', () => {
+    const p = { area: 'trabalhista' as const, classe: 'Reclamação Trabalhista', assunto: 'Horas extras' };
+    expect(pontuarLista(trab, p)).toBeGreaterThan(pontuarLista(geral, p));
+    expect(pontuarLista(trab, null)).toBe(0);
+  });
+  it('sem relação, não pontua', () => {
+    expect(pontuarLista(trab, { area: 'civel', classe: 'Procedimento Comum Cível', assunto: 'Indenização' })).toBe(0);
+  });
+});

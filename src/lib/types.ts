@@ -393,6 +393,8 @@ export interface TarefaFunc extends Pick<Tarefa, 'id' | 'tipo' | 'titulo' | 'des
 export type TipoPessoa = 'pf' | 'pj';
 export interface Cliente {
   id: string; nome: string; tipo: TipoPessoa; documento: string | null; email: string | null; telefone: string | null; observacoes: string | null;
+  /** Qualificação para procurações e peças. */
+  rg?: string | null; estado_civil?: string | null; profissao?: string | null; nacionalidade?: string | null; endereco?: string | null;
   ativo: boolean; drive_folder_id?: string | null; created_at: string; updated_at: string;
 }
 export type SituacaoProcesso = 'ativo' | 'suspenso' | 'arquivado' | 'encerrado';
@@ -413,12 +415,27 @@ export interface Movimento {
   id: string; processo_id: string; origem: 'datajud' | 'manual' | 'simulada'; codigo: number | null; nome: string; complemento: string | null; data_hora: string;
   categoria: CategoriaMovimento; exige_acao: boolean; prazo_sugerido_dias: number | null; lido: boolean; tarefa_id: string | null; criado_por_nome: string | null; created_at: string;
 }
-export interface ChecklistModelo { id: string; nome: string; area: AreaJuridica | null; itens: { nome: string; obrigatorio?: boolean }[]; ativo: boolean; created_at: string }
+export interface ChecklistModelo {
+  id: string; nome: string; area: AreaJuridica | null; itens: { nome: string; obrigatorio?: boolean }[]; ativo: boolean; created_at: string;
+  /** Tipo de processo a que a lista se destina (ex.: "Reclamação trabalhista"). */
+  tipo?: string | null; descricao?: string | null;
+}
 export type StatusItem = 'pendente' | 'recebido' | 'conferido' | 'dispensado';
 export interface ChecklistItem {
   id: string; cliente_id: string | null; processo_id: string | null; nome: string; obrigatorio: boolean; status: StatusItem; observacao: string | null;
   ordem: number; recebido_em: string | null; created_at: string;
 }
+export type StatusIntimacao = 'nova' | 'lida' | 'tratada' | 'descartada';
+/** Comunicação publicada no DJEN (CNJ) para um advogado do escritório. O conteúdo vem do tribunal e não muda; só o tratamento. */
+export interface Intimacao {
+  id: string; djen_id: number; hash: string | null; tribunal: string; tipo_comunicacao: string; tipo_documento: string | null; orgao: string | null; classe: string | null;
+  numero_processo: string | null; processo_id: string | null; texto: string; link: string | null; data_disponibilizacao: string; meio: string | null; cancelada: boolean;
+  destinatarios: { nome: string; polo: string | null }[]; advogados: { nome: string; oab: string | null; uf: string | null }[]; oab_busca: string | null;
+  exige_providencia: boolean; prazo_dias: number | null; prazo_regime: 'uteis' | 'corridos' | null; prazo_fim: string | null;
+  status: StatusIntimacao; responsavel_id: string | null; tarefa_id: string | null; tratada_em: string | null; tratada_por_nome: string | null; created_at: string; updated_at: string;
+}
+export interface IntimacoesSync { executada_em: string; oabs: string[]; novas: number; erros: number; mensagem: string | null }
+export interface ResultadoIntimacoes { oabs: number; novas: number; tarefas: number; erros: number; mensagem: string }
 export type StatusDrive = 'desligado' | 'pendente' | 'enviado' | 'erro';
 export interface DocumentoArquivo {
   id: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; mime: string; tamanho: number; sha256: string | null;

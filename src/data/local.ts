@@ -7,7 +7,7 @@
  * exclusão, período fechado congelado, decisões só do administrador, rastro de acessos a atestados, retenção.
  */
 import { CONFIG_PADRAO, mesclarConfig } from '@/lib/config';
-import { agoraBR, brParaIso, definirFuso, hhmmParaMin, hojeMais, isoParaBR } from '@/lib/datetime';
+import { addDays, agoraBR, brParaIso, definirFuso, hhmmParaMin, hojeMais, isoParaBR } from '@/lib/datetime';
 import { gerarCodigoDocumento } from '@/lib/codigo';
 import { ErroNegocio, erro } from '@/lib/erros';
 import { semAcento } from '@/lib/format';
@@ -17,13 +17,16 @@ import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
 import { base64ParaBlob } from '@/lib/anexos';
 import { normalizarCnj } from '@/lib/cnj';
 import { MAX_DOCUMENTO_DEMO, MODELOS_INICIAIS, mimeDoNome } from '@/lib/checklist';
+import type { ModeloDocumento } from '@/lib/modelos';
+import { normalizarParametros, type PropostaHonorarios } from '@/lib/precificacao';
+import { exigeProvidencia, prazoNoTexto } from '@/lib/intimacoes';
 import { ehCategoria, sugerirCategoria, type CategoriaDoc } from '@/lib/organizacao';
-import { chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
+import { calcularPrazo, chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
 import { STATUS_ROTULO } from '@/lib/tarefas';
 import type {
   AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
   ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta,
-  Funcionario, Ocorrencia, Papel, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
+  Funcionario, Intimacao, IntimacoesSync, Ocorrencia, Papel, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
 } from '@/lib/types';
 import type {
   AnexarArgs, AnexoAberto, ArquivosRepo, BaterArgs, Crud, Db, DocumentoVerificado, FolhasRepo, ProcessosRepo, JustificarAusenciaArgs, JustificativaFunc, MarcacaoHistorico,
@@ -317,6 +320,7 @@ export function criarDbLocal(): Db {
       Object.assign(novo, {
         tipo: novo.tipo ?? 'pf', documento: (novo.documento ?? '').replace(/[^0-9A-Za-z]/g, '') || null, email: novo.email?.trim() || null, telefone: novo.telefone?.trim() || null,
         observacoes: novo.observacoes?.trim() || null, ativo: novo.ativo ?? true, updated_at: agoraIso(), drive_folder_id: velho?.drive_folder_id ?? null,
+        rg: novo.rg?.trim() || null, estado_civil: novo.estado_civil?.trim() || null, profissao: novo.profissao?.trim() || null, nacionalidade: novo.nacionalidade?.trim() || null, endereco: novo.endereco?.trim() || null,
       });
     },
     depois(op, velho, novo, a) {
@@ -480,7 +484,86 @@ export function criarDbLocal(): Db {
       if (novo.nome.length < 2) throw erro('NOME_OBRIGATORIO');
       if (lerTab<ChecklistModelo>(a.slug, 'checklist_modelos').some(m => m.id !== novo.id && m.nome.toLowerCase() === novo.nome.toLowerCase())) throw erro('NOME_EXISTE', 'Já existe um modelo com esse nome.');
       novo.itens = (novo.itens ?? []).filter(i => i.nome?.trim()).slice(0, 80).map(i => ({ nome: i.nome.trim(), ...(i.obrigatorio === false ? { obrigatorio: false } : {}) }));
-      novo.ativo = novo.ativo ?? true; novo.area = novo.area ?? null;
+      novo.ativo = novo.ativo ?? true; novo.area = novo.area ?? null; novo.tipo = novo.tipo?.trim() || null; novo.descricao = novo.descricao?.trim() || null;
+    },
+  });
+  const modelosDocumentos = crud<ModeloDocumento>('modelos_documentos', {
+    le: DELEGA, ins: GESTAO, upd: GESTAO, del: GESTAO,
+    antes(op, velho, novo, a) {
+      if (op === 'del' || !novo) return;
+      novo.titulo = (novo.titulo ?? '').trim();
+      if (novo.titulo.length < 2 || novo.titulo.length > 160) throw erro('NOME_OBRIGATORIO');
+      if (lerTab<ModeloDocumento>(a.slug, 'modelos_documentos').some(m => m.id !== novo.id && m.titulo.toLowerCase() === novo.titulo.toLowerCase())) throw erro('NOME_EXISTE', 'Já existe um modelo com esse título.');
+      if (!novo.conteudo || novo.conteudo.length < 20 || novo.conteudo.length > 80000) throw erro('ARQUIVO_INVALIDO', 'O texto do modelo deve ter de 20 a 80.000 caracteres.');
+      novo.categoria = novo.categoria ?? 'manifestacoes'; novo.area = novo.area ?? null; novo.descricao = novo.descricao?.trim() || null; novo.ativo = novo.ativo ?? true;
+      novo.versao = op === 'upd' && velho && velho.conteudo !== novo.conteudo ? (velho.versao ?? 1) + 1 : (velho?.versao ?? 1);
+      novo.updated_at = agoraIso();
+    },
+  });
+  // ---- intimações do DJEN: no modo demonstração a "busca" gera comunicações de exemplo para os processos cadastrados
+  const IMUTAVEIS_INTIMACAO = ['djen_id', 'tribunal', 'texto', 'tipo_comunicacao', 'numero_processo', 'data_disponibilizacao', 'orgao', 'classe', 'link', 'destinatarios', 'advogados', 'hash', 'created_at'] as const;
+  const intimacoesBase = crud<Intimacao>('intimacoes', {
+    le: DELEGA, ins: [], upd: DELEGA, del: GESTAO,
+    antes(op, velho, novo, a) {
+      if (op === 'del' || !novo || !velho) return;
+      for (const k of IMUTAVEIS_INTIMACAO) if (JSON.stringify(novo[k]) !== JSON.stringify(velho[k])) throw erro('CAMPO_IMUTAVEL', 'O conteúdo da intimação vem do tribunal e não pode ser alterado.');
+      if (!['nova', 'lida', 'tratada', 'descartada'].includes(novo.status)) throw erro('ARQUIVO_INVALIDO', 'Situação inválida.');
+      if (novo.status === 'tratada' || novo.status === 'descartada') { novo.tratada_em = velho.tratada_em ?? agoraIso(); novo.tratada_por_nome = velho.tratada_por_nome ?? a.sessao.nome; }
+      else { novo.tratada_em = null; novo.tratada_por_nome = null; }
+      novo.updated_at = agoraIso();
+    },
+  });
+  const MODELOS_DEMO_INTIMACAO = [
+    { tipo: 'Intimação', doc: 'Decisão (expediente)', texto: 'Fica a parte autora intimada para, no prazo de 15 (quinze) dias, manifestar-se sobre a contestação e os documentos juntados pela parte ré.', dias: 1 },
+    { tipo: 'Intimação', doc: 'Despacho (expediente)', texto: 'Intime-se a parte ré para apresentar contrarrazões ao recurso no prazo de 15 (quinze) dias úteis.', dias: 2 },
+    { tipo: 'Intimação', doc: 'Ato ordinatório', texto: 'Audiência de conciliação designada. Ficam as partes e seus advogados intimados a comparecer. Não há prazo a cumprir.', dias: 3 },
+  ];
+  const intimacoes: Db['intimacoes'] = {
+    list: intimacoesBase.list, update: intimacoesBase.update, remove: intimacoesBase.remove,
+    async novas() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? lerTab<Intimacao>(a.slug, 'intimacoes').filter(i => i.status === 'nova').length : 0; },
+    async sync() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? lerJson<IntimacoesSync | null>(kt(a.slug, 'intimacoes_sync'), null) : null; },
+    async buscar() {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      const procs = processosDe(a.slug).filter(p => p.situacao === 'ativo').slice(0, 3);
+      const oabs = lerTab<Funcionario>(a.slug, 'funcionarios').filter(f => f.oab).map(f => f.oab as string);
+      const existentes = lerTab<Intimacao>(a.slug, 'intimacoes');
+      const fer = new Set(lerTab<{ data: string }>(a.slug, 'feriados').map(f => f.data));
+      const hoje = agoraBR().data;
+      let novas = 0;
+      const gravar: Intimacao[] = [];
+      procs.forEach((p, k) => {
+        const m = MODELOS_DEMO_INTIMACAO[k % MODELOS_DEMO_INTIMACAO.length];
+        const djen = 900_000_000 + [...(p.id + m.doc)].reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 99_999_999, 7);
+        if (existentes.some(x => x.djen_id === djen) || gravar.some(x => x.djen_id === djen)) return;
+        const data = addDays(hoje, -m.dias);
+        const providencia = exigeProvidencia(m.tipo, m.texto), pz = providencia ? prazoNoTexto(m.texto) : null;
+        const calc = pz ? calcularPrazo({ marco: data, tipo: 'disponibilizacao', dias: pz.dias, regime: pz.regime, feriados: fer }) : null;
+        gravar.push({
+          id: uuid(), djen_id: djen, hash: null, tribunal: tribunalDeCnj(p.numero)?.sigla ?? 'TJMA', tipo_comunicacao: m.tipo, tipo_documento: m.doc, orgao: p.orgao_julgador ?? '1ª Vara Cível', classe: p.classe ?? 'Procedimento Comum Cível',
+          numero_processo: p.numero, processo_id: p.id, texto: m.texto, link: null, data_disponibilizacao: data, meio: 'D', cancelada: false, destinatarios: p.parte_contraria ? [{ nome: p.parte_contraria, polo: 'P' }] : [],
+          advogados: [], oab_busca: oabs[0] ?? null, exige_providencia: providencia, prazo_dias: pz?.dias ?? null, prazo_regime: pz?.regime ?? null, prazo_fim: calc?.vencimento ?? null, status: 'nova',
+          responsavel_id: p.responsavel_id ?? null, tarefa_id: null, tratada_em: null, tratada_por_nome: null, created_at: agoraIso(), updated_at: agoraIso(),
+        });
+        novas++;
+      });
+      if (gravar.length) gravarTab(a.slug, 'intimacoes', [...existentes, ...gravar]);
+      const mensagem = !procs.length ? 'Cadastre processos para ver intimações de exemplo.' : novas ? `${novas} intimação(ões) de exemplo (demonstração).` : 'Nenhuma intimação nova (demonstração).';
+      const sync: IntimacoesSync = { executada_em: agoraIso(), oabs: oabs.slice(0, 5), novas, erros: 0, mensagem };
+      gravarJson(kt(a.slug, 'intimacoes_sync'), sync);
+      return { oabs: oabs.length, novas, tarefas: 0, erros: 0, mensagem };
+    },
+  };
+  const propostas = crud<PropostaHonorarios>('honorarios_propostas', {
+    le: ['admin'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    antes(op, velho, novo) {
+      if (op === 'del' || !novo) return;
+      novo.titulo = (novo.titulo ?? '').trim();
+      if (novo.titulo.length < 2 || novo.titulo.length > 200) throw erro('NOME_OBRIGATORIO');
+      const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : 0);
+      novo.valor_recomendado = num(novo.valor_recomendado); novo.valor_proposto = num(novo.valor_proposto); novo.exito_pct = Math.min(100, num(novo.exito_pct));
+      novo.status = novo.status ?? 'rascunho'; novo.cliente_id = novo.cliente_id ?? null; novo.processo_id = novo.processo_id ?? null; novo.forma_pagamento = novo.forma_pagamento?.trim() || null;
+      novo.observacoes = novo.observacoes?.trim() || null; novo.updated_at = agoraIso(); novo.created_at = velho?.created_at ?? novo.created_at ?? agoraIso();
     },
   });
   const itens = crud<ChecklistItem>('checklist_itens', {
@@ -1013,6 +1096,15 @@ export function criarDbLocal(): Db {
     processos,
     checklist: { modelos, itens, aplicar: aplicarChecklist },
     arquivos,
+    modelosDocumentos,
+    intimacoes,
+    honorarios: {
+      parametros: {
+        async get() { const a = tentaAtor(); return normalizarParametros(a?.papel === 'admin' ? lerJson(kt(a.slug, 'honorarios_parametros'), {}) : {}); },
+        async save(p) { const a = exigeAdmin(); gravarJson(kt(a.slug, 'honorarios_parametros'), normalizarParametros(p)); auditarLocal(a, 'Alterado · honorarios_parametros', 'Parâmetros de honorários', 'honorarios_parametros', a.slug); },
+      },
+      propostas,
+    },
     andamentos: {
       async list(tarefaId) { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? andamentosDe(a.slug).filter(x => x.tarefa_id === tarefaId).sort((x, y) => x.created_at.localeCompare(y.created_at)) : []; },
       async add(tarefaId, texto) {

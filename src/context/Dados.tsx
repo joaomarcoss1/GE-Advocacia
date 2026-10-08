@@ -17,6 +17,8 @@ interface DadosCtx {
   cargos: Cargo[]; escalas: Escala[]; funcionarios: Funcionario[]; registros: RegistroPonto[]; ocorrencias: Ocorrencia[];
   feriados: Feriado[]; ajustes: AjusteFolha[]; ajustesDia: AjusteDia[]; folhas: Folha[]; usuarios: Usuario[]; config: Config; tarefas: Tarefa[];
   clientes: Cliente[]; processos: Processo[]; novidades: Movimento[];
+  /** Intimações do DJEN ainda não abertas (selo do menu). */
+  intimacoesNovas: number;
   agora: AgoraBR;
   /** Esta data (ou intervalo) cai num período com folha fechada/paga? Então marcações, ocorrências e ajustes ficam congelados. */
   travado(funcionarioId: string, ini: string, fim?: string): boolean;
@@ -37,7 +39,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     cargos: [] as Cargo[], escalas: [] as Escala[], funcionarios: [] as Funcionario[], registros: [] as RegistroPonto[],
     ocorrencias: [] as Ocorrencia[], feriados: [] as Feriado[], ajustes: [] as AjusteFolha[], ajustesDia: [] as AjusteDia[], folhas: [] as Folha[],
     usuarios: [] as Usuario[], config: CONFIG_PADRAO, tarefas: [] as Tarefa[],
-    clientes: [] as Cliente[], processos: [] as Processo[], novidades: [] as Movimento[],
+    clientes: [] as Cliente[], processos: [] as Processo[], novidades: [] as Movimento[], intimacoesNovas: 0,
   });
   const [agora, setAgora] = useState(agoraBR());
   const [fechados, setFechados] = useState<PeriodoFechado[]>([]);
@@ -49,7 +51,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const recarregar = useCallback(async () => {
     if (!db || !sessao) return;
     const admin = sessao.papel === 'admin';
-    const [cargos, escalas, func, registros, ocorrencias, feriados, config, ajustes, ajustesDia, folhas, usuarios, periodos, tarefas, clientes, processos, novidades] = await Promise.all([
+    const [cargos, escalas, func, registros, ocorrencias, feriados, config, ajustes, ajustesDia, folhas, usuarios, periodos, tarefas, clientes, processos, novidades, intimacoesNovas] = await Promise.all([
       db.cargos.list(), db.escalas.list(),
       admin
         ? db.funcionarios.list()
@@ -67,6 +69,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       db.clientes.list().catch(() => [] as Cliente[]),
       db.processos.list().catch(() => [] as Processo[]),
       db.processos.naoLidos().catch(() => [] as Movimento[]),
+      db.intimacoes.novas().catch(() => 0),             // banco ainda sem a migração 0012: o resto continua funcionando
     ]);
     setFechados(periodos);
     if (admin) setVersaoBanco(await db.versaoEsquema().catch(() => null));
@@ -74,7 +77,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     try {
       if (localStorage.getItem('ge.selos.pendentes')) import('@/lib/selo').then(m => m.sincronizarSelos(db)).catch(() => undefined);
     } catch { /* sem armazenamento local */ }
-    setD({ cargos, escalas, funcionarios: func, registros, ocorrencias, feriados, config, ajustes, ajustesDia, folhas, usuarios, tarefas, clientes, processos, novidades });
+    setD({ cargos, escalas, funcionarios: func, registros, ocorrencias, feriados, config, ajustes, ajustesDia, folhas, usuarios, tarefas, clientes, processos, novidades, intimacoesNovas });
     setAgora(agoraBR());
   }, [db, sessao]);
 

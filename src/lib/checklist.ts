@@ -29,3 +29,15 @@ export const extensao = (nome: string) => (nome.split('.').pop() ?? '').toLowerC
 export const mimeDoNome = (nome: string): string | null => MIMES_DOCUMENTO[extensao(nome)] ?? null;
 /** Nome de arquivo/pasta seguro para o Google Drive e para download. */
 export const nomeSeguroArquivo = (n: string) => n.normalize('NFC').replace(/[\\/:*?"<>|\x00-\x1f]+/g, '_').replace(/\s+/g, ' ').trim().slice(0, 120) || 'arquivo';
+
+const semAcentoMin = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const palavras = (s: string) => new Set(semAcentoMin(s).split(/[^a-z0-9]+/).filter(p => p.length >= 4));
+/** Pontua o quanto uma lista combina com o processo: área igual e palavras do "tipo de processo" na classe, no assunto ou no título. */
+export function pontuarLista(m: { nome: string; tipo?: string | null; area: AreaJuridica | null }, p: { area?: AreaJuridica | null; classe?: string | null; assunto?: string | null; titulo?: string | null } | null | undefined): number {
+  if (!p) return 0;
+  let n = 0;
+  if (m.area && m.area === p.area) n += 2;
+  const alvo = palavras(`${p.classe ?? ''} ${p.assunto ?? ''} ${p.titulo ?? ''}`);
+  for (const w of palavras(`${m.tipo ?? ''} ${m.nome}`)) if (alvo.has(w)) n += 3;
+  return n;
+}

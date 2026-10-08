@@ -1220,3 +1220,54 @@ button.auth-link { background: none; border: 0; font: inherit; cursor: pointer; 
 .ci-estrutura-titulo { display: block; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text); font-weight: 700; margin-bottom: 6px; }
 .ci-estrutura code { display: block; padding: 8px 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); font-size: .8rem; line-height: 1.6; word-break: break-word; }
 .ci-estrutura ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: .86rem; line-height: 1.55; display: flex; flex-direction: column; gap: 4px; }
+.qualificacao { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--surface-2); }
+.qualificacao summary { cursor: pointer; font-weight: 600; }
+
+/* ---------- Modelos de documentos ---------- */
+.previa-peca { background: #fff; color: #111; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 28px 32px; max-height: 460px; overflow: auto; font-family: 'Times New Roman', Times, serif; font-size: 1rem; line-height: 1.6; }
+.previa-peca p { margin: 0 0 8px; text-align: justify; }
+.previa-peca .bl-paragrafo { text-indent: 2.2em; }
+.previa-peca .bl-titulo { text-align: center; font-weight: 700; font-size: 1.15rem; margin: 6px 0 14px; }
+.previa-peca .bl-secao { font-weight: 700; margin-top: 14px; }
+.previa-peca .bl-centro { text-align: center; }
+.previa-peca .bl-direita { text-align: right; }
+.previa-peca mark { background: #fff3a3; color: #111; padding: 0 2px; border-radius: 2px; }
+.previa-peca hr { border: 0; border-top: 1px dashed #bbb; margin: 14px 0; }
+.lista-edicao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista-edicao li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.lista-edicao .input { min-width: 200px; }
+
+/* ---------- Honorários ---------- */
+.honorarios-grid { align-items: start; }
+.preco-card { border-left: 3px solid var(--brass); }
+.preco-grande { font-size: 2.3rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; margin: 2px 0 6px; font-variant-numeric: tabular-nums; }
+.faixas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.faixas > div { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-2); }
+.faixas strong { font-variant-numeric: tabular-nums; }
+.alertas-preco { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.alertas-preco li { display: flex; gap: 10px; align-items: flex-start; line-height: 1.45; }
+.alertas-preco svg { flex: none; margin-top: 2px; }
+.alertas-preco .al-bad { color: var(--bad); }
+.alertas-preco .al-warn { color: var(--warn, #9a6700); }
+.alertas-preco .al-ok { color: var(--ok, #1a7f37); }
+.alertas-preco .al-info { color: var(--muted); }
+.alertas-preco li span { color: var(--ink); }
+.tbl.compacta td { padding: 9px 22px; }
+.valor-calc { min-height: 44px; display: flex; align-items: center; }
+@media (max-width: 980px) { .faixas { grid-template-columns: 1fr; } .preco-grande { font-size: 1.9rem; } }
+
+/* ---------- Intimações ---------- */
+.texto-intimacao { margin: 6px 0 0; padding: 14px 16px; max-height: 280px; overflow: auto; white-space: pre-wrap; word-break: break-word; font: inherit; font-size: .94rem; line-height: 1.55; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.resumo-intimacao { font-size: .84rem; max-width: 520px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.passos-prazo { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: .9rem; }
+.girar { animation: girar 1s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girar { animation: none; } }
+
+/* abas segmentadas longas (Intimações): rolam em vez de estourar a tela do celular */
+@media (max-width: 980px) {
+  .filtros .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .filtros .seg::-webkit-scrollbar { display: none; }
+  .filtros .seg button { white-space: nowrap; flex: none; }
+}
+.texto-longo, .texto-longo > * { min-width: 0; overflow-wrap: anywhere; }

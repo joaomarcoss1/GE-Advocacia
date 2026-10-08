@@ -14,13 +14,13 @@ const FASES: [FaseProcesso, string][] = [['conhecimento', 'Conhecimento'], ['rec
 const POLOS: [PoloProcesso, string][] = [['ativo', 'Autor / ativo'], ['passivo', 'Réu / passivo'], ['terceiro', 'Terceiro']];
 
 /** Cadastro do processo: digitou o número, o sistema busca classe, assunto e órgão e já acompanha os andamentos. */
-export default function ProcessoModal({ processo, padrao, onClose, onSalvo }: { processo: Processo | null; padrao?: { cliente_id?: string }; onClose(): void; onSalvo(p: Processo): void }) {
+export default function ProcessoModal({ processo, padrao, onClose, onSalvo }: { processo: Processo | null; padrao?: { cliente_id?: string; numero?: string; orgao_julgador?: string; classe?: string }; onClose(): void; onSalvo(p: Processo): void }) {
   const { db, clientes, funcionarios, config, recarregar } = useDados();
   const toast = useToast();
   const [f, setF] = useState({
-    numero: processo?.numero ?? '', titulo: processo?.titulo ?? '', cliente_id: processo?.cliente_id ?? padrao?.cliente_id ?? '', polo: (processo?.polo ?? 'ativo') as PoloProcesso,
-    parte_contraria: processo?.parte_contraria ?? '', area: (processo?.area ?? '') as AreaJuridica | '', classe: processo?.classe ?? '', assunto: processo?.assunto ?? '',
-    orgao_julgador: processo?.orgao_julgador ?? '', grau: processo?.grau ?? '', data_ajuizamento: processo?.data_ajuizamento ?? '', responsavel_id: processo?.responsavel_id ?? '',
+    numero: processo?.numero ?? padrao?.numero ?? '', titulo: processo?.titulo ?? '', cliente_id: processo?.cliente_id ?? padrao?.cliente_id ?? '', polo: (processo?.polo ?? 'ativo') as PoloProcesso,
+    parte_contraria: processo?.parte_contraria ?? '', area: (processo?.area ?? '') as AreaJuridica | '', classe: processo?.classe ?? padrao?.classe ?? '', assunto: processo?.assunto ?? '',
+    orgao_julgador: processo?.orgao_julgador ?? padrao?.orgao_julgador ?? '', grau: processo?.grau ?? '', data_ajuizamento: processo?.data_ajuizamento ?? '', responsavel_id: processo?.responsavel_id ?? '',
     situacao: (processo?.situacao ?? 'ativo') as SituacaoProcesso, fase: (processo?.fase ?? 'conhecimento') as FaseProcesso, valor: processo?.valor_causa != null ? String(processo.valor_causa).replace('.', ',') : '',
     monitorar: processo?.monitorar ?? true, sigiloso: processo?.sigiloso ?? false, observacoes: processo?.observacoes ?? '', modelo: '',
   });

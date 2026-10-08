@@ -64,7 +64,11 @@ select t.ok((redefinir_senha_usuario(t.id_perfil('nora@t.com'), 'outraSenha77') 
 \echo == L6. Excluir escritório: só se estiver vazio
 select t.como('00000000-0000-0000-0000-0000000000f1');
 select t.falha($q$ select plataforma_excluir_escritorio(t.id_esc('almeida-t')) $q$, 'ESCRITORIO_COM_DADOS', 'escritório com funcionários não é excluído');
-select t.ok((plataforma_excluir_escritorio(t.id_esc('novo-t')) ->> 'ok') = 'true', 'escritório vazio é excluído');
+select t.admin_db();
+insert into public.modelos_documentos (escritorio_id, titulo, categoria, conteudo) values (t.id_esc('novo-t'), 'Modelo do escritório novo', 'procuracoes', 'texto de modelo com mais de vinte caracteres');
+insert into public.honorarios_parametros (escritorio_id, dados) values (t.id_esc('novo-t'), '{}'::jsonb);
+select t.como('00000000-0000-0000-0000-0000000000f1');
+select t.ok((plataforma_excluir_escritorio(t.id_esc('novo-t')) ->> 'ok') = 'true', 'escritório sem pessoas e dados, mas com modelos e parâmetros, é excluído');
 select t.admin_db();
 select t.ok(not exists (select 1 from public.escritorios where slug = 'novo-t') and not exists (select 1 from auth.users where email in ('nora@t.com', 'segundo.admin@t.com')), 'escritório e acessos sumiram');
 select t.ok(exists (select 1 from public.plataforma_auditoria where acao = 'Escritório excluído'), 'exclusão ficou na auditoria da plataforma');

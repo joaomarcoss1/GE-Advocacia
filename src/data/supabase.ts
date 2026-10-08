@@ -11,8 +11,10 @@ import { mesclarConfig } from '@/lib/config';
 import { ErroNegocio, PONTO_ERRO_MSG, traduzirErroBanco, type PontoErro } from '@/lib/erros';
 import type {
   AcessoSensivel, Andamento, AnexoMeta, ChecklistItem, ChecklistModelo, Cliente, Config, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, Escala, EscritorioPlataforma, Folha,
-  FuncionarioBasico, GoogleStatus, LinkEnvio, Movimento, Processo, ResultadoConsulta, SyncGoogle, Tarefa, Usuario,
+  FuncionarioBasico, GoogleStatus, Intimacao, IntimacoesSync, LinkEnvio, ResultadoIntimacoes, Movimento, Processo, ResultadoConsulta, SyncGoogle, Tarefa, Usuario,
 } from '@/lib/types';
+import type { ModeloDocumento } from '@/lib/modelos';
+import { normalizarParametros, type PropostaHonorarios } from '@/lib/precificacao';
 import { porCategoria } from '@/lib/processos';
 import type { AnexoAberto, ArquivoAnexo, ArquivosRepo, Crud, Db, ProcessosRepo, DocumentoVerificado, FolhasRepo, PeriodoFechado, PessoaPonto, PontoApi, PontoResp, ResumoExpurgo, Sessao } from './db';
 
@@ -348,6 +350,38 @@ export function criarDbSupabase(url: string, key: string): Db {
       aplicar: (modeloId, alvo) => rpc<number>('checklist_aplicar', { p_modelo: modeloId, p_processo: alvo.processo_id ?? null, p_cliente: alvo.cliente_id ?? null }),
     },
     arquivos,
+    modelosDocumentos: crud<ModeloDocumento>('modelos_documentos', 'titulo'),
+    intimacoes: (() => {
+      const base = crud<Intimacao>('intimacoes', 'data_disponibilizacao');
+      return {
+        list: base.list, update: base.update, remove: base.remove,
+        async novas() {
+          const { count } = await sb.from('intimacoes').select('id', { count: 'exact', head: true }).eq('status', 'nova');
+          return count ?? 0;
+        },
+        async sync() {
+          const { data } = await sb.from('intimacoes_sync').select('executada_em,oabs,novas,erros,mensagem').limit(1).maybeSingle();
+          return (data as IntimacoesSync | null) ?? null;
+        },
+        // O DJEN só responde ao Brasil: a função roda em São Paulo (sa-east-1) para esta chamada
+        buscar: (dias = 15) => chamarFuncao<ResultadoIntimacoes>('processos', { acao: 'intimacoes_buscar', dias }, { 'x-region': 'sa-east-1' }),
+      };
+    })(),
+    honorarios: {
+      parametros: {
+        async get() {
+          const { data } = await sb.from('honorarios_parametros').select('dados').limit(1).maybeSingle();
+          return normalizarParametros(data?.dados as Record<string, unknown> | undefined);
+        },
+        async save(p) {
+          const esc = sessaoCache?.escritorio?.id ?? (await lerSessao()).sessao?.escritorio?.id;
+          if (!esc) throw new ErroNegocio('SEM_PERMISSAO');
+          const { error } = await sb.from('honorarios_parametros').upsert({ escritorio_id: esc, dados: normalizarParametros(p) });
+          if (error) falha(error);
+        },
+      },
+      propostas: crud<PropostaHonorarios>('honorarios_propostas', 'created_at'),
+    },
     andamentos: {
       async list(tarefaId) {
         const { data, error } = await sb.from('tarefa_andamentos').select('id,tarefa_id,tipo,texto,autor_nome,created_at').eq('tarefa_id', tarefaId).order('created_at');

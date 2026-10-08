@@ -176,7 +176,7 @@ export default function Funcionarios() {
               <Field label="CPF"><input className="input" value={ed.cpf ?? ''} onChange={e => set({ cpf: mascaraCpf(e.target.value) })} inputMode="numeric" /></Field>
               <Field label="E-mail"><input className="input" type="email" value={ed.email ?? ''} onChange={e => set({ email: e.target.value })} /></Field>
               <Field label="Telefone / WhatsApp"><input className="input" value={ed.telefone ?? ''} onChange={e => set({ telefone: mascaraTelefone(e.target.value) })} inputMode="tel" /></Field>
-              <Field label="Nº da OAB (se advogado)"><input className="input" value={ed.oab ?? ''} onChange={e => set({ oab: e.target.value })} placeholder="OAB/MA 00.000" /></Field>
+              <Field label="Nº da OAB (se advogado)" dica="Com a UF, ex.: OAB/MA 12345. O sistema busca no DJEN as intimações desse número."><input className="input" value={ed.oab ?? ''} onChange={e => set({ oab: e.target.value })} placeholder="OAB/MA 00.000" /></Field>
             </div>
             <div className="section-title">Vínculo e jornada</div>
             <div className="grid c3">

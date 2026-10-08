@@ -5,6 +5,9 @@
 //   consultar       → consulta UM processo do escritório do chamador e grava os andamentos novos
 //   consultar_todos → o mesmo para todos os processos monitorados do escritório do chamador
 //   varredura       → TODOS os escritórios (chamada agendada com o cabeçalho x-cron-secret; sem login)
+//   intimacoes_buscar     → lê no DJEN (CNJ) as intimações dos advogados do escritório do chamador (pela OAB cadastrada)
+//   intimacoes_varredura  → o mesmo para TODOS os escritórios (agendada, com x-cron-secret)
+//   O DJEN só responde ao Brasil: estas ações devem ser chamadas com o cabeçalho  x-region: sa-east-1  (função rodando em São Paulo).
 //
 // Segurança: o JWT do chamador e o papel (administrador, gerência ou coordenação) são conferidos aqui; a service_role fica só
 // neste arquivo. Cada escritório só alcança os próprios processos. Andamentos já gravados nunca se repetem e nunca se alteram.
@@ -12,8 +15,9 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { segredoConfere } from '../_shared/cripto.ts';
 import {
-  chaveMovimento, classificarMovimento, corpoConsultaDatajud, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, urlDatajud, type DadosProcesso,
+  calcularPrazo, chaveMovimento, classificarMovimento, corpoConsultaDatajud, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, urlDatajud, type DadosProcesso,
 } from '../_shared/processos.ts';
+import { exigeProvidencia, lerComunicacao, parseOab, prazoNoTexto, urlDjen, type IntimacaoLinha, type OabBusca } from '../_shared/intimacoes.ts';
 
 const URL_BASE = Deno.env.get('SUPABASE_URL')!;
 const ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -23,7 +27,7 @@ const CRON = Deno.env.get('CRON_SECRET');
 const LIMITE_VARREDURA = 60;           // processos por execução (os mais antigos primeiro)
 const LIMITE_USUARIO = 120;
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret, x-region', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const falha = (erro: string, status = 400) => json({ erro }, status);
 
@@ -120,6 +124,106 @@ async function lote(sb: SupabaseClient, lista: ProcessoLinha[]): Promise<Resulta
 }
 const COLS = 'id,escritorio_id,numero,titulo,cliente_id,responsavel_id,area,ultima_consulta,classe,assunto,orgao_julgador,grau,data_ajuizamento';
 
+
+// ---------------------------------------------------------------- Intimações (DJEN)
+interface ResultadoIntimacoes { oabs: number; novas: number; tarefas: number; erros: number; mensagem: string }
+const DIAS_TAREFA = 10;                 // só vira tarefa a intimação publicada nos últimos 10 dias (o resto entra na caixa, sem tarefa)
+const MAX_TAREFAS_POR_RODADA = 30;
+const MAX_PAGINAS = 5;                  // 500 comunicações por OAB por rodada
+
+async function lerDjen(oab: OabBusca, inicio: string, fim: string): Promise<{ itens: IntimacaoLinha[]; erro?: string }> {
+  const itens: IntimacaoLinha[] = [];
+  for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+    let r: Response | null = null;
+    for (let t = 1; t <= 2 && !r?.ok; t++) {
+      try { r = await fetch(urlDjen({ oab, inicio, fim, pagina, porPagina: 100 }), { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(25_000) }); }
+      catch { r = null; }
+      if (r && (r.status === 429 || r.status >= 500)) { await new Promise(res => setTimeout(res, 1500)); continue; }
+      break;
+    }
+    if (!r) return { itens, erro: 'O DJEN não respondeu.' };
+    if (r.status === 403) return { itens, erro: 'O DJEN bloqueou a consulta (acesso só do Brasil). Chame a função na região sa-east-1.' };
+    if (r.status === 429) return { itens, erro: 'Limite de consultas do DJEN atingido. Tentaremos de novo na próxima rodada.' };
+    if (!r.ok) return { itens, erro: `O DJEN respondeu ${r.status}.` };
+    const j = await r.json().catch(() => null) as { items?: unknown[] } | null;
+    const lote = (j?.items ?? []).map(lerComunicacao).filter((x): x is IntimacaoLinha => !!x);
+    itens.push(...lote);
+    if ((j?.items ?? []).length < 100) break;
+    await new Promise(res => setTimeout(res, 300));                       // educado com a API pública
+  }
+  return { itens };
+}
+
+async function sincronizarIntimacoes(sb: SupabaseClient, escId: string, dias: number): Promise<ResultadoIntimacoes> {
+  const r: ResultadoIntimacoes = { oabs: 0, novas: 0, tarefas: 0, erros: 0, mensagem: '' };
+  const { data: func } = await sb.from('funcionarios').select('id,nome,oab').eq('escritorio_id', escId).is('data_desligamento', null).not('oab', 'is', null);
+  const porOab = new Map<string, { oab: OabBusca; funcionario_id: string }>();
+  for (const f of (func ?? []) as { id: string; nome: string; oab: string }[]) {
+    const o = parseOab(f.oab);
+    if (o && !porOab.has(`${o.numero}/${o.uf}`)) porOab.set(`${o.numero}/${o.uf}`, { oab: o, funcionario_id: f.id });
+  }
+  r.oabs = porOab.size;
+  if (!porOab.size) { r.mensagem = 'Nenhum advogado com OAB e UF cadastradas em Funcionários (ex.: OAB/MA 12345).'; await sb.from('intimacoes_sync').upsert({ escritorio_id: escId, executada_em: new Date().toISOString(), oabs: [], novas: 0, erros: 0, mensagem: r.mensagem }); return r; }
+
+  const hoje = new Date(), ini = new Date(Date.now() - Math.min(Math.max(dias, 1), 60) * 86_400_000);
+  const dia = (d: Date) => d.toISOString().slice(0, 10);
+  const achadas = new Map<number, { l: IntimacaoLinha; oab: string; funcionario_id: string }>();
+  const erros: string[] = [];
+  for (const [chave, { oab, funcionario_id }] of porOab) {
+    const x = await lerDjen(oab, dia(ini), dia(hoje));
+    if (x.erro) { r.erros++; erros.push(`OAB ${chave}: ${x.erro}`); }
+    for (const l of x.itens) if (!achadas.has(l.djen_id)) achadas.set(l.djen_id, { l, oab: chave, funcionario_id });
+    await new Promise(res => setTimeout(res, 300));
+  }
+
+  const ids = [...achadas.keys()];
+  const jaExistem = new Set<number>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await sb.from('intimacoes').select('djen_id').eq('escritorio_id', escId).in('djen_id', ids.slice(i, i + 200));
+    for (const x of (data ?? []) as { djen_id: number }[]) jaExistem.add(x.djen_id);
+  }
+  const novas = [...achadas.values()].filter(x => !jaExistem.has(x.l.djen_id));
+  if (novas.length) {
+    const numeros = [...new Set(novas.map(x => x.l.numero_processo).filter((n): n is string => !!n))];
+    const { data: procs } = numeros.length ? await sb.from('processos').select('id,numero,titulo,responsavel_id,area,cliente_id').eq('escritorio_id', escId).in('numero', numeros) : { data: [] };
+    const processos = new Map<string, { id: string; titulo: string | null; responsavel_id: string | null; area: string | null; cliente_id: string | null }>(((procs ?? []) as { id: string; numero: string; titulo: string | null; responsavel_id: string | null; area: string | null; cliente_id: string | null }[]).map(p => [p.numero, p]));
+    const { data: fer } = await sb.from('feriados').select('data').eq('escritorio_id', escId);
+    const feriados = new Set<string>((fer ?? []).map((f: { data: string }) => f.data));
+    const { data: cfg } = await sb.from('configuracoes').select('dados').eq('escritorio_id', escId).maybeSingle();
+    const criarTarefa = (cfg?.dados as { automacao?: { tarefa_andamento?: boolean } } | undefined)?.automacao?.tarefa_andamento !== false;
+    const limiteTarefa = dia(new Date(Date.now() - DIAS_TAREFA * 86_400_000));
+
+    for (const { l, oab, funcionario_id } of novas) {
+      const proc = l.numero_processo ? processos.get(l.numero_processo) : undefined;
+      const providencia = !l.cancelada && exigeProvidencia(l.tipo_comunicacao, l.texto);
+      const pz = providencia ? prazoNoTexto(l.texto) : null;
+      const calc = pz ? calcularPrazo({ marco: l.data_disponibilizacao, tipo: 'disponibilizacao', dias: pz.dias, regime: pz.regime, feriados }) : null;
+      const { data: ins, error } = await sb.from('intimacoes').upsert({
+        escritorio_id: escId, djen_id: l.djen_id, hash: l.hash, tribunal: l.tribunal, tipo_comunicacao: l.tipo_comunicacao, tipo_documento: l.tipo_documento, orgao: l.orgao, classe: l.classe,
+        numero_processo: l.numero_processo, processo_id: proc?.id ?? null, texto: l.texto, link: l.link, data_disponibilizacao: l.data_disponibilizacao, meio: l.meio, cancelada: l.cancelada,
+        destinatarios: l.destinatarios, advogados: l.advogados, oab_busca: oab, exige_providencia: providencia, prazo_dias: pz?.dias ?? null, prazo_regime: pz?.regime ?? null, prazo_fim: calc?.vencimento ?? null,
+        status: l.cancelada ? 'descartada' : 'nova', responsavel_id: proc?.responsavel_id ?? funcionario_id,
+      }, { onConflict: 'escritorio_id,djen_id', ignoreDuplicates: true }).select('id').maybeSingle();
+      if (error || !ins) { if (error) r.erros++; continue; }
+      r.novas++;
+      if (criarTarefa && providencia && l.data_disponibilizacao >= limiteTarefa && r.tarefas < MAX_TAREFAS_POR_RODADA) {
+        const alvo = proc?.titulo || l.numero_processo || l.tribunal;
+        const linhas = [`${l.tipo_comunicacao}${l.tipo_documento ? ` — ${l.tipo_documento}` : ''} (${l.tribunal}${l.orgao ? ` · ${l.orgao}` : ''})`, `Processo ${l.numero_processo ?? '—'} · disponibilizada em ${l.data_disponibilizacao.split('-').reverse().join('/')}.`, '', l.texto.slice(0, 700)];
+        if (calc && pz) linhas.push('', `Prazo identificado no texto: ${pz.dias} dias ${pz.regime === 'uteis' ? 'úteis' : 'corridos'}, vencendo em ${calc.vencimento.split('-').reverse().join('/')}. Sugestão pela regra geral (CPC e Lei 11.419): confira no ato e ajuste a data.`);
+        const { data: t } = await sb.from('tarefas').insert({
+          escritorio_id: escId, tipo: calc ? 'prazo' : 'tarefa', titulo: `Intimação: ${l.classe || l.tipo_comunicacao} — ${alvo}`.slice(0, 200), descricao: linhas.join('\n').slice(0, 3900),
+          prioridade: calc ? 'alta' : 'normal', responsavel_id: proc?.responsavel_id ?? funcionario_id, processo_id: proc?.id ?? null, processo_numero: l.numero_processo, area: proc?.area ?? null,
+          ...(calc ? { inicio: `${calc.vencimento}T00:00:00-03:00`, fim: `${calc.vencimento}T00:00:00-03:00`, dia_inteiro: true } : {}), criado_por_nome: 'Caixa de intimações',
+        }).select('id').maybeSingle();
+        if (t) { r.tarefas++; await sb.from('intimacoes').update({ tarefa_id: t.id }).eq('id', ins.id); }
+      }
+    }
+  }
+  r.mensagem = erros.length ? erros.join(' · ').slice(0, 480) : r.novas ? `${r.novas} intimação(ões) nova(s).` : 'Nenhuma intimação nova.';
+  await sb.from('intimacoes_sync').upsert({ escritorio_id: escId, executada_em: new Date().toISOString(), oabs: [...porOab.keys()], novas: r.novas, erros: r.erros, mensagem: r.mensagem });
+  return r;
+}
+
 // ---------------------------------------------------------------- identificação do chamador
 async function chamador(req: Request) {
   const auth = req.headers.get('Authorization');
@@ -140,6 +244,20 @@ Deno.serve(async (req: Request) => {
   try {
     const corpo = await req.json().catch(() => ({}));
     const acao = String(corpo.acao ?? '');
+
+    // intimações de todos os escritórios (agendada): só com o segredo
+    if (acao === 'intimacoes_varredura') {
+      if (!segredoConfere(req.headers.get('x-cron-secret'), CRON)) return falha('Não autorizado.', 401);
+      const { data: escs } = await sb.from('escritorios').select('id').eq('ativo', true);
+      const total: ResultadoIntimacoes = { oabs: 0, novas: 0, tarefas: 0, erros: 0, mensagem: '' };
+      const fim = Date.now() + 110_000;
+      for (const e of (escs ?? []) as { id: string }[]) {
+        if (Date.now() > fim) break;
+        const x = await sincronizarIntimacoes(sb, e.id, Number(corpo.dias) || 5).catch(() => ({ oabs: 0, novas: 0, tarefas: 0, erros: 1, mensagem: '' }));
+        total.oabs += x.oabs; total.novas += x.novas; total.tarefas += x.tarefas; total.erros += x.erros;
+      }
+      return json({ ok: true, ...total });
+    }
 
     // varredura agendada (todos os escritórios): só com o segredo
     if (acao === 'varredura') {
@@ -179,6 +297,7 @@ Deno.serve(async (req: Request) => {
 
     const { sbUser, escId } = await chamador(req);
     if (acao === 'fonte') return json({ disponivel: !!CHAVE });
+    if (acao === 'intimacoes_buscar') return json(await sincronizarIntimacoes(sb, escId, Number(corpo.dias) || 15));
     if (acao === 'buscar') {
       const t = tribunalDeCnj(String(corpo.numero ?? ''));
       if (!t) return json({ dados: null });

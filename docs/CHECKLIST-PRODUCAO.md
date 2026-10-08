@@ -28,3 +28,11 @@
 
 ## Provas de isolamento a repetir após qualquer mudança de schema
 `npm run test:sql` (RLS, 300+ asserções, concorrência), `npm test`, `npm run test:e2e`.
+
+
+## Modelos, honorários e intimações (migrações 0010 a 0012)
+- [ ] Rodar o workflow **Supabase — aplicar banco e funções** (aplica `0010`, `0011` e `0012` e republica as funções) e fazer **Redeploy** na Vercel.
+- [ ] **Modelos** → *Carregar modelos padrão* e *Carregar listas padrão* (a gestão); revisar com o jurídico antes do uso.
+- [ ] **Honorários** (só administrador) → *Parâmetros*: custos fixos, folha, tributação (confirmar com a contabilidade), margem, praça e **tabela de mínimos da OAB-MA** (do documento oficial vigente); custas do TJMA (atualizar todo janeiro).
+- [ ] **Funcionários**: OAB com UF de cada advogado (ex.: `OAB/MA 12345`) e **Intimações** → *Buscar no DJEN*.
+- [ ] Rodar *Verificar integrações* e conferir que o DJEN responde 200 pela região `sa-east-1`.

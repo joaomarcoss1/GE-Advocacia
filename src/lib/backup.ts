@@ -14,13 +14,17 @@ export async function gerarBackup(db: Db, esc: EscritorioInfo): Promise<PacoteBa
     ler(() => db.ajustes.list()), ler(() => db.ajustesDia.list()), ler(() => db.folhas.list()), ler(() => db.tarefas.list()), ler(() => db.clientes.list()), ler(() => db.processos.list()),
     ler(() => db.checklist.modelos.list()), ler(() => db.checklist.itens.list()), ler(() => db.arquivos.list()), ler(() => db.usuarios.list()), ler(() => db.auditoria.list()),
   ]);
+  const modelosDocs = await ler(() => db.modelosDocumentos.list());
+  const intimacoes = await ler(() => db.intimacoes.list());
+  const propostas = await ler(() => db.honorarios.propostas.list());
+  const parametrosHonorarios = await ler(async () => [await db.honorarios.parametros.get()]);
   const movimentos = (await Promise.all(processos.map(p => ler(() => db.processos.movimentos(p.id))))).flat();
   const andamentos = (await Promise.all(tarefas.map(t => ler(() => db.andamentos.list(t.id))))).flat();
   const config = await db.config.get();
   return {
     gerado_em: new Date().toISOString(), versao: 1, escritorio: { nome: esc.nome, slug: esc.slug },
     tabelas: { cargos, escalas, funcionarios: limpo(funcionarios), registros, ocorrencias, feriados, ajustes, ajustes_dia: ajustesDia, folhas, tarefas, andamentos_tarefas: andamentos, clientes, processos, movimentos_processos: movimentos,
-      checklist_modelos: modelos, checklist_itens: itens, documentos: arquivos, usuarios: limpo(usuarios), auditoria, configuracoes: [config] },
+      checklist_modelos: modelos, modelos_documentos: modelosDocs, intimacoes, honorarios_propostas: propostas, honorarios_parametros: parametrosHonorarios, checklist_itens: itens, documentos: arquivos, usuarios: limpo(usuarios), auditoria, configuracoes: [config] },
   };
 }
 

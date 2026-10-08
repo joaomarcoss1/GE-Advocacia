@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Briefcase, CalendarClock, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, FolderOpen, LayoutDashboard, ListChecks, Scale, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
+  Briefcase, CalendarClock, CalendarDays, CalendarOff, ClipboardCheck, Clock, FileBarChart, FolderOpen, LayoutDashboard, LibraryBig, Calculator, Inbox, ListChecks, Scale, LockKeyhole, Settings, ShieldCheck, Smartphone, Users, Wallet,
 } from 'lucide-react';
 import sqlAtualizacao from '../../supabase/atualizacao_definitiva.sql?raw';
 import Shell, { type ItemNav } from '@/components/Shell';
@@ -27,7 +27,7 @@ export default function Layout() {
   const { sessao, sair, modo } = useAuth();
   const toast = useToast();
   useEffect(() => { lembrarDestino('/painel'); }, []);
-  const { db, registros, ocorrencias, tarefas, novidades, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
+  const { db, registros, ocorrencias, tarefas, novidades, intimacoesNovas, carregando, agora, atualizacaoPendente, versaoBanco, recarregar, escritorio } = useDados();
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
   const [backupPendente, setBackupPendente] = useState(() => backupVencido(escritorio.slug));
@@ -57,7 +57,9 @@ export default function Layout() {
     { grupo: 'Delegação', to: '/painel/tarefas', rotulo: 'Tarefas', icone: ListChecks, papeis: ['admin', 'gerente', 'coordenador'], contagem: atrasadas },
     { to: '/painel/agenda', rotulo: 'Agenda', icone: CalendarClock, papeis: ['admin', 'gerente', 'coordenador'] },
     { grupo: 'Processos', to: '/painel/processos', rotulo: 'Processos', icone: Scale, papeis: ['admin', 'gerente', 'coordenador'], contagem: novidades.length },
+    { to: '/painel/intimacoes', rotulo: 'Intimações', icone: Inbox, papeis: ['admin', 'gerente', 'coordenador'], contagem: intimacoesNovas },
     { to: '/painel/documentos', rotulo: 'Documentos', icone: FolderOpen, papeis: ['admin', 'gerente', 'coordenador'] },
+    { to: '/painel/modelos', rotulo: 'Modelos', icone: LibraryBig, papeis: ['admin', 'gerente', 'coordenador'] },
     { grupo: 'Gestão', to: '/painel/gerencia', rotulo: 'Gerência', icone: ShieldCheck, papeis: ['admin', 'gerente'], contagem: pendentes },
     { grupo: 'Equipe', to: '/painel/funcionarios', rotulo: 'Funcionários', curto: 'Equipe', icone: Users, papeis: ['admin'] },
     { to: '/painel/cargos', rotulo: 'Cargos', icone: Briefcase, papeis: ['admin'] },
@@ -66,6 +68,7 @@ export default function Layout() {
     { to: '/painel/ocorrencias', rotulo: 'Ocorrências e abonos', curto: 'Ocorrências', icone: ClipboardCheck, papeis: ['admin', 'gerente'], contagem: analises },
     { to: '/painel/feriados', rotulo: 'Feriados', icone: CalendarOff, papeis: ['admin', 'gerente'] },
     { grupo: 'Financeiro', to: '/painel/folha', rotulo: 'Folha de pagamento', curto: 'Folha', icone: Wallet, papeis: ['admin'] },
+    { to: '/painel/honorarios', rotulo: 'Honorários', icone: Calculator, papeis: ['admin'] },
     { to: '/painel/relatorios', rotulo: 'Relatórios', icone: FileBarChart, papeis: ['admin', 'gerente'] },
     { grupo: 'Sistema', to: '/painel/configuracoes', rotulo: 'Configurações', curto: 'Ajustes', icone: Settings, papeis: ['admin'] },
   ];

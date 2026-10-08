@@ -2,10 +2,12 @@ import type {
   AcessoSensivel, AjusteDia, AjusteFolha, AnexoMeta, Auditoria, Cargo, Config, ConfigPonto, EscritorioInfo, EscritorioPlataforma, Escala, Feriado,
   Folha, Funcionario, FuncionarioBasico, Ocorrencia, Papel, PapelSessao, RegistroPonto, StatusAnalise, TipoMarcacao, TipoOcorrencia, Usuario,
   Andamento, GoogleStatus, StatusTarefa, SyncGoogle, Tarefa, TarefaFunc,
-  ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta, ResumoDocumentos,
+  ChecklistItem, ChecklistModelo, Cliente, Intimacao, IntimacoesSync, ResultadoIntimacoes, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta, ResumoDocumentos,
 } from '@/lib/types';
 import type { PontoErro } from '@/lib/erros';
 import type { CategoriaDoc } from '@/lib/organizacao';
+import type { ModeloDocumento } from '@/lib/modelos';
+import type { ParametrosHonorarios, PropostaHonorarios } from '@/lib/precificacao';
 
 export { PONTO_ERRO_MSG, type PontoErro } from '@/lib/erros';
 
@@ -172,6 +174,12 @@ export interface Db {
     aplicar(modeloId: string, alvo: { processo_id?: string | null; cliente_id?: string | null }): Promise<number>;
   };
   arquivos: ArquivosRepo;
+  /** Biblioteca de modelos de peças, contratos e procurações (a gestão guarda; quem delega lê e baixa). */
+  modelosDocumentos: Crud<ModeloDocumento>;
+  /** Caixa de intimações do DJEN: a equipe lê e trata; quem grava é a Edge Function (busca por OAB, na região de São Paulo). */
+  intimacoes: Omit<Crud<Intimacao>, 'insert'> & { novas(): Promise<number>; sync(): Promise<IntimacoesSync | null>; buscar(dias?: number): Promise<ResultadoIntimacoes> };
+  /** Precificação de honorários (dados financeiros: só o administrador). */
+  honorarios: { parametros: { get(): Promise<ParametrosHonorarios>; save(p: ParametrosHonorarios): Promise<void> }; propostas: Crud<PropostaHonorarios> };
   andamentos: { list(tarefaId: string): Promise<Andamento[]>; add(tarefaId: string, texto: string): Promise<void> };
   /** Google Agenda: cada pessoa conecta a própria conta; os compromissos vão para a agenda dela e os envolvidos recebem o convite. */
   google: {

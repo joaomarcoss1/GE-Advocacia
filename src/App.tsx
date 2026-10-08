@@ -29,6 +29,9 @@ const Tarefas = lazy(() => import('@/pages/Tarefas'));
 const Agenda = lazy(() => import('@/pages/Agenda'));
 const Processos = lazy(() => import('@/pages/Processos'));
 const Documentos = lazy(() => import('@/pages/Documentos'));
+const Modelos = lazy(() => import('@/pages/Modelos'));
+const Honorarios = lazy(() => import('@/pages/Honorarios'));
+const Intimacoes = lazy(() => import('@/pages/Intimacoes'));
 const Escritorios = lazy(() => import('@/pages/plataforma/Escritorios'));
 
 type Papel = 'admin' | 'gerente' | 'coordenador' | 'plataforma';
@@ -77,7 +80,10 @@ export default function App() {
                 <Route path="tarefas" element={pagina(<Tarefas />)} />
                 <Route path="agenda" element={pagina(<Agenda />)} />
                 <Route path="processos" element={pagina(<Processos />)} />
+                <Route path="intimacoes" element={pagina(<Intimacoes />)} />
                 <Route path="documentos" element={pagina(<Documentos />)} />
+                <Route path="modelos" element={pagina(<Modelos />)} />
+                <Route path="honorarios" element={soAdmin(<Honorarios />)} />
                 <Route path="gerencia" element={gestao(<Gerencia />)} />
                 <Route path="funcionarios" element={soAdmin(<Funcionarios />)} />
                 <Route path="cargos" element={soAdmin(<Cargos />)} />

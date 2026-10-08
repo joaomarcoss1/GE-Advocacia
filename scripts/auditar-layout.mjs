@@ -5,7 +5,7 @@ import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://127.0.0.1:5173';
 const TELAS = (process.env.TELAS ? process.env.TELAS.split(',').map(t => t.split('x').map(Number)) : [[320, 568], [375, 667], [390, 844], [768, 1024], [1024, 768], [1366, 768], [1920, 1080]]);
 const PUBLICAS = ['/', '/entrar', '/ponto/silva-ribeiro', '/verificar', '/privacidade/silva-ribeiro', '/diagnostico'];
-const PAINEL = ['/painel', '/painel/tarefas', '/painel/agenda', '/painel/processos', '/painel/documentos', '/painel/gerencia', '/painel/funcionarios', '/painel/cargos', '/painel/escalas',
+const PAINEL = ['/painel', '/painel/tarefas', '/painel/agenda', '/painel/processos', '/painel/intimacoes', '/painel/documentos', '/painel/modelos', '/painel/honorarios', '/painel/gerencia', '/painel/funcionarios', '/painel/cargos', '/painel/escalas',
   '/painel/ponto', '/painel/ocorrencias', '/painel/feriados', '/painel/folha', '/painel/relatorios', '/painel/configuracoes', '/painel/configuracoes?aba=integracoes', '/painel/configuracoes?aba=backup', '/painel/configuracoes?aba=acessos', '/painel/configuracoes?aba=privacidade'];
 
 const medir = () => {

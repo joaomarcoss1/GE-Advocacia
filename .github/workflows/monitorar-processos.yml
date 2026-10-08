@@ -1,5 +1,5 @@
 name: Acompanhamento de processos e Drive
-# Roda a cada 6 horas: consulta os andamentos dos processos monitorados (DataJud) e reenvia ao Google Drive o que ficou pendente.
+# Roda a cada 6 horas: consulta os andamentos dos processos monitorados (DataJud), busca as intimações dos advogados no DJEN e reenvia ao Google Drive o que ficou pendente.
 # Segredos (Settings > Secrets and variables > Actions):
 #   SUPABASE_URL        https://<ref>.supabase.co
 #   SUPABASE_ANON_KEY   chave publicável (a mesma do front-end; as funções exigem também o CRON_SECRET)
@@ -37,6 +37,13 @@ jobs:
           curl -fsS -m 240 -X POST "$URL/functions/v1/processos" \
             -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" -H "x-cron-secret: $SEGREDO" \
             -H "Content-Type: application/json" -d '{"acao":"varredura"}'
+          echo
+      - name: Intimações do DJEN (função em São Paulo: o DJEN só responde ao Brasil)
+        if: steps.segredos.outputs.ok == 'sim' && always()
+        run: |
+          curl -fsS -m 240 -X POST "$URL/functions/v1/processos" \
+            -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" -H "x-cron-secret: $SEGREDO" -H "x-region: sa-east-1" \
+            -H "Content-Type: application/json" -d '{"acao":"intimacoes_varredura","dias":5}'
           echo
       - name: Documentos pendentes no Google Drive
         if: steps.segredos.outputs.ok == 'sim' && always()

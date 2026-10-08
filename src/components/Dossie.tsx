@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, CircleDashed, Cloud, Eye, FolderOpen, Link2, MinusCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { BookmarkPlus, Check, CircleDashed, Cloud, Eye, FolderOpen, Link2, MinusCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
 import { Badge, Modal, useConfirm, useToast } from '@/components/ui';
 import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import EnvioLote, { AreaSoltar } from '@/components/EnvioLote';
 import { fmtTamanho } from '@/lib/anexos';
 import { CATEGORIAS, rotuloCategoria, type CategoriaDoc } from '@/lib/organizacao';
-import { ACEITA_DOCUMENTO } from '@/lib/checklist';
+import { ACEITA_DOCUMENTO, pontuarLista } from '@/lib/checklist';
+import { ListaEditor } from '@/components/ModeloEditor';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { abrirNovaAba, prepararDocumento } from '@/lib/documentos';
 import type { ChecklistItem, ChecklistModelo, DocumentoArquivo, DriveStatus, LinkEnvio } from '@/lib/types';
@@ -37,8 +38,12 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
   const [novoItem, setNovoItem] = useState('');
   const [novoLink, setNovoLink] = useState<{ url: string; expira: string } | null>(null);
   const [lote, setLote] = useState<File[] | null>(null);
+  const [salvarComoModelo, setSalvarComoModelo] = useState(false);
   const cliente = clientes.find(c => c.id === clienteId);
   const processo = processoId ? processos.find(p => p.id === processoId) : null;
+  // valores simples (não o objeto do processo) para a lista não recarregar a cada atualização dos dados
+  const [area, classe, assunto, titulo] = [processo?.area ?? null, processo?.classe ?? null, processo?.assunto ?? null, processo?.titulo ?? null];
+  const alvoLista = useMemo(() => ({ area, classe, assunto, titulo }), [area, classe, assunto, titulo]);
 
   const carregar = useCallback(async () => {
     const [its, ds, ms, ls, dr] = await Promise.all([
@@ -49,10 +54,10 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
     setDocs(ds.filter(d => (processoId ? d.processo_id === processoId : !d.processo_id && d.cliente_id === clienteId)));
     const ativos = ms.filter(m => m.ativo).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     setModelos(ativos);
-    setModelo(m => m || (ativos.find(x => x.area && x.area === processo?.area) ?? ativos[0])?.id || '');
+    setModelo(m => m || [...ativos].sort((a, b) => pontuarLista(b, alvoLista) - pontuarLista(a, alvoLista))[0]?.id || '');
     setLinks(ls.filter(l => l.ativo && Date.parse(l.expira_em) > Date.now() && l.cliente_id === clienteId && (processoId ? l.processo_id === processoId : !l.processo_id)));
     setDrive(dr); setCarregado(true);
-  }, [db, clienteId, processoId, processo?.area]);
+  }, [db, clienteId, processoId, alvoLista]);
   useEffect(() => { void carregar(); }, [carregar]);
   const atualizar = async () => { await carregar(); aoMudar?.(); };
   const demo = db.modo === 'local';
@@ -125,6 +130,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
     try { await db.arquivos.links.revogar(l.id); await carregar(); } catch (e) { toast.erro((e as Error).message); }
   }
 
+  const sugerida = useMemo(() => (processoId ? [...modelos].sort((a, b) => pontuarLista(b, alvoLista) - pontuarLista(a, alvoLista)).find(m => pontuarLista(m, alvoLista) >= 3) : undefined), [modelos, alvoLista, processoId]);
   const prog = progressoDe(itens);
   const soltos = useMemo(() => docs.filter(d => !d.item_id), [docs]);
   const telefone = (cliente?.telefone ?? '').replace(/\D/g, '');
@@ -210,7 +216,13 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
             {modelos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
           <button className="btn ghost" onClick={aplicar}>Aplicar modelo</button>
+          {sugerida && sugerida.id !== modelo && <button className="btn ghost sm" onClick={() => setModelo(sugerida.id)} title="Lista que combina com o tipo deste processo">Sugerida: {sugerida.nome}</button>}
+          {gestao && itens.length > 0 && <button className="btn ghost" onClick={() => setSalvarComoModelo(true)}><BookmarkPlus size={16} />Salvar esta lista como modelo</button>}
         </div>
+      )}
+      {salvarComoModelo && (
+        <ListaEditor lista={null} inicial={{ itens: itens.filter(i => i.status !== 'dispensado').map(i => ({ nome: i.nome, obrigatorio: i.obrigatorio })), area: processo?.area ?? null, tipo: processo?.classe ?? '' }}
+          onClose={() => setSalvarComoModelo(false)} aoSalvar={() => { setSalvarComoModelo(false); void carregar(); }} />
       )}
 
       {links.length > 0 && (
