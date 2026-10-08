@@ -55,6 +55,14 @@ export default function Privacidade() {
             <li>Tentativas de PIN: {RETENCAO_TENTATIVAS_DIAS} dias, removidas automaticamente.</li>
             <li>Marcações, folha e auditoria: pelo prazo de guarda trabalhista definido pelo escritório.</li>
           </ul>
+          <h2>Integrações com o Google (Agenda e Drive)</h2>
+          <p>Quando o escritório conecta uma conta Google, o sistema usa apenas as permissões que ela autorizou:</p>
+          <ul>
+            <li><strong>Google Agenda</strong> (<code>calendar.events</code>): criar, atualizar e remover os <em>eventos que o próprio sistema cria</em> (prazos, audiências e reuniões), com convite por e-mail aos envolvidos. O sistema não lê nem altera os demais eventos da agenda.</li>
+            <li><strong>Google Drive</strong> (<code>drive.file</code>): criar pastas e guardar os documentos enviados ao sistema. Por essa permissão, o sistema enxerga <em>somente os arquivos e pastas que ele mesmo criou</em>, nunca o restante do Drive.</li>
+            <li>A autorização é guardada <strong>cifrada</strong> no servidor e nunca chega ao navegador. Pode ser desfeita a qualquer momento pelo botão <em>Desconectar</em> no sistema ou em myaccount.google.com/permissions.</li>
+            <li>Os dados do Google não são vendidos, não são usados para publicidade nem para treinar modelos, e só servem para entregar essas funções ao escritório. O uso segue a Política de Dados de Usuário dos Serviços de API do Google, inclusive os requisitos de uso limitado.</li>
+          </ul>
           <h2>Seus direitos</h2>
           <p>Você pode pedir ao escritório acesso, correção, informação sobre o compartilhamento e, quando cabível, eliminação dos seus dados, nos termos da Lei Geral de Proteção de Dados (Lei 13.709/2018). Procure o administrador do escritório.</p>
           <h2>Como protegemos</h2>

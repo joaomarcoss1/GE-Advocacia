@@ -23,6 +23,11 @@ Como funciona por dentro (e por que é seguro):
 
 Se **Conectar** mostrar "Ativação necessária", é porque o passo 3 ainda não foi feito (a função não está publicada) ou faltam as credenciais do Google.
 
+### Publicar o app no Google (importante)
+Na *Tela de consentimento OAuth* o app começa em **Teste**. Nesse modo o Google **revoga a autorização a cada 7 dias** e a pessoa precisa conectar de novo. Para uso contínuo:
+- **Se o escritório usa Google Workspace:** escolha o tipo **Interno**. Não exige verificação e não tem o limite de 7 dias.
+- **Se usa Gmail comum:** deixe **Externo** e clique em **Publicar o app** (status "Em produção"). Preencha em *Branding*: nome do app (`GE Advocacia`), e-mail de suporte, **página inicial** (endereço do site) e **política de privacidade** (`<site>/privacidade`, que já descreve o uso da Agenda e do Drive). Sem verificação do Google, aparece o aviso "app não verificado" (clique em *Avançado → continuar*) e há limite de 100 contas, suficiente para um escritório. A verificação formal só é necessária para ir além disso.
+
 ### Configuração manual (uma vez, por instalação)
 1. **Google Cloud Console** → criar um projeto → *APIs e serviços* → ativar **Google Calendar API**.
 2. *Tela de consentimento OAuth*: tipo **Externo**; adicionar o escopo `.../auth/calendar.events`; enquanto estiver em "Teste", cadastre os e-mails de quem vai usar. Para uso aberto, publique o app (o Google pode pedir verificação).
