@@ -35,18 +35,23 @@ async function consultarDatajud(numero: string): Promise<DadosProcesso | null> {
   const t = tribunalDeCnj(numero);
   if (!t) throw new Error('Este tribunal não tem consulta automática.');
   if (!CHAVE) throw new Error('A consulta automática não está configurada (DATAJUD_API_KEY).');
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 20_000);
-  try {
-    const r = await fetch(urlDatajud(t.alias), { method: 'POST', signal: ctl.signal, headers: { Authorization: `APIKey ${CHAVE}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpoConsultaDatajud(numero)) });
-    if (r.status === 401 || r.status === 403) throw new Error('A chave do DataJud foi recusada. Confira DATAJUD_API_KEY.');
-    if (r.status === 429) throw new Error('Limite de consultas do DataJud atingido. Tentaremos de novo na próxima rodada.');
-    if (!r.ok) throw new Error(`O DataJud respondeu ${r.status}. Tentaremos de novo na próxima rodada.`);
-    return lerRespostaDatajud(await r.json());
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw new Error('O DataJud demorou para responder. Tentaremos de novo na próxima rodada.');
-    throw e;
-  } finally { clearTimeout(timer); }
+  // O DataJud às vezes passa de 20 s (medido em 08/10/2026): espera até 35 s e tenta de novo uma vez antes de desistir da rodada.
+  let ultimo: Error = new Error('O DataJud não respondeu.');
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 35_000);
+    try {
+      const r = await fetch(urlDatajud(t.alias), { method: 'POST', signal: ctl.signal, headers: { Authorization: `APIKey ${CHAVE}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpoConsultaDatajud(numero)) });
+      if (r.status === 401 || r.status === 403) throw new Error('A chave do DataJud foi recusada. Confira DATAJUD_API_KEY.');
+      if (r.status === 429 || r.status >= 500) { ultimo = new Error(r.status === 429 ? 'Limite de consultas do DataJud atingido. Tentaremos de novo na próxima rodada.' : `O DataJud respondeu ${r.status}. Tentaremos de novo na próxima rodada.`); await new Promise(res => setTimeout(res, 2000)); continue; }
+      if (!r.ok) throw new Error(`O DataJud respondeu ${r.status}. Tentaremos de novo na próxima rodada.`);
+      return lerRespostaDatajud(await r.json());
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') { ultimo = new Error('O DataJud demorou para responder. Tentaremos de novo na próxima rodada.'); continue; }
+      throw e;
+    } finally { clearTimeout(timer); }
+  }
+  throw ultimo;
 }
 
 // ---------------------------------------------------------------- um processo: grava andamentos novos e cria a tarefa (uma vez por andamento)
@@ -99,11 +104,13 @@ async function atualizarProcesso(sb: SupabaseClient, p: ProcessoLinha): Promise<
 }
 
 async function lote(sb: SupabaseClient, lista: ProcessoLinha[]): Promise<Resultado> {
-  const r: Resultado = { processos: lista.length, novos: 0, tarefas: 0, erros: 0 };
+  const r: Resultado = { processos: 0, novos: 0, tarefas: 0, erros: 0 };
   let i = 0;
+  const fim = Date.now() + 100_000;                                     // orçamento de tempo da função; o que sobrar fica para a próxima rodada (os mais antigos vêm primeiro)
   const trabalhador = async () => {
-    while (i < lista.length) {
+    while (i < lista.length && Date.now() < fim) {
       const p = lista[i++];
+      r.processos++;
       try { const x = await atualizarProcesso(sb, p); r.novos += x.novos; r.tarefas += x.tarefas; } catch { r.erros++; }
       await new Promise(res => setTimeout(res, 150));                   // educado com a API pública
     }
