@@ -56,7 +56,8 @@ export function porCategoria(categoria: Categoria): Classificacao {
 
 /** Classifica pelo texto do andamento (nome + complementos). A ordem importa: o primeiro que casa vale. */
 export function classificarMovimento(m: Pick<MovimentoBruto, 'nome' | 'complemento'>): Classificacao {
-  const t = sa(`${m.nome} ${m.complemento ?? ''}`);
+  // "cumprimento/execução/liquidação de sentença" é a fase do processo, não uma sentença nova
+  const t = sa(`${m.nome} ${m.complemento ?? ''}`).replace(/(cumprimento|execucao|liquidacao)( provisori[oa]| definitiv[oa])?( de| da| do)? sentenca/g, 'fase de cumprimento');
   const r = (categoria: Categoria, exige_acao: boolean, prazo: number | null, prioridade: Prioridade): Classificacao => ({ categoria, exige_acao, prazo_sugerido_dias: prazo, prioridade });
   if (/transito em julgado|transitad[oa] em julgado/.test(t)) return r('transito', true, null, 'normal');
   if (/(^|\W)sentenca|julgad[oa] (procedente|improcedente|parcialmente)|\b(im)?procedencia\b|extint[oa] (o )?(processo|execucao|feito)|extincao d[oa] (processo|execucao)|homologa\w* (a |o )?(transacao|acordo)/.test(t)) return r('sentenca', true, 15, 'alta');
@@ -162,6 +163,78 @@ export function calcularVencimento(marco: string, dias: number, feriados: Readon
   return d;
 }
 
+// ---------------------------------------------------------------- prazo processual completo (marco, dobro, passo a passo)
+/** O que o número informado representa: determina onde começa a contagem. */
+export type TipoMarco = 'disponibilizacao' | 'publicacao' | 'ciencia' | 'envio_portal';
+export const TIPO_MARCO_ROTULO: Record<TipoMarco, string> = {
+  disponibilizacao: 'Disponibilização no Diário (DJe/DJEN)',
+  publicacao: 'Publicação (já considerada publicada)',
+  ciencia: 'Ciência / juntada / citação cumprida',
+  envio_portal: 'Intimação eletrônica sem consulta (portal)',
+};
+export interface OpcoesPrazo { marco: string; tipo?: TipoMarco; dias: number; regime?: RegimePrazo; dobro?: boolean; feriados?: ReadonlySet<string> }
+export interface ResultadoPrazo { vencimento: string; inicio: string; publicacao: string | null; ciencia: string | null; dias: number; passos: string[] }
+
+const proximoDiaUtil = (d: string, feriados: ReadonlySet<string>) => { let x = somarDias(d, 1); while (!diaUtil(x, feriados)) x = somarDias(x, 1); return x; };
+const extenso = (d: string) => parse(d).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+
+/**
+ * Prazo processual com o marco correto (CPC e Lei 11.419/2006):
+ *  • disponibilização no Diário: a publicação é o 1º dia útil seguinte e a contagem começa no dia útil depois dela (Lei 11.419, art. 4º, §§ 3º e 4º; CPC, art. 224, § 3º);
+ *  • intimação eletrônica sem consulta: ciência tácita no 10º dia corrido após o envio (Lei 11.419, art. 5º, § 3º); se cair em dia sem expediente, vale o próximo dia útil;
+ *  • prazo em dobro (Fazenda, Ministério Público, Defensoria e litisconsortes com advogados distintos: CPC, arts. 180, 183, 186 e 229).
+ * É SUGESTÃO por regra geral: o advogado confere no ato (feriados locais, suspensões, regras do juízo).
+ */
+export function calcularPrazo(o: OpcoesPrazo): ResultadoPrazo {
+  const feriados = o.feriados ?? new Set<string>();
+  const regime = o.regime ?? 'uteis';
+  const tipo = o.tipo ?? 'publicacao';
+  const dias = Math.max(0, Math.floor(o.dias)) * (o.dobro ? 2 : 1);
+  const passos: string[] = [];
+  let publicacao: string | null = null;
+  let ciencia: string | null = null;
+  let referencia = o.marco;
+  if (tipo === 'disponibilizacao') {
+    passos.push(`Disponibilização: ${extenso(o.marco)}`);
+    publicacao = proximoDiaUtil(o.marco, feriados);
+    passos.push(`Publicação (1º dia útil seguinte): ${extenso(publicacao)}`);
+    referencia = publicacao;
+  } else if (tipo === 'envio_portal') {
+    passos.push(`Envio da intimação: ${extenso(o.marco)}`);
+    let c = somarDias(o.marco, 10);
+    if (!diaUtil(c, feriados)) c = proximoDiaUtil(c, feriados);
+    ciencia = c;
+    passos.push(`Ciência tácita (10 dias corridos sem consulta): ${extenso(c)}`);
+    referencia = c;
+  } else {
+    passos.push(`${tipo === 'publicacao' ? 'Publicação' : 'Ciência'}: ${extenso(o.marco)}`);
+    if (tipo === 'ciencia') ciencia = o.marco;
+    else publicacao = o.marco;
+  }
+  const inicio = regime === 'uteis' ? proximoDiaUtil(referencia, feriados) : somarDias(referencia, 1);
+  passos.push(`Início da contagem: ${extenso(inicio)}`);
+  passos.push(`Prazo: ${dias} dia${dias === 1 ? '' : 's'} ${regime === 'uteis' ? 'úteis' : 'corridos'}${o.dobro ? ' (em dobro)' : ''}`);
+  const vencimento = calcularVencimento(referencia, dias, feriados, regime);
+  passos.push(`Vencimento: ${extenso(vencimento)}`);
+  return { vencimento, inicio, publicacao, ciencia, dias, passos };
+}
+
+// ---------------------------------------------------------------- prazo-padrão por tipo de justiça
+/** Segmento da Justiça no número CNJ (1 = STF … 5 = Trabalho, 8 = Estadual …) ou null. */
+export function segmentoDeCnj(numero: string): string | null {
+  const d = (numero ?? '').replace(/\D/g, '');
+  return d.length === 20 ? d[13] : null;
+}
+/**
+ * Prazo-padrão sugerido conforme a Justiça: no CPC o recurso e a manifestação geral são de 15 dias úteis, mas na Justiça do Trabalho o
+ * prazo recursal comum é de 8 dias (CLT, arts. 895 e 897). Sugerir 15 ali faria perder o prazo, então o padrão cai para 8.
+ * Juizados Especiais (recurso inominado: 10 dias) não aparecem no número: a tela oferece o atalho.
+ */
+export function diasPadraoPorJustica(numero: string, base: number | null): number | null {
+  if (base == null) return null;
+  return segmentoDeCnj(numero) === '5' && base === 15 ? 8 : base;
+}
+
 // ---------------------------------------------------------------- tarefa criada a partir do andamento
 export interface ProcessoResumo { id: string; numero: string; titulo?: string | null; cliente?: string | null; responsavel_id?: string | null }
 export interface TarefaSugerida {
@@ -171,9 +244,10 @@ export interface TarefaSugerida {
 export function tarefaDoMovimento(p: ProcessoResumo, m: MovimentoBruto, c: Classificacao, feriados: ReadonlySet<string> = new Set()): TarefaSugerida {
   const dia = m.dataHora.slice(0, 10);
   const linhas = [`${m.nome}${m.complemento ? ` — ${m.complemento}` : ''}`, `Processo ${p.numero}${p.cliente ? ` · ${p.cliente}` : ''}`, `Andamento de ${dia.split('-').reverse().join('/')}.`];
-  if (c.prazo_sugerido_dias) {
-    const v = calcularVencimento(dia, c.prazo_sugerido_dias, feriados).split('-').reverse().join('/');
-    linhas.push(`Prazo sugerido: ${c.prazo_sugerido_dias} dias úteis a partir da publicação/ciência, vencendo em ${v}. Sugestão pela regra geral: confirme no ato e ajuste a data.`);
+  const sug = diasPadraoPorJustica(p.numero, c.prazo_sugerido_dias);
+  if (sug) {
+    const v = calcularVencimento(dia, sug, feriados).split('-').reverse().join('/');
+    linhas.push(`Prazo sugerido: ${sug} dias úteis a partir da publicação/ciência, vencendo em ${v}. Sugestão pela regra geral: confirme no ato e ajuste a data.`);
   }
   return {
     tipo: 'tarefa', titulo: `Analisar ${CATEGORIA_ROTULO[c.categoria].toLowerCase()} — ${p.titulo || p.numero}`.slice(0, 200), descricao: linhas.join('\n'),

@@ -136,4 +136,31 @@ test.describe('processos, documentos e backup', () => {
     await expect(page.getByRole('heading', { name: 'Documentos' })).toBeVisible();
     await expect(page.getByText('Beta x Delta Comercial')).toHaveCount(0);
   });
+
+  test('calcular prazo: marco no Diário, atalhos, prazo em dobro e passo a passo', async ({ page }) => {
+    await relogio(page, '09:00');
+    await semear(page);
+    await entrar(page, CONTAS.adminA);
+    await page.goto('/painel/processos');
+    await page.getByRole('tab', { name: 'Processos' }).click();
+    await page.getByRole('button', { name: 'Beta x Delta Comercial' }).first().click();
+    const ficha = page.getByRole('dialog', { name: 'Beta x Delta Comercial' });
+    await ficha.getByRole('button', { name: /Calcular prazo/ }).first().click();
+    const m = page.getByRole('dialog', { name: 'Calcular prazo' });
+    await m.getByLabel('A data informada é').selectOption('disponibilizacao');
+    await m.getByLabel('Data', { exact: true }).fill('2026-06-12');                       // sexta-feira
+    await m.getByRole('button', { name: 'CPC · 15' }).click();
+    await expect(m.getByRole('status')).toContainText('06/07/2026');                      // publicação 15/06 → contagem 16/06 → 15 dias úteis
+    const passos = m.getByRole('list', { name: 'Como o prazo foi contado' });
+    await expect(passos).toContainText('Publicação (1º dia útil seguinte): segunda-feira, 15/06/2026');
+    await expect(passos).toContainText('Início da contagem: terça-feira, 16/06/2026');
+    await m.getByLabel('Prazo em dobro').check();
+    await expect(passos).toContainText('30 dias úteis (em dobro)');
+    await m.getByLabel('Prazo em dobro').uncheck();
+    await m.getByRole('button', { name: 'CLT · 8' }).click();
+    await expect(m.getByRole('status')).toContainText('25/06/2026');                      // 8 dias úteis: 16, 17, 18, 19, 22, 23, 24 e 25/06
+    await m.getByRole('button', { name: 'Criar prazo na agenda' }).click();
+    await expect(page.getByRole('dialog', { name: 'Delegar' }).or(page.getByRole('dialog', { name: /prazo/i })).first()).toBeVisible();
+  });
 });
+

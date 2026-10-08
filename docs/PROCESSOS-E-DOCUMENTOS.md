@@ -54,3 +54,9 @@ Sem a chave, o sistema continua funcionando com andamentos manuais, e a tela avi
 As regras de negócio, o banco (SQL), o modo demonstração e a interface têm testes automáticos. As Edge Functions `processos` e `documentos` foram conferidas por tipagem e pela lógica compartilhada testada, mas **não rodaram contra o DataJud, o Google Drive nem um Supabase real**. No primeiro dia: consultar um processo conhecido, conectar o Drive, enviar um PDF pelo painel e pelo link do cliente, abrir e excluir.
 
 Fora do escopo desta versão: leitura do Diário de Justiça (DJEN) e peticionamento; antivírus; OCR.
+
+
+## Proteções do link público do cliente
+- O envio do cliente usa o cabeçalho `x-envio-token`; o servidor confere o link **antes** de ler o arquivo (um estranho não consegue forçar o processamento de um upload grande).
+- Limite por IP: 60 requisições/minuto e 8 tentativas inválidas/minuto (depois disso, resposta de "muitas tentativas"). O limite é por instância da função — protege contra abuso simples; para proteção forte, use também as regras de firewall do Supabase/Cloudflare.
+- Links são guardados só como hash e expiram.

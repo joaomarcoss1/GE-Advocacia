@@ -16,6 +16,7 @@
 // Segredos: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_TOKEN_KEY, ALLOWED_ORIGINS, CRON_SECRET.
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { criarCripto, segredoConfere } from '../_shared/cripto.ts';
+import { criarLimitador, ipDe } from '../_shared/limite.ts';
 import { conferirArquivo, escaparConsultaDrive, MAX_BYTES, nomeSeguro, sha256Hex, sha256Texto } from '../_shared/arquivos.ts';
 
 const URL_BASE = Deno.env.get('SUPABASE_URL')!;
@@ -31,8 +32,11 @@ const ESCOPOS = 'https://www.googleapis.com/auth/drive.file openid email';
 const BUCKET = 'documentos';
 const MAX_TENTATIVAS = 8;
 const cripto = criarCripto(TOKEN_KEY || 'invalida');
+const limPublico = criarLimitador(60, 60_000);        // pedidos por minuto, por endereço, nas rotas públicas do cliente
+const limFalhas = criarLimitador(8, 60_000);          // links inválidos por minuto, por endereço (barra a adivinhação)
+const MSG_MUITAS = 'Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo.';
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret, x-envio-token', 'Access-Control-Allow-Methods': 'POST, GET, OPTIONS' };
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const falha = (erro: string, status = 400) => json({ erro }, status);
 const origemPermitida = (url: string) => { try { return ORIGENS.includes(new URL(url).origin); } catch { return false; } };
@@ -286,29 +290,17 @@ Deno.serve(async (req: Request) => {
     if (req.method !== 'POST') return falha('Método não permitido.', 405);
 
     const multipart = (req.headers.get('content-type') ?? '').startsWith('multipart/form-data');
+    const ip = ipDe(req);
     if (multipart) {
-      const { campos, bytes, nome } = await lerArquivo(req);
-      const acao = texto(campos.get('acao'));
-
-      // ---------- envio pelo painel ----------
-      if (acao === 'enviar') {
-        const { sbUser, userId, escId } = await chamador(req);
-        const cliente = uuidOuNulo(texto(campos.get('cliente_id')));
-        const processo = uuidOuNulo(texto(campos.get('processo_id')));
-        const item = uuidOuNulo(texto(campos.get('item_id')));
-        if (!cliente) return falha('Pedido inválido.');
-        if (!(await sbUser.from('clientes').select('id').eq('id', cliente).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
-        if (processo && !(await sbUser.from('processos').select('id').eq('id', processo).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
-        const { data: perfil } = await sb.from('perfis').select('nome').eq('id', userId).maybeSingle();
-        const documento = await guardar(sb, { esc: escId, cliente_id: cliente, processo_id: processo, item_id: item, nome, bytes, origem: 'painel', enviado_por: userId, enviado_por_nome: perfil?.nome ?? 'Equipe' });
-        return json({ documento });
-      }
-
-      // ---------- envio pelo link do cliente (sem login) ----------
-      if (acao === 'publico_enviar') {
-        const achado = await acharLink(sb, String(texto(campos.get('token')) ?? ''));
-        if ('erro' in achado) return json({ ok: false, erro: achado.erro });
+      // Quem é e o que pode vem ANTES de ler o arquivo: um visitante sem direito algum não faz o servidor ler 20 MB.
+      const tokenCab = req.headers.get('x-envio-token');
+      if (tokenCab) {
+        // ---------- envio pelo link do cliente (sem login) ----------
+        if (limFalhas.bloqueado(ip) || !limPublico.tenta(ip)) return json({ ok: false, erro: MSG_MUITAS });
+        const achado = await acharLink(sb, tokenCab);
+        if ('erro' in achado) { limFalhas.tenta(ip); return json({ ok: false, erro: achado.erro }); }
         const l = achado.link;
+        const { campos, bytes, nome } = await lerArquivo(req);
         let item: string | null;
         try { item = uuidOuNulo(texto(campos.get('item_id'))); } catch { return json({ ok: false, erro: 'Item não encontrado.' }); }
         if (!(await reservarUso(sb, l))) return json({ ok: false, erro: MSG_LINK.limite });
@@ -322,7 +314,20 @@ Deno.serve(async (req: Request) => {
           return json({ ok: false, erro: m.includes('ITEM_INVALIDO') || m.includes('NAO_ENCONTRADO') ? 'Item não encontrado.' : 'Não foi possível receber o arquivo.' });
         }
       }
-      return falha('Ação desconhecida.');
+
+      // ---------- envio pelo painel ----------
+      const { sbUser, userId, escId } = await chamador(req);                 // sem login e papel válidos, nem chega a ler o corpo
+      const { campos, bytes, nome } = await lerArquivo(req);
+      if (texto(campos.get('acao')) !== 'enviar') return falha('Ação desconhecida.');
+      const cliente = uuidOuNulo(texto(campos.get('cliente_id')));
+      const processo = uuidOuNulo(texto(campos.get('processo_id')));
+      const item = uuidOuNulo(texto(campos.get('item_id')));
+      if (!cliente) return falha('Pedido inválido.');
+      if (!(await sbUser.from('clientes').select('id').eq('id', cliente).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
+      if (processo && !(await sbUser.from('processos').select('id').eq('id', processo).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
+      const { data: perfil } = await sb.from('perfis').select('nome').eq('id', userId).maybeSingle();
+      const documento = await guardar(sb, { esc: escId, cliente_id: cliente, processo_id: processo, item_id: item, nome, bytes, origem: 'painel', enviado_por: userId, enviado_por_nome: perfil?.nome ?? 'Equipe' });
+      return json({ documento });
     }
 
     const corpo = await req.json().catch(() => ({}));
@@ -330,8 +335,9 @@ Deno.serve(async (req: Request) => {
 
     // ---------- página pública: o que falta enviar ----------
     if (acao === 'publico_info') {
+      if (limFalhas.bloqueado(ip) || !limPublico.tenta(ip)) return json({ ok: false, erro: MSG_MUITAS });
       const achado = await acharLink(sb, String(corpo.token ?? ''));
-      if ('erro' in achado) return json({ ok: false, erro: achado.erro });
+      if ('erro' in achado) { limFalhas.tenta(ip); return json({ ok: false, erro: achado.erro }); }
       const l = achado.link;
       const [esc, cli, proc] = await Promise.all([
         sb.from('escritorios').select('nome').eq('id', l.escritorio_id).single(),

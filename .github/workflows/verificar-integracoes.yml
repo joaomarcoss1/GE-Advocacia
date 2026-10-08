@@ -1,0 +1,37 @@
+name: Verificar integrações
+# Manual (Actions > "Verificar integrações" > Run workflow). Testa, com a internet do GitHub, o DataJud, o DJEN e as funções do Supabase.
+# Não grava nada. Segredos opcionais: DATAJUD_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY.
+on:
+  workflow_dispatch:
+    inputs:
+      processo:
+        description: 'Número CNJ de um processo seu (opcional) para testar a leitura de andamentos'
+        required: false
+        type: string
+      oab_numero:
+        description: 'Número da OAB (opcional) para testar o DJEN'
+        required: false
+        type: string
+      oab_uf:
+        description: 'UF da OAB (ex.: MA)'
+        required: false
+        type: string
+
+permissions: { contents: read }
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATAJUD_API_KEY: ${{ secrets.DATAJUD_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      PROCESSO: ${{ inputs.processo }}
+      OAB_NUMERO: ${{ inputs.oab_numero }}
+      OAB_UF: ${{ inputs.oab_uf }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: node scripts/verificar-integracoes.mjs

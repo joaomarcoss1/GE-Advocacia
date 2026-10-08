@@ -1,4 +1,3 @@
-import QRCode from 'qrcode';
 import type { Db, TipoDocumento } from '@/data/db';
 import { gerarCodigoDocumento } from './codigo';
 
@@ -42,6 +41,7 @@ export async function criarSelo(db: Db, d: { tipo: TipoDocumento; titulo: string
   catch { registrado = false; gravarFila([...lerFila(), item]); }
   const base = `${location.origin}/verificar/${item.codigo}`;
   const url = registrado ? base : `${base}?d=${paraBase64Url(JSON.stringify({ t: d.tipo, p: d.periodo, r: d.resumo, h: hash }))}`;
+  const { default: QRCode } = await import('qrcode'); // carregado só ao gerar PDF: fora do pacote inicial
   const qr = await QRCode.toDataURL(url, { margin: 0, width: 300, errorCorrectionLevel: 'M', color: { dark: '#0f1c2e', light: '#ffffff' } });
   // O texto impresso usa o endereço curto; o QR (quando pendente) leva também os dados.
   return { codigo: item.codigo, url: base, qr, urlQr: url };

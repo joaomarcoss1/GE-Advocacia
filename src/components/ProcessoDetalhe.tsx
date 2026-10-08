@@ -8,7 +8,7 @@ import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { useGoogle } from '@/context/useGoogle';
 import { addDays, agoraBR, fmtData, isoParaBR } from '@/lib/datetime';
-import { CATEGORIA_ROTULO, calcularVencimento, type Categoria, type RegimePrazo } from '@/lib/processos';
+import { CATEGORIA_ROTULO, TIPO_MARCO_ROTULO, calcularPrazo, diasPadraoPorJustica, type Categoria, type RegimePrazo, type TipoMarco } from '@/lib/processos';
 import { AREA_ROTULO, STATUS_ROTULO } from '@/lib/tarefas';
 import type { Movimento, Processo } from '@/lib/types';
 
@@ -17,30 +17,41 @@ const CATEGORIAS_MANUAIS: Categoria[] = ['intimacao', 'citacao', 'sentenca', 'de
 const ORIGEM = { datajud: 'Tribunal', manual: 'Registrado à mão', simulada: 'Simulado' } as const;
 export const dataHora = (iso: string) => { const d = isoParaBR(iso); return `${fmtData(d.data)} ${d.hhmm}`; };
 
-/** Cálculo do prazo a partir do andamento: o advogado confere o marco e os dias e cria o prazo na agenda. */
+/** Cálculo do prazo a partir do andamento: o advogado confere o tipo da data, o marco e os dias; o passo a passo fica à vista. */
+const ATALHOS_PRAZO: [number, string][] = [[15, 'CPC · 15'], [8, 'CLT · 8'], [10, 'Juizados · 10'], [5, 'Embargos/despacho · 5']];
 function PrazoModal({ processo, movimento, onClose, onCriar }: { processo: Processo; movimento: Movimento; onClose(): void; onCriar(v: string, resumo: string): void }) {
   const { feriados } = useDados();
   const [marco, setMarco] = useState(isoParaBR(movimento.data_hora).data);
-  const [dias, setDias] = useState(String(movimento.prazo_sugerido_dias ?? 15));
+  const [tipo, setTipo] = useState<TipoMarco>(movimento.categoria === 'intimacao' ? 'disponibilizacao' : 'ciencia');
+  const [dias, setDias] = useState(String(diasPadraoPorJustica(processo.numero, movimento.prazo_sugerido_dias) ?? 15));
   const [regime, setRegime] = useState<RegimePrazo>('uteis');
+  const [dobro, setDobro] = useState(false);
   const n = Math.max(0, Math.min(365, Math.floor(Number(dias) || 0)));
   const conjunto = useMemo(() => new Set(feriados.map(f => f.data)), [feriados]);
-  const venc = marco && n > 0 ? calcularVencimento(marco, n, conjunto, regime) : '';
-  const resumo = `${movimento.nome} em ${fmtData(marco)} · ${n} dias ${regime === 'uteis' ? 'úteis' : 'corridos'}`;
+  const r = marco && n > 0 ? calcularPrazo({ marco, tipo, dias: n, regime, dobro, feriados: conjunto }) : null;
+  const resumo = `${movimento.nome} · ${TIPO_MARCO_ROTULO[tipo]} em ${fmtData(marco)} · ${r?.dias ?? n} dias ${regime === 'uteis' ? 'úteis' : 'corridos'}${dobro ? ' (em dobro)' : ''}`;
   return (
     <Modal titulo="Calcular prazo" onClose={onClose}
-      rodape={<><button className="btn ghost" onClick={onClose}>Cancelar</button><button className="btn" disabled={!venc} onClick={() => onCriar(venc, resumo)}><CalendarClock size={16} />Criar prazo na agenda</button></>}>
+      rodape={<><button className="btn ghost" onClick={onClose}>Cancelar</button><button className="btn" disabled={!r} onClick={() => r && onCriar(r.vencimento, resumo)}><CalendarClock size={16} />Criar prazo na agenda</button></>}>
       <div className="stack">
         <p><strong>{CATEGORIA_ROTULO[movimento.categoria]}</strong> · {movimento.nome}<br /><span className="muted mono">{processo.numero}</span></p>
-        <div className="grid c3">
-          <Field label="Data da publicação / ciência"><input className="input" type="date" value={marco} onChange={e => setMarco(e.target.value)} /></Field>
+        <div className="grid c2">
+          <Field label="A data informada é"><select className="select" value={tipo} onChange={e => setTipo(e.target.value as TipoMarco)}>{(Object.keys(TIPO_MARCO_ROTULO) as TipoMarco[]).map(k => <option key={k} value={k}>{TIPO_MARCO_ROTULO[k]}</option>)}</select></Field>
+          <Field label="Data"><input className="input" type="date" value={marco} onChange={e => setMarco(e.target.value)} /></Field>
+        </div>
+        <div className="grid c2">
           <Field label="Prazo (dias)"><input className="input" inputMode="numeric" value={dias} onChange={e => setDias(e.target.value.replace(/\D/g, ''))} /></Field>
           <Field label="Contagem"><select className="select" value={regime} onChange={e => setRegime(e.target.value as RegimePrazo)}><option value="uteis">Dias úteis</option><option value="corridos">Dias corridos</option></select></Field>
         </div>
-        <div className="resultado-prazo" role="status">
-          {venc ? <>Vence em <strong>{fmtData(venc)}</strong></> : 'Informe a data e os dias.'}
+        <div className="atalhos-prazo" role="group" aria-label="Prazos usuais">
+          {ATALHOS_PRAZO.map(([d, rot]) => <button key={d} type="button" className={`chip-atalho ${n === d ? 'on' : ''}`} aria-pressed={n === d} onClick={() => setDias(String(d))}>{rot}</button>)}
+          <label className="check"><input type="checkbox" checked={dobro} onChange={e => setDobro(e.target.checked)} />Prazo em dobro</label>
         </div>
-        <p className="hint">Sugestão pela regra geral: não conta o dia da publicação; ignora fins de semana, feriados cadastrados e o recesso forense (20/12 a 20/01). Confira o prazo no ato antes de confirmar.</p>
+        <div className="resultado-prazo" role="status">
+          {r ? <>Vence em <strong>{fmtData(r.vencimento)}</strong></> : 'Informe a data e os dias.'}
+        </div>
+        {r && <ol className="passos-prazo" aria-label="Como o prazo foi contado">{r.passos.map(p => <li key={p}>{p}</li>)}</ol>}
+        <p className="hint">Sugestão pela regra geral (CPC e Lei 11.419): ignora fins de semana, feriados cadastrados e o recesso forense (20/12 a 20/01). Em dobro: Fazenda, Ministério Público, Defensoria e litisconsortes com advogados distintos. Confira o prazo no ato antes de confirmar.</p>
       </div>
     </Modal>
   );
@@ -155,7 +166,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
                         {m.tarefa_id ? <Badge tom="ok">Tarefa criada</Badge> : (
                           <button className="btn ghost sm" onClick={() => setTarefaPadrao({ tipo: 'tarefa', titulo: `Analisar ${CATEGORIA_ROTULO[m.categoria].toLowerCase()} — ${processo.titulo || processo.numero}`, descricao: `${m.nome}${m.complemento ? ` — ${m.complemento}` : ''}`, processoId: processo.id, responsavel: processo.responsavel_id ?? '' })}>Criar tarefa</button>
                         )}
-                        {m.prazo_sugerido_dias && <button className="btn sm" onClick={() => setPrazo(m)}><CalendarClock size={15} />Calcular prazo ({m.prazo_sugerido_dias} dias)</button>}
+                        {m.prazo_sugerido_dias && <button className="btn sm" onClick={() => setPrazo(m)}><CalendarClock size={15} />Calcular prazo ({diasPadraoPorJustica(processo.numero, m.prazo_sugerido_dias)} dias)</button>}
                       </div>
                     )}
                   </li>

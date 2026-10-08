@@ -184,8 +184,8 @@ export function criarDbSupabase(url: string, key: string): Db {
   const checklistItens: Crud<ChecklistItem> = { ...itensBase, insert: r => itensBase.insert(semServidor(['recebido_em'])(r)), update: (id, p) => itensBase.update(id, semServidor(['recebido_em'])(p)) };
 
   /** Edge Function "documentos": envio ao Storage privado, abertura por URL assinada, Google Drive e página pública do cliente. */
-  async function funcaoDocumentos<T>(corpo: FormData | Record<string, unknown>): Promise<T> {
-    const { data, error } = await sb.functions.invoke('documentos', { body: corpo });
+  async function funcaoDocumentos<T>(corpo: FormData | Record<string, unknown>, cabecalhos?: Record<string, string>): Promise<T> {
+    const { data, error } = await sb.functions.invoke('documentos', { body: corpo, headers: cabecalhos });
     if (error) {
       let msg = error.message;
       try { const j = await (error as { context?: Response }).context?.json(); if (j?.erro) msg = j.erro; } catch { /* sem corpo */ }
@@ -260,7 +260,7 @@ export function criarDbSupabase(url: string, key: string): Db {
         try { return await funcaoDocumentos({ acao: 'publico_info', token }); } catch (e) { return { ok: false, erro: (e as Error).message }; }
       },
       async enviar(token, itemId, arquivo) {
-        try { return await funcaoDocumentos(formArquivo({ acao: 'publico_enviar', token, item_id: itemId }, arquivo)); } catch (e) { return { ok: false, erro: (e as Error).message }; }
+        try { return await funcaoDocumentos(formArquivo({ acao: 'publico_enviar', token, item_id: itemId }, arquivo), { 'x-envio-token': token }); } catch (e) { return { ok: false, erro: (e as Error).message }; }
       },
     },
   };

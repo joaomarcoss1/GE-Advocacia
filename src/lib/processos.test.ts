@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { montarCnj } from './cnj';
 import {
-  calcularVencimento, chaveMovimento, classificarMovimento, corpoConsultaDatajud, dataDatajud, diaUtil, emRecesso, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, urlDatajud,
+  calcularPrazo, calcularVencimento, chaveMovimento, diasPadraoPorJustica, segmentoDeCnj, classificarMovimento, corpoConsultaDatajud, dataDatajud, diaUtil, emRecesso, lerRespostaDatajud, tarefaDoMovimento, tribunalDeCnj, urlDatajud,
 } from './processos';
 
 describe('tribunal pelo número CNJ', () => {
@@ -119,3 +119,72 @@ describe('tarefa criada a partir do andamento', () => {
     expect(t.titulo).toBe('Analisar trânsito em julgado — n');
   });
 });
+
+describe('prazo processual completo (marco, dobro e passo a passo)', () => {
+  it('disponibilização no Diário: publicação no 1º dia útil seguinte e contagem no dia útil depois dela', () => {
+    // sexta 12/06/2026 → publicação segunda 15/06 → 1º dia da contagem terça 16/06 → 15 dias úteis vencem em 06/07
+    const r = calcularPrazo({ marco: '2026-06-12', tipo: 'disponibilizacao', dias: 15 });
+    expect(r.publicacao).toBe('2026-06-15');
+    expect(r.inicio).toBe('2026-06-16');
+    expect(r.vencimento).toBe('2026-07-06');
+    expect(r.passos[0]).toContain('sexta-feira');
+    expect(r.passos.at(-1)).toContain('segunda-feira');
+  });
+  it('publicação ou ciência: conta a partir do dia útil seguinte (como o cálculo simples)', () => {
+    expect(calcularPrazo({ marco: '2026-06-15', tipo: 'publicacao', dias: 15 }).vencimento).toBe('2026-07-06');
+    expect(calcularPrazo({ marco: '2026-06-15', tipo: 'ciencia', dias: 15 }).vencimento).toBe(calcularVencimento('2026-06-15', 15));
+  });
+  it('disponibilização na véspera do recesso só publica depois dele (21/01)', () => {
+    const r = calcularPrazo({ marco: '2026-12-18', tipo: 'disponibilizacao', dias: 5 });
+    expect(r.publicacao).toBe('2027-01-21');
+    expect(r.inicio).toBe('2027-01-22');
+    expect(r.vencimento).toBe('2027-01-28');
+  });
+  it('intimação eletrônica sem consulta: ciência tácita no 10º dia corrido (ou no próximo dia útil)', () => {
+    const r = calcularPrazo({ marco: '2026-06-01', tipo: 'envio_portal', dias: 5 });       // segunda + 10 = quinta 11/06
+    expect(r.ciencia).toBe('2026-06-11');
+    expect(r.inicio).toBe('2026-06-12');
+    expect(r.vencimento).toBe('2026-06-18');
+    expect(calcularPrazo({ marco: '2026-06-03', tipo: 'envio_portal', dias: 5 }).ciencia).toBe('2026-06-15');   // 13/06 é sábado → segunda 15/06
+  });
+  it('prazo em dobro e feriados cadastrados', () => {
+    expect(calcularPrazo({ marco: '2026-03-02', dias: 5, dobro: true }).dias).toBe(10);
+    expect(calcularPrazo({ marco: '2026-03-02', dias: 5, dobro: true }).vencimento).toBe(calcularVencimento('2026-03-02', 10));
+    expect(calcularPrazo({ marco: '2026-03-02', dias: 5, feriados: new Set(['2026-03-04']) }).vencimento).toBe('2026-03-10');
+  });
+  it('dias corridos: vencimento que cai em fim de semana passa para a segunda', () => {
+    const r = calcularPrazo({ marco: '2026-03-02', dias: 5, regime: 'corridos' });
+    expect(r.inicio).toBe('2026-03-03');
+    expect(r.vencimento).toBe('2026-03-09');
+  });
+});
+
+describe('prazo-padrão por tipo de justiça', () => {
+  it('Justiça do Trabalho (J=5): 15 vira 8; demais seguem o CPC', () => {
+    expect(segmentoDeCnj('0001234-77.2024.5.10.0001')).toBe('5');
+    expect(segmentoDeCnj('0001234-77.2024.8.26.0001')).toBe('8');
+    expect(segmentoDeCnj('123')).toBeNull();
+    expect(diasPadraoPorJustica('0001234-77.2024.5.10.0001', 15)).toBe(8);
+    expect(diasPadraoPorJustica('0001234-77.2024.5.10.0001', 5)).toBe(5);
+    expect(diasPadraoPorJustica('0001234-77.2024.8.26.0001', 15)).toBe(15);
+    expect(diasPadraoPorJustica('0001234-77.2024.5.10.0001', null)).toBeNull();
+  });
+  it('a tarefa criada para processo trabalhista sugere 8 dias, não 15', () => {
+    const c = classificarMovimento({ nome: 'Sentença', complemento: 'Julgado procedente' });
+    const t = tarefaDoMovimento({ id: 'p', numero: '0001234-77.2024.5.10.0001' }, { nome: 'Sentença', dataHora: '2026-03-02T10:00:00Z' }, c);
+    expect(t.descricao).toContain('Prazo sugerido: 8 dias úteis');
+  });
+});
+
+describe('classificador: fase de cumprimento não é sentença', () => {
+  it.each(['Início do Cumprimento de Sentença', 'Cumprimento provisório de sentença', 'Liquidação de Sentença', 'Execução de sentença'])('"%s" não gera alerta de sentença', nome => {
+    const c = classificarMovimento({ nome });
+    expect(c.categoria).not.toBe('sentenca');
+    expect(c.exige_acao).toBe(false);
+  });
+  it('sentença de verdade continua sendo reconhecida', () => {
+    expect(classificarMovimento({ nome: 'Sentença', complemento: 'Julgado procedente em parte' }).categoria).toBe('sentenca');
+    expect(classificarMovimento({ nome: 'Proferida sentença de extinção do processo' }).exige_acao).toBe(true);
+  });
+});
+
