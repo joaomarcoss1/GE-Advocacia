@@ -81,7 +81,8 @@ export default function ProcessoModal({ processo, padrao, onClose, onSalvo }: { 
           <Field label="Número do processo" dica={cnj && tribunal ? `${tribunal.nome} (${tribunal.sigla})` : cnj ? 'Tribunal sem consulta automática' : undefined}>
             <div className="row" style={{ flexWrap: 'nowrap', gap: 8 }}>
               <input className="input mono" inputMode="numeric" autoFocus value={f.numero} placeholder="0000000-00.0000.0.00.0000" aria-invalid={!!f.numero && !cnj} onChange={e => set('numero', mascararCnj(e.target.value))} />
-              <button type="button" className="btn ghost" onClick={preencher} disabled={buscando || !cnj}><Search size={16} />{buscando ? 'Buscando…' : 'Buscar dados'}</button>
+              <button type="button" className="btn ghost" onClick={preencher} disabled={buscando || !cnj}><Search size={16} />{buscando ? 'Consultando o tribunal…' : 'Buscar dados'}</button>
+              {buscando && <small className="muted" role="status">A base do CNJ pode levar até 1 minuto para responder. Aguarde.</small>}
             </div>
             {!!f.numero && f.numero.replace(/\D/g, '').length === 20 && !cnj && <span className="hint" style={{ color: 'var(--bad)' }}>Dígito verificador inválido: confira o número.</span>}
           </Field>
