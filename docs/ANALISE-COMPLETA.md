@@ -71,6 +71,11 @@ Comprovado por teste: isolamento entre escritórios (RLS + chaves compostas), `a
 
 Para fechar essa lacuna foi criado o workflow **Verificar integrações** (GitHub → Actions → Run workflow) e o script `scripts/verificar-integracoes.mjs`: ele consulta DataJud, DJEN e as funções publicadas com a internet do GitHub e mostra o resultado e os campos reais retornados. A saída dele é o que permite implementar a captura automática de intimações com segurança.
 
+### Resultado da primeira verificação real (08/10/2026, executada no GitHub Actions)
+- **DJEN (comunicaapi.pje.jus.br): HTTP 403, "CloudFront … configured to block access from your country".** O serviço bloqueia acessos de fora do Brasil. Os servidores do GitHub e, provavelmente, as Edge Functions do Supabase (fora do Brasil) são bloqueados. **Consequência:** a captura automática de intimações precisa sair de um IP brasileiro. Caminhos a testar, do mais simples ao mais robusto: (1) executar a função do Supabase fixada na região de São Paulo (cabeçalho `x-region: sa-east-1`) e repetir este teste; (2) um pequeno serviço próprio em hospedagem brasileira que consulta o DJEN e entrega ao sistema; (3) runner próprio do GitHub em máquina no Brasil. Até lá, a captura automática de intimações **não deve ser prometida**.
+- **DataJud:** não testado (falta `DATAJUD_API_KEY` nos segredos do GitHub). Ele também pode ter restrição regional; o mesmo teste mostrará.
+- **Supabase:** não testado (faltam `SUPABASE_URL` e `SUPABASE_ANON_KEY` nos segredos).
+
 ## 7. Comparação com o mercado
 
 Fontes: materiais públicos dos próprios fornecedores (alegações dos fornecedores, não auditadas por nós).
@@ -125,7 +130,7 @@ Fontes: materiais públicos dos próprios fornecedores (alegações dos forneced
 4. Cadastrar segredos (DataJud, Google, CRON) e testar um processo real e um upload real.
 
 **P1 — próximo ciclo (maior valor de mercado)**
-1. Caixa de **intimações automáticas via DJEN** por OAB, com prazo calculado e tarefa criada (depende do P0.3).
+1. Caixa de **intimações automáticas via DJEN** por OAB, com prazo calculado e tarefa criada. **Antes:** resolver o bloqueio por país do DJEN (seção 6): testar a função na região de São Paulo ou usar um intermediário no Brasil.
 2. **Financeiro/honorários** básico (contratos, parcelas, vencimentos, inadimplência).
 3. **Modelos de documentos** com campos do processo/cliente.
 4. **Notificações push** para prazos e tarefas.
