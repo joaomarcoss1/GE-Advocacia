@@ -156,6 +156,7 @@ try {
           if (!jj?.ok) { falha(`DJEN pelo Supabase (${rot}): HTTP ${rr.status} ${jj?.erro ?? ''}`); continue; }
           const o = jj.origem ?? {};
           console.log(`  [${rot}] a chamada saiu de: ${o.cidade ?? '?'}, ${o.regiao ?? '?'}, ${o.pais ?? '?'} (${o.org ?? '?'}) · função: ${jj.regiao_funcao ?? '?'}`);
+          if (jj.djen.amostra) console.log('  estrutura do DJEN:', JSON.stringify(jj.djen.amostra));
           jj.djen.status === 200 ? ok(`DJEN pelo Supabase (${rot}): HTTP 200 — ${jj.djen.trecho.slice(0, 200)}`) : falha(`DJEN pelo Supabase (${rot}): HTTP ${jj.djen.status} — ${jj.djen.trecho.slice(0, 200)}`);
         } catch (e) { falha(`DJEN pelo Supabase (${regiao || 'região padrão'}): ${e.message}`); }
       }

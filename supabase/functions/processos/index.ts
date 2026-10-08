@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
         const hoje = new Date(), ini = new Date(Date.now() - 7 * 86_400_000);
         const dia = (d: Date) => d.toISOString().slice(0, 10);
         const origem = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(8000) }).then(r => r.json()).catch(() => ({}));
-        let djen: { status: number; trecho: string };
+        let djen: { status: number; trecho: string; amostra?: unknown };
         try {
           const r = await fetch(`https://comunicaapi.pje.jus.br/api/v1/comunicacao?siglaTribunal=${sigla}&dataDisponibilizacaoInicio=${dia(ini)}&dataDisponibilizacaoFim=${dia(hoje)}&itensPorPagina=3&pagina=1`, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30_000) });
           djen = { status: r.status, trecho: (await r.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400) };
