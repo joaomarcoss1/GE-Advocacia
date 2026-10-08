@@ -71,7 +71,7 @@ if (chave && process.env.TODOS_TRIBUNAIS === '1' && lib?.TRIBUNAIS_DATAJUD) {
 
 if (chave && process.env.TODOS_TRIBUNAIS === '1') {
   console.log('\n== DataJud: nomes alternativos (TRE do Distrito Federal)');
-  for (const alias of ['tre-dft', 'tre-df', 'tredft', 'tre-dfd']) {
+  for (const alias of ['tre-df', 'tre-dft']) {
     try {
       const r = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_${alias}/_search`, { method: 'POST', signal: AbortSignal.timeout(45_000), headers: { Authorization: `APIKey ${chave}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ size: 1, query: { match_all: {} } }) });
       console.log(`  api_publica_${alias}: HTTP ${r.status}`);

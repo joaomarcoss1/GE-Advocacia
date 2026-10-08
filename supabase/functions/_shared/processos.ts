@@ -34,7 +34,8 @@ export const TRIBUNAIS_DATAJUD: readonly Tribunal[] = [
   ...[1, 2, 3, 4, 5, 6].map(n => t(`trf${n}`, `Tribunal Regional Federal da ${n}ª Região`, 'federal')),
   ...UFS.map(uf => t(`tj${uf}`, `Tribunal de Justiça ${NOME_UF[uf]}`, 'estadual')),
   ...Array.from({ length: 24 }, (_, i) => t(`trt${i + 1}`, `Tribunal Regional do Trabalho da ${i + 1}ª Região`, 'trabalho')),
-  ...UFS.map(uf => t(`tre-${uf}`, `Tribunal Regional Eleitoral ${NOME_UF[uf]}`, 'eleitoral')),
+  // o endpoint do TRE do DF é "tre-df" (confirmado na API real); os demais seguem "tre-<uf>"
+  ...UFS.map(uf => t(`tre-${uf === 'dft' ? 'df' : uf}`, `Tribunal Regional Eleitoral ${NOME_UF[uf]}`, 'eleitoral')),
   t('tjmmg', 'Tribunal de Justiça Militar de Minas Gerais', 'militar'), t('tjmrs', 'Tribunal de Justiça Militar do Rio Grande do Sul', 'militar'), t('tjmsp', 'Tribunal de Justiça Militar de São Paulo', 'militar'),
 ];
 export const RAMO_ROTULO: Record<Ramo, string> = { superior: 'Tribunais superiores', federal: 'Justiça Federal', estadual: 'Justiça Estadual', trabalho: 'Justiça do Trabalho', eleitoral: 'Justiça Eleitoral', militar: 'Justiça Militar estadual' };
@@ -50,7 +51,7 @@ export function tribunalDeCnj(numero: string): Tribunal | null {
   if (j === '3' && tr === '00') alias = 'stj';
   else if (j === '4' && /^0[1-6]$/.test(tr)) alias = `trf${Number(tr)}`;
   else if (j === '5') alias = tr === '00' ? 'tst' : Number(tr) >= 1 && Number(tr) <= 24 ? `trt${Number(tr)}` : null;
-  else if (j === '6') alias = tr === '00' ? 'tse' : UF[tr] ? `tre-${UF[tr]}` : null;
+  else if (j === '6') alias = tr === '00' ? 'tse' : UF[tr] ? `tre-${UF[tr] === 'dft' ? 'df' : UF[tr]}` : null;
   else if (j === '7' && tr === '00') alias = 'stm';
   else if (j === '8') alias = UF[tr] ? `tj${UF[tr]}` : null;
   else if (j === '9') alias = ({ '13': 'tjmmg', '21': 'tjmrs', '26': 'tjmsp' } as Record<string, string>)[tr] ?? null;

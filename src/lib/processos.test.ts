@@ -31,8 +31,9 @@ describe('catálogo de endpoints do DataJud', () => {
     const por = (r: string) => TRIBUNAIS_DATAJUD.filter(x => x.ramo === r).length;
     expect([por('superior'), por('federal'), por('estadual'), por('trabalho'), por('eleitoral'), por('militar')]).toEqual([4, 6, 27, 24, 27, 3]);
     expect(tribunalPorAlias('tjma')?.nome).toBe('Tribunal de Justiça do Maranhão');
+    expect(tribunalDeCnj(montarCnj('1234', '2024', '607', '1'))?.alias).toBe('tre-df');   // confirmado na API real: tre-df (e não tre-dft)
     expect(tribunalPorAlias('TRT2')?.nome).toBe('Tribunal Regional do Trabalho da 2ª Região');
-    expect(tribunalPorAlias('tre-dft')?.nome).toBe('Tribunal Regional Eleitoral do Distrito Federal e Territórios');
+    expect(tribunalPorAlias('tre-df')?.nome).toBe('Tribunal Regional Eleitoral do Distrito Federal e Territórios');
   });
   it('todo número CNJ válido (ramo × tribunal) resolve para um item do catálogo, e todo item é alcançável por um número', () => {
     const achados = new Set<string>();
