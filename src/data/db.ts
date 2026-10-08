@@ -5,6 +5,7 @@ import type {
   ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta, ResumoDocumentos,
 } from '@/lib/types';
 import type { PontoErro } from '@/lib/erros';
+import type { CategoriaDoc } from '@/lib/organizacao';
 
 export { PONTO_ERRO_MSG, type PontoErro } from '@/lib/erros';
 
@@ -98,7 +99,10 @@ export interface ProcessosRepo extends Crud<Processo> {
 
 export interface ArquivosRepo {
   list(filtro?: { cliente_id?: string; processo_id?: string }): Promise<DocumentoArquivo[]>;
-  enviar(a: { cliente_id: string; processo_id?: string | null; item_id?: string | null; arquivo: ArquivoAnexo }): Promise<DocumentoArquivo>;
+  /** `categoria` define a subpasta no Drive; sem ela o sistema sugere pelo item da lista e pelo nome do arquivo. */
+  enviar(a: { cliente_id: string; processo_id?: string | null; item_id?: string | null; categoria?: CategoriaDoc | null; arquivo: ArquivoAnexo }): Promise<DocumentoArquivo>;
+  /** Muda a categoria e move o arquivo para a subpasta certa do Drive. */
+  reclassificar(id: string, categoria: CategoriaDoc): Promise<void>;
   /** Abre o arquivo (URL assinada de 60 s ou blob local); cada abertura fica registrada. */
   abrir(id: string): Promise<AnexoAberto>;
   conferir(id: string, conferido: boolean): Promise<void>;
@@ -117,6 +121,8 @@ export interface ArquivosRepo {
     desconectar(): Promise<void>;
     /** Reenvia ao Drive o que ficou pendente ou com erro. */
     sincronizar(): Promise<{ enviados: number; erros: number }>;
+    /** Endereço da pasta do cliente (ou do processo) no Drive; cria a pasta se ainda não existir. */
+    pasta(alvo: { cliente_id: string; processo_id?: string | null }): Promise<string>;
   };
   /** Página pública do cliente (sem login): confere o token e recebe os arquivos. */
   publico: {

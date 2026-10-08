@@ -17,6 +17,7 @@ import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
 import { base64ParaBlob } from '@/lib/anexos';
 import { normalizarCnj } from '@/lib/cnj';
 import { MAX_DOCUMENTO_DEMO, MODELOS_INICIAIS, mimeDoNome } from '@/lib/checklist';
+import { ehCategoria, sugerirCategoria, type CategoriaDoc } from '@/lib/organizacao';
 import { chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
 import { STATUS_ROTULO } from '@/lib/tarefas';
 import type {
@@ -522,7 +523,7 @@ export function criarDbLocal(): Db {
 
   // ---- arquivos (documentos dos clientes)
   const conteudoDe = (slug: string, id: string) => lerJson<Record<string, string>>(kt(slug, 'arquivos_conteudo'), {})[id];
-  function guardarArquivo(slug: string, quem: { id: string | null; nome: string }, origem: DocumentoArquivo['origem'], x: { cliente_id: string; processo_id?: string | null; item_id?: string | null; arquivo: { nome: string; mime: string; tamanho: number; conteudo: string } }): DocumentoArquivo {
+  function guardarArquivo(slug: string, quem: { id: string | null; nome: string }, origem: DocumentoArquivo['origem'], x: { cliente_id: string; processo_id?: string | null; item_id?: string | null; categoria?: CategoriaDoc | null; arquivo: { nome: string; mime: string; tamanho: number; conteudo: string } }): DocumentoArquivo {
     const { cliente_id, arquivo } = x;
     const processo_id = x.processo_id ?? null, item_id = x.item_id ?? null;
     if (!clientesDe(slug).some(c => c.id === cliente_id)) throw erro('NAO_ENCONTRADO');
@@ -535,7 +536,8 @@ export function criarDbLocal(): Db {
     if (arquivo.tamanho > MAX_DOCUMENTO_DEMO) throw erro('ARQUIVO_INVALIDO', 'No modo demonstração o limite é de 1,5 MB por arquivo (o navegador guarda pouco). No sistema real o limite é de 20 MB.');
     const doc: ArquivoLocal = {
       id: uuid(), cliente_id, processo_id, item_id, nome: arquivo.nome.slice(0, 200), mime, tamanho: arquivo.tamanho, sha256: null, origem, enviado_por: quem.id, enviado_por_nome: quem.nome,
-      conferido: false, conferido_em: null, drive_status: 'desligado', drive_link: null, drive_erro: null, created_at: agoraIso(),
+      conferido: false, conferido_em: null, drive_status: 'desligado', drive_link: null, drive_erro: null,
+      categoria: x.categoria && ehCategoria(x.categoria) ? x.categoria : sugerirCategoria(arquivo.nome, item?.nome), created_at: agoraIso(),
     };
     const cont = lerJson<Record<string, string>>(kt(slug, 'arquivos_conteudo'), {});
     cont[doc.id] = arquivo.conteudo;
@@ -548,14 +550,29 @@ export function criarDbLocal(): Db {
     async list(f) {
       const a = tentaAtor();
       if (!a || !DELEGA.includes(a.papel)) return [];
-      return arquivosDe(a.slug).filter(d => (!f?.cliente_id || d.cliente_id === f.cliente_id) && (!f?.processo_id || d.processo_id === f.processo_id)).sort((x, y) => y.created_at.localeCompare(x.created_at)).map(({ enviado_por: _e, ...d }) => d);
+      return arquivosDe(a.slug).filter(d => (!f?.cliente_id || d.cliente_id === f.cliente_id) && (!f?.processo_id || d.processo_id === f.processo_id)).sort((x, y) => y.created_at.localeCompare(x.created_at)).map(({ enviado_por: _e, ...d }) => ({ ...d, categoria: d.categoria ?? 'outros' })); // dados de demonstração antigos não têm categoria
     },
     async enviar(x) {
       const a = ator();
       if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
-      const { enviado_por: _e, ...d } = guardarArquivo(a.slug, { id: a.sessao.id, nome: a.sessao.nome }, 'painel', x) as ArquivoLocal;
+      const guardado = guardarArquivo(a.slug, { id: a.sessao.id, nome: a.sessao.nome }, 'painel', x) as ArquivoLocal;
+      // impressão digital do conteúdo (igual à do servidor): permite avisar de arquivo repetido também na demonstração
+      try {
+        const bin = atob(x.arquivo.conteudo), bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+        const h = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))).map(b => b.toString(16).padStart(2, '0')).join('');
+        guardado.sha256 = h;
+        gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).map(d => (d.id === guardado.id ? { ...d, sha256: h } : d)));
+      } catch { /* sem hash: só não avisa de repetido */ }
+      const { enviado_por: _e, ...d } = guardado;
       auditarLocal(a, 'Documento recebido', d.nome, 'documentos', d.id);
       return d;
+    },
+    async reclassificar(id, categoria) {
+      const a = ator();
+      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!ehCategoria(categoria)) throw erro('ARQUIVO_INVALIDO', 'Categoria inválida.');
+      if (!arquivosDe(a.slug).some(d => d.id === id)) throw erro('NAO_ENCONTRADO');
+      gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).map(d => (d.id === id ? { ...d, categoria } : d)));
     },
     async abrir(id) {
       const a = ator();
@@ -615,6 +632,7 @@ export function criarDbLocal(): Db {
       async conectar(): Promise<string> { throw erro('GOOGLE_INDISPONIVEL'); },
       async desconectar() { /* nada a desconectar */ },
       async sincronizar() { return { enviados: 0, erros: 0 }; },
+      async pasta(): Promise<string> { throw erro('GOOGLE_INDISPONIVEL'); },
     },
     publico: {
       async info(token) {

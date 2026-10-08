@@ -58,6 +58,16 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
       >
         {drive.conectado && drive.email && <p className="ci-conta">Conta conectada: <b>{drive.email}</b></p>}
         {ativacao && <PassosAtivacao motivo={ativacao} servico="documentos" />}
+        <div className="ci-estrutura" aria-label="Como os arquivos ficam organizados no Drive">
+          <span className="ci-estrutura-titulo">Como fica no Drive</span>
+          <code>GE Advocacia – {escritorio.nome} / <b>Cliente</b> / <b>Processo 0001234-56…</b> / 03 · Petições e peças / 2026-10-08 · Contestação · arquivo.pdf</code>
+          <ul>
+            <li>Cada arquivo tem <b>duas cópias</b>: a do sistema (privada) e a do Drive; se o Drive falhar, nada se perde e o envio é refeito sozinho.</li>
+            <li>O sistema só enxerga o que ele mesmo criou no Drive (permissão mínima). Seus outros arquivos continuam fora do alcance.</li>
+            <li>Excluir no sistema manda a cópia do Drive para a <b>lixeira</b> (recuperável por 30 dias).</li>
+            <li>Dica: conecte uma conta Google do escritório (não a pessoal) e ative a verificação em duas etapas nela.</li>
+          </ul>
+        </div>
         <label className="check" style={{ marginTop: 12 }}><input type="checkbox" checked={c.automacao.enviar_drive} onChange={e => auto({ enviar_drive: e.target.checked })} />Enviar sozinho para o Drive cada documento recebido</label>
       </CartaoIntegracao>
 

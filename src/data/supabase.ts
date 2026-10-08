@@ -194,7 +194,7 @@ export function criarDbSupabase(url: string, key: string): Db {
     f.append('arquivo', base64ParaBlob(a.conteudo, a.mime), a.nome);
     return f;
   };
-  const COLS_DOC = 'id,cliente_id,processo_id,item_id,nome,mime,tamanho,sha256,origem,enviado_por_nome,conferido,conferido_em,drive_status,drive_link,drive_erro,created_at';
+  const COLS_DOC = 'id,cliente_id,processo_id,item_id,nome,mime,tamanho,sha256,origem,enviado_por_nome,conferido,conferido_em,drive_status,drive_link,drive_erro,categoria,created_at';
   const arquivos: ArquivosRepo = {
     async list(f) {
       let q = sb.from('documentos').select(COLS_DOC).order('created_at', { ascending: false }).limit(1000);
@@ -205,10 +205,11 @@ export function criarDbSupabase(url: string, key: string): Db {
       return (data ?? []) as DocumentoArquivo[];
     },
     async enviar(x) {
-      const r = await funcaoDocumentos<{ documento: DocumentoArquivo }>(formArquivo({ acao: 'enviar', cliente_id: x.cliente_id, processo_id: x.processo_id, item_id: x.item_id }, x.arquivo));
+      const r = await funcaoDocumentos<{ documento: DocumentoArquivo }>(formArquivo({ acao: 'enviar', cliente_id: x.cliente_id, processo_id: x.processo_id, item_id: x.item_id, categoria: x.categoria }, x.arquivo));
       return r.documento;
     },
     abrir: id => funcaoDocumentos<AnexoAberto>({ acao: 'abrir', id }),
+    async reclassificar(id, categoria) { await funcaoDocumentos({ acao: 'reclassificar', id, categoria }); },
     async conferir(id, conferido) {
       const { error } = await sb.from('documentos').update({ conferido }).eq('id', id);
       if (error) falha(error);
@@ -248,6 +249,7 @@ export function criarDbSupabase(url: string, key: string): Db {
       async conectar() { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_conectar', retorno: `${location.origin}/painel/configuracoes?aba=integracoes` })).url; },
       async desconectar() { await rpc('drive_desconectar'); },
       sincronizar: () => funcaoDocumentos<{ enviados: number; erros: number }>({ acao: 'drive_sincronizar' }),
+      async pasta(alvo) { return (await funcaoDocumentos<{ url: string }>({ acao: 'drive_pasta', cliente_id: alvo.cliente_id, processo_id: alvo.processo_id ?? null })).url; },
     },
     publico: {
       async info(token) {

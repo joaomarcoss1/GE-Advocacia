@@ -47,4 +47,16 @@ test.describe('celular com escurecimento automático de sites ligado', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     expect(await page.locator('meta[name=color-scheme]').getAttribute('content')).toBe('dark light');
   });
+
+  test('janelas (modais) cobrem a tela inteira do aparelho, mesmo com a página longa', async ({ page }) => {
+    await relogio(page, '09:00');
+    await semear(page);
+    await entrar(page, CONTAS.adminA);
+    await page.goto('/painel/documentos');
+    await page.getByRole('button', { name: 'Enviar documentos' }).click();
+    const vp = page.viewportSize()!;
+    await expect.poll(async () => { const r = await page.locator('.overlay').boundingBox(); return r ? [r.x, r.y, r.width, r.height] : null; }).toEqual([0, 0, vp.width, vp.height]);
+    // a janela está à vista (depois de entrar com a animação), não lá embaixo na página
+    await expect.poll(async () => { const m = (await page.locator('.modal').boundingBox())!; return m.y >= 0 && m.y + m.height <= vp.height + 1; }).toBe(true);
+  });
 });

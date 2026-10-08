@@ -59,6 +59,53 @@ test.describe('processos, documentos e backup', () => {
     await expect(det.getByText('Intimação para réplica')).toBeVisible();
   });
 
+  test('envio em lote: categoria e item sugeridos, repetido desmarcado, reclassificar e biblioteca', async ({ page }) => {
+    await relogio(page, '09:00');
+    await semear(page);
+    await entrar(page, CONTAS.adminA);
+    const dossie = await abrirDossieDoProcesso(page, 'Beta x Delta Comercial', 'Indústria Beta Ltda');
+    await dossie.getByLabel('Modelo de lista de documentos').selectOption({ label: 'Cível' });
+    await dossie.getByRole('button', { name: 'Aplicar modelo' }).click();
+    await expect(page.getByText(/itens adicionados|já estão na lista/)).toBeVisible();
+
+    const peticao = { name: 'peticao inicial.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<< /Peca 1 >>endobj\ntrailer<<>>\n%%EOF\n') };
+    await dossie.getByLabel('Escolher documentos para enviar').setInputFiles([{ ...PDF, name: 'procuracao.pdf' }, peticao, { ...peticao, name: 'peticao inicial - copia.pdf' }]);
+    const lote = page.getByRole('dialog', { name: 'Enviar documentos' });
+    await expect(lote.getByLabel('Categoria de procuracao.pdf')).toHaveValue('contrato');
+    await expect(lote.getByLabel('Item da lista para procuracao.pdf').locator('option:checked')).toHaveText('Procuração assinada');
+    await expect(lote.getByLabel('Categoria de peticao inicial.pdf')).toHaveValue('peticoes');
+    await expect(lote.getByText('Repetido neste lote')).toBeVisible();
+    await expect(lote.getByLabel('Enviar peticao inicial - copia.pdf')).not.toBeChecked();
+    await lote.getByRole('button', { name: 'Salvar 2 documentos' }).click();
+    await expect(page.getByText('2 documentos salvos.')).toBeVisible();
+
+    // organizado por categoria; o documento do item já nasce na categoria certa
+    await expect(dossie.getByText('03 · Petições e peças')).toBeVisible();
+    await expect(dossie.getByLabel('Categoria de procuracao.pdf')).toHaveValue('contrato');
+
+    // trocar a categoria muda o grupo
+    await dossie.getByLabel('Categoria de peticao inicial.pdf').selectOption('provas');
+    await expect(page.getByText('Movido para "Provas e anexos".')).toBeVisible();
+    await expect(dossie.getByText('06 · Provas e anexos')).toBeVisible();
+
+    // o mesmo arquivo de novo: avisa que já existe (e não envia sem querer)
+    await dossie.getByLabel('Escolher documentos para enviar').setInputFiles(peticao);
+    await expect(page.getByRole('dialog', { name: 'Enviar documentos' }).getByText('Já enviado antes')).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Enviar documentos' }).getByLabel('Enviar peticao inicial.pdf')).not.toBeChecked();
+    await page.getByRole('dialog', { name: 'Enviar documentos' }).locator('button.btn', { hasText: 'Fechar' }).click();
+
+    // biblioteca: busca e filtro por categoria
+    await page.goto('/painel/documentos');
+    await page.getByRole('tab', { name: /Biblioteca/ }).click();
+    await page.getByLabel('Buscar documentos').fill('peticao');
+    await expect(page.locator('tbody tr', { hasText: 'peticao inicial.pdf' })).toBeVisible();
+    await expect(page.locator('tbody tr', { hasText: 'procuracao.pdf' })).toHaveCount(0);
+    await page.getByLabel('Buscar documentos').fill('');
+    await page.getByLabel('Categoria', { exact: true }).selectOption('contrato');
+    await expect(page.locator('tbody tr', { hasText: 'procuracao.pdf' })).toBeVisible();
+    await expect(page.locator('tbody tr', { hasText: 'peticao inicial.pdf' })).toHaveCount(0);
+  });
+
   test('checklist: envia arquivo ao item, recusa arquivo falso, gera link do cliente e o cliente envia pelo link', async ({ page }) => {
     await relogio(page, '09:00');
     await semear(page);

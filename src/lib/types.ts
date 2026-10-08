@@ -1,3 +1,4 @@
+import type { CategoriaDoc } from './organizacao';
 /** Dias da semana como no JS Date: 0 = domingo … 6 = sábado. A escala cobre de segunda (1) a sábado (6). */
 export const DIAS_ESCALA = [1, 2, 3, 4, 5, 6] as const;
 export const DIA_LABEL: Record<number, string> = {
@@ -422,7 +423,7 @@ export type StatusDrive = 'desligado' | 'pendente' | 'enviado' | 'erro';
 export interface DocumentoArquivo {
   id: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; mime: string; tamanho: number; sha256: string | null;
   origem: 'painel' | 'link_cliente'; enviado_por_nome: string | null; conferido: boolean; conferido_em: string | null;
-  drive_status: StatusDrive; drive_link: string | null; drive_erro: string | null; created_at: string;
+  drive_status: StatusDrive; drive_link: string | null; drive_erro: string | null; categoria: CategoriaDoc; created_at: string;
 }
 export interface LinkEnvio {
   id: string; cliente_id: string; processo_id: string | null; rotulo: string | null; expira_em: string; ativo: boolean; max_arquivos: number; usos: number; ultimo_uso: string | null; created_at: string;

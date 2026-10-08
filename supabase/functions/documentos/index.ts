@@ -17,6 +17,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { criarCripto, segredoConfere } from '../_shared/cripto.ts';
 import { criarLimitador, ipDe } from '../_shared/limite.ts';
+import { ehCategoria, nomeNoDrive, pastaDaCategoria, sugerirCategoria, urlPastaDrive, type CategoriaDoc } from '../_shared/organizacao.ts';
 import { conferirArquivo, escaparConsultaDrive, MAX_BYTES, nomeSeguro, sha256Hex, sha256Texto } from '../_shared/arquivos.ts';
 
 const URL_BASE = Deno.env.get('SUPABASE_URL')!;
@@ -40,9 +41,9 @@ const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers
 const json = (corpo: unknown, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const falha = (erro: string, status = 400) => json({ erro }, status);
 const origemPermitida = (url: string) => { try { return ORIGENS.includes(new URL(url).origin); } catch { return false; } };
-const COLS_DOC = 'id,cliente_id,processo_id,item_id,nome,mime,tamanho,sha256,origem,enviado_por_nome,conferido,conferido_em,drive_status,drive_link,drive_erro,created_at';
+const COLS_DOC = 'id,cliente_id,processo_id,item_id,nome,mime,tamanho,sha256,origem,enviado_por_nome,conferido,conferido_em,drive_status,drive_link,drive_erro,categoria,created_at';
 
-interface DocLinha { id: string; escritorio_id: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; mime: string; storage_path: string | null; drive_tentativas: number }
+interface DocLinha { id: string; escritorio_id: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; mime: string; tamanho: number; categoria: string; created_at: string; storage_path: string | null; drive_tentativas: number }
 
 // ---------------------------------------------------------------- Google Drive
 async function tokenDrive(sb: SupabaseClient, escId: string): Promise<{ token: string; raiz: string | null } | null> {
@@ -89,7 +90,41 @@ async function criarRaiz(sb: SupabaseClient, token: string, escId: string): Prom
   return c.dados.id;
 }
 
-/** Envia um documento ao Drive: Cliente/ → Processo/ → arquivo "Item - original". Nunca apaga nada. */
+/** Pastas já conhecidas nesta instância (a existência é conferida a cada uso; se foi apagada no Drive, é recriada). */
+const memoPastas = new Map<string, string>();
+
+/**
+ * Pasta de destino no Drive: Cliente/ → Processo/ → "03 · Petições e peças"/ (a subpasta só quando há categoria).
+ * Reaproveita o que existe, recria o que foi apagado e nunca apaga nada.
+ */
+async function destinoDrive(sb: SupabaseClient, conexao: { token: string; raiz: string | null }, escId: string, clienteId: string, processoId: string | null, categoria: CategoriaDoc | null): Promise<string> {
+  const montar = async (raiz: string) => {
+    const { data: cli } = await sb.from('clientes').select('nome,drive_folder_id').eq('id', clienteId).single();
+    const pastaCliente = await garantirPasta(conexao.token, `cliente:${clienteId}`, cli?.nome ?? 'Cliente', raiz, cli?.drive_folder_id ?? null);
+    if (pastaCliente !== cli?.drive_folder_id) await sb.from('clientes').update({ drive_folder_id: pastaCliente }).eq('id', clienteId);
+    let base = pastaCliente;
+    if (processoId) {
+      const { data: pr } = await sb.from('processos').select('numero,drive_folder_id').eq('id', processoId).single();
+      base = await garantirPasta(conexao.token, `processo:${processoId}`, `Processo ${pr?.numero ?? ''}`.trim(), pastaCliente, pr?.drive_folder_id ?? null);
+      if (base !== pr?.drive_folder_id) await sb.from('processos').update({ drive_folder_id: base }).eq('id', processoId);
+    }
+    if (!categoria) return base;
+    const marca = `cat:${processoId ?? clienteId}:${categoria}`;
+    const sub = await garantirPasta(conexao.token, marca, pastaDaCategoria(categoria), base, memoPastas.get(marca) ?? null);
+    memoPastas.set(marca, sub);
+    return sub;
+  };
+  const raiz = conexao.raiz ?? await criarRaiz(sb, conexao.token, escId);
+  try { return await montar(raiz); }
+  catch (e) {
+    if ((e as Error).message !== 'PASTA_RAIZ_AUSENTE') throw e;
+    memoPastas.clear();
+    conexao.raiz = await criarRaiz(sb, conexao.token, escId);                                      // a pasta raiz foi apagada no Drive
+    return await montar(conexao.raiz);
+  }
+}
+
+/** Envia um documento ao Drive: Cliente/ → Processo/ → categoria/ → "AAAA-MM-DD · Item · original". Confere o tamanho que o Drive guardou. */
 async function enviarAoDrive(sb: SupabaseClient, d: DocLinha, conexao: { token: string; raiz: string | null }): Promise<void> {
   const falhar = async (msg: string) => { await sb.from('documentos').update({ drive_status: 'erro', drive_erro: msg.slice(0, 300), drive_tentativas: d.drive_tentativas + 1 }).eq('id', d.id); };
   try {
@@ -97,45 +132,31 @@ async function enviarAoDrive(sb: SupabaseClient, d: DocLinha, conexao: { token: 
     const baixado = await sb.storage.from(BUCKET).download(d.storage_path);
     if (baixado.error || !baixado.data) throw new Error('Arquivo não encontrado no armazenamento.');
     const bytes = new Uint8Array(await baixado.data.arrayBuffer());
-
-    const montarCaminho = async (raiz: string) => {
-      const { data: cli } = await sb.from('clientes').select('nome,drive_folder_id').eq('id', d.cliente_id).single();
-      const pastaCliente = await garantirPasta(conexao.token, `cliente:${d.cliente_id}`, cli?.nome ?? 'Cliente', raiz, cli?.drive_folder_id ?? null);
-      if (pastaCliente !== cli?.drive_folder_id) await sb.from('clientes').update({ drive_folder_id: pastaCliente }).eq('id', d.cliente_id);
-      if (!d.processo_id) return pastaCliente;
-      const { data: pr } = await sb.from('processos').select('numero,drive_folder_id').eq('id', d.processo_id).single();
-      const pastaProc = await garantirPasta(conexao.token, `processo:${d.processo_id}`, `Processo ${pr?.numero ?? ''}`.trim(), pastaCliente, pr?.drive_folder_id ?? null);
-      if (pastaProc !== pr?.drive_folder_id) await sb.from('processos').update({ drive_folder_id: pastaProc }).eq('id', d.processo_id);
-      return pastaProc;
-    };
-    let raiz = conexao.raiz ?? await criarRaiz(sb, conexao.token, d.escritorio_id);
-    let destino: string;
-    try { destino = await montarCaminho(raiz); }
-    catch (e) {
-      if ((e as Error).message !== 'PASTA_RAIZ_AUSENTE') throw e;
-      raiz = await criarRaiz(sb, conexao.token, d.escritorio_id);                                  // a pasta raiz foi apagada no Drive
-      conexao.raiz = raiz;
-      destino = await montarCaminho(raiz);
-    }
+    const destino = await destinoDrive(sb, conexao, d.escritorio_id, d.cliente_id, d.processo_id, ehCategoria(d.categoria) ? d.categoria : 'outros');
 
     const item = d.item_id ? (await sb.from('checklist_itens').select('nome').eq('id', d.item_id).maybeSingle()).data?.nome : null;
-    const nome = nomeSeguro(item ? `${item} - ${d.nome}` : d.nome);
+    const nome = nomeNoDrive({ criadoEm: d.created_at, nome: d.nome, item });
     const limite = `ge${crypto.randomUUID().replaceAll('-', '')}`;
     const meta = JSON.stringify({ name: nome, parents: [destino], appProperties: { ge_doc: d.id } });
     const enc = new TextEncoder();
     const corpo = new Blob([enc.encode(`--${limite}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${limite}\r\nContent-Type: ${d.mime}\r\n\r\n`), bytes, enc.encode(`\r\n--${limite}--`)]);
-    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+    const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink,size', {
       method: 'POST', headers: { Authorization: `Bearer ${conexao.token}`, 'Content-Type': `multipart/related; boundary=${limite}` }, body: corpo,
     });
     if (!up.ok) throw new Error(`Google Drive: ${(await up.json().catch(() => ({})))?.error?.message ?? up.status}`);
     const f = await up.json();
+    // integridade: o Drive precisa ter guardado exatamente os bytes que enviamos; se não, a cópia é descartada e o envio é refeito
+    if (f.size !== undefined && Number(f.size) !== bytes.length) {
+      await drive(conexao.token, 'PATCH', `/files/${f.id}`, { trashed: true }).catch(() => undefined);
+      throw new Error('O Drive guardou o arquivo incompleto; o envio será refeito.');
+    }
     await sb.from('documentos').update({ drive_status: 'enviado', drive_file_id: f.id, drive_link: f.webViewLink ?? null, drive_erro: null }).eq('id', d.id);
   } catch (e) { await falhar((e as Error).message); }
 }
 
 async function sincronizarEscritorio(sb: SupabaseClient, escId: string, limite: number): Promise<{ enviados: number; erros: number }> {
   const r = { enviados: 0, erros: 0 };
-  const { data: lista } = await sb.from('documentos').select('id,escritorio_id,cliente_id,processo_id,item_id,nome,mime,storage_path,drive_tentativas')
+  const { data: lista } = await sb.from('documentos').select('id,escritorio_id,cliente_id,processo_id,item_id,nome,mime,tamanho,categoria,created_at,storage_path,drive_tentativas')
     .eq('escritorio_id', escId).in('drive_status', ['pendente', 'erro']).lt('drive_tentativas', MAX_TENTATIVAS).order('created_at').limit(limite);
   if (!lista?.length) return r;
   let c: Awaited<ReturnType<typeof tokenDrive>>;
@@ -178,12 +199,15 @@ async function limparLixeira(sb: SupabaseClient, escId: string | null): Promise<
 // ---------------------------------------------------------------- guardar um arquivo (painel e link do cliente)
 /** Mensagem própria para o usuário (pode ser mostrada a quem enviou). Qualquer outro erro é interno e não vai para o visitante anônimo. */
 class ErroUsuario extends Error {}
-interface Entrada { esc: string; cliente_id: string; processo_id: string | null; item_id: string | null; nome: string; bytes: Uint8Array; origem: 'painel' | 'link_cliente'; enviado_por: string | null; enviado_por_nome: string }
+interface Entrada { esc: string; cliente_id: string; processo_id: string | null; item_id: string | null; categoria?: CategoriaDoc | null; nome: string; bytes: Uint8Array; origem: 'painel' | 'link_cliente'; enviado_por: string | null; enviado_por_nome: string }
 async function guardar(sb: SupabaseClient, x: Entrada) {
   const c = conferirArquivo(x.nome, x.bytes);
   if (!c.ok) throw new ErroUsuario(c.erro);
   const id = crypto.randomUUID();
   const caminho = `${x.esc}/${x.cliente_id}/${id}`;
+  // categoria = a escolhida pela equipe ou, sem escolha, a sugerida pelo item da lista e pelo nome do arquivo
+  const nomeItem = x.item_id ? (await sb.from('checklist_itens').select('nome').eq('id', x.item_id).maybeSingle()).data?.nome ?? null : null;
+  const categoria: CategoriaDoc = x.categoria && ehCategoria(x.categoria) ? x.categoria : sugerirCategoria(x.nome, nomeItem);
   const up = await sb.storage.from(BUCKET).upload(caminho, x.bytes, { contentType: c.mime, upsert: false });
   if (up.error) throw new ErroUsuario('Não foi possível guardar o arquivo. Tente novamente.');
   const { data: cfg } = await sb.from('configuracoes').select('dados').eq('escritorio_id', x.esc).maybeSingle();
@@ -191,7 +215,7 @@ async function guardar(sb: SupabaseClient, x: Entrada) {
   const driveAtivo = !!conexao && (cfg?.dados as { automacao?: { enviar_drive?: boolean } } | undefined)?.automacao?.enviar_drive !== false;
   const { data: doc, error } = await sb.from('documentos').insert({
     id, escritorio_id: x.esc, cliente_id: x.cliente_id, processo_id: x.processo_id, item_id: x.item_id, nome: nomeSeguro(x.nome), mime: c.mime, tamanho: x.bytes.length,
-    sha256: await sha256Hex(x.bytes), storage_path: caminho, origem: x.origem, enviado_por: x.enviado_por, enviado_por_nome: x.enviado_por_nome, drive_status: driveAtivo ? 'pendente' : 'desligado',
+    sha256: await sha256Hex(x.bytes), categoria, storage_path: caminho, origem: x.origem, enviado_por: x.enviado_por, enviado_por_nome: x.enviado_por_nome, drive_status: driveAtivo ? 'pendente' : 'desligado',
   }).select(COLS_DOC).single();
   if (error) { await sb.storage.from(BUCKET).remove([caminho]); throw new Error(error.message); }
   if (driveAtivo && CLIENT_ID && TOKEN_KEY) {
@@ -322,11 +346,13 @@ Deno.serve(async (req: Request) => {
       const cliente = uuidOuNulo(texto(campos.get('cliente_id')));
       const processo = uuidOuNulo(texto(campos.get('processo_id')));
       const item = uuidOuNulo(texto(campos.get('item_id')));
+      const catTexto = texto(campos.get('categoria'));
+      if (catTexto && !ehCategoria(catTexto)) return falha('Categoria inválida.');
       if (!cliente) return falha('Pedido inválido.');
       if (!(await sbUser.from('clientes').select('id').eq('id', cliente).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
       if (processo && !(await sbUser.from('processos').select('id').eq('id', processo).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
       const { data: perfil } = await sb.from('perfis').select('nome').eq('id', userId).maybeSingle();
-      const documento = await guardar(sb, { esc: escId, cliente_id: cliente, processo_id: processo, item_id: item, nome, bytes, origem: 'painel', enviado_por: userId, enviado_por_nome: perfil?.nome ?? 'Equipe' });
+      const documento = await guardar(sb, { esc: escId, cliente_id: cliente, processo_id: processo, item_id: item, categoria: catTexto as CategoriaDoc | null, nome, bytes, origem: 'painel', enviado_por: userId, enviado_por_nome: perfil?.nome ?? 'Equipe' });
       return json({ documento });
     }
 
@@ -376,6 +402,40 @@ Deno.serve(async (req: Request) => {
       const { escId } = await chamador(req);
       if (!CLIENT_ID || !TOKEN_KEY) return falha('GOOGLE_INDISPONIVEL', 503);
       return json(await sincronizarEscritorio(sb, escId, 40));
+    }
+    if (acao === 'reclassificar') {
+      const { sbUser } = await chamador(req);
+      const id = uuidOuNulo(String(corpo.id ?? ''));
+      if (!id || !ehCategoria(corpo.categoria)) return falha('Pedido inválido.');
+      const { data: d } = await sbUser.from('documentos').select('id,escritorio_id,cliente_id,processo_id,drive_file_id,drive_status,categoria').eq('id', id).maybeSingle();   // o RLS garante que é do escritório de quem pede
+      if (!d) return falha('NAO_ENCONTRADO', 404);
+      if (d.categoria === corpo.categoria) return json({ ok: true });
+      // 1º move no Drive; só então grava: se o Drive falhar, nada muda e a tela mostra o motivo
+      if (d.drive_status === 'enviado' && d.drive_file_id) {
+        if (!CLIENT_ID || !TOKEN_KEY) return falha('GOOGLE_INDISPONIVEL', 503);
+        const c = await tokenDrive(sb, d.escritorio_id);
+        if (c) {
+          const destino = await destinoDrive(sb, c, d.escritorio_id, d.cliente_id, d.processo_id, corpo.categoria);
+          const atuais = await drive(c.token, 'GET', `/files/${d.drive_file_id}?fields=parents`);
+          if (atuais.status === 200) {
+            const de = (atuais.dados?.parents ?? []).filter((p: string) => p !== destino).join(',');
+            await drive(c.token, 'PATCH', `/files/${d.drive_file_id}?addParents=${encodeURIComponent(destino)}${de ? `&removeParents=${encodeURIComponent(de)}` : ''}&fields=id`);
+          }
+        }
+      }
+      const { error } = await sb.from('documentos').update({ categoria: corpo.categoria }).eq('id', id);
+      if (error) return falha(error.message);
+      return json({ ok: true });
+    }
+    if (acao === 'drive_pasta') {
+      const { sbUser, escId } = await chamador(req);
+      if (!CLIENT_ID || !TOKEN_KEY) return falha('GOOGLE_INDISPONIVEL', 503);
+      const cliente = uuidOuNulo(String(corpo.cliente_id ?? '')), processo = uuidOuNulo(corpo.processo_id ? String(corpo.processo_id) : null);
+      if (!cliente || !(await sbUser.from('clientes').select('id').eq('id', cliente).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
+      if (processo && !(await sbUser.from('processos').select('id').eq('id', processo).maybeSingle()).data) return falha('NAO_ENCONTRADO', 404);
+      const c = await tokenDrive(sb, escId);
+      if (!c) return falha('Conecte o Google Drive em Configurações > Integrações.');
+      return json({ url: urlPastaDrive(await destinoDrive(sb, c, escId, cliente, processo, null)) });
     }
     if (acao === 'abrir') {
       const { sbUser } = await chamador(req);

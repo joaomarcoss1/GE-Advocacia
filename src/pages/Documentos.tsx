@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Cloud, FileText, FolderOpen, Search } from 'lucide-react';
+import { Cloud, FileText, FolderOpen, Search, UploadCloud } from 'lucide-react';
 import { Badge, Kpi, Modal, PageHeader, Vazio, useToast } from '@/components/ui';
+import BibliotecaDocs from '@/components/BibliotecaDocs';
 import Dossie, { progressoDe } from '@/components/Dossie';
+import EnvioLote from '@/components/EnvioLote';
 import { useDados } from '@/context/Dados';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { semAcento } from '@/lib/format';
@@ -21,6 +23,8 @@ export default function Documentos() {
   const [soPendentes, setSoPendentes] = useState(true);
   const [aberto, setAberto] = useState<Linha | null>(null);
   const [sincronizando, setSincronizando] = useState(false);
+  const [aba, setAba] = useState<'pendencias' | 'biblioteca'>('pendencias');
+  const [envio, setEnvio] = useState<{ cliente: string; processo: string } | null>(null);
 
   const carregar = useCallback(async () => {
     const [i, d, r, dr] = await Promise.all([db.checklist.itens.list().catch(() => []), db.arquivos.list().catch(() => []), db.arquivos.resumo().catch(() => ({ total: 0, sem_conferir: 0, drive_pendente: 0 })), db.arquivos.drive.status().catch(() => ({ disponivel: false, conectado: false }) as DriveStatus)]);
@@ -59,6 +63,7 @@ export default function Documentos() {
   return (
     <>
       <PageHeader titulo="Documentos">
+        <button className="btn gold" onClick={() => setEnvio({ cliente: '', processo: '' })}><UploadCloud size={17} />Enviar documentos</button>
         {drive.conectado && resumo.drive_pendente > 0 && <button className="btn ghost" onClick={sincronizar} disabled={sincronizando}><Cloud size={17} />{sincronizando ? 'Enviando…' : `Enviar ${resumo.drive_pendente} ao Drive`}</button>}
       </PageHeader>
 
@@ -69,7 +74,14 @@ export default function Documentos() {
         <Kpi label={drive.disponivel ? (drive.conectado ? 'Drive: pendentes' : 'Drive') : 'Drive'} valor={drive.conectado ? resumo.drive_pendente : '—'} alerta={drive.conectado && resumo.drive_pendente > 0} />
       </div>
 
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="seg" role="tablist" aria-label="Visões dos documentos" style={{ marginBottom: 14 }}>
+        <button role="tab" aria-selected={aba === 'pendencias'} className={aba === 'pendencias' ? 'on' : ''} onClick={() => setAba('pendencias')}>Pendências por processo</button>
+        <button role="tab" aria-selected={aba === 'biblioteca'} className={aba === 'biblioteca' ? 'on' : ''} onClick={() => setAba('biblioteca')}>Biblioteca ({docs.length})</button>
+      </div>
+
+      {aba === 'biblioteca' && <BibliotecaDocs docs={docs} />}
+
+      {aba === 'pendencias' && <><div className="card" style={{ marginBottom: 18 }}>
         <div className="filtros">
           <div className="search-field grow" style={{ minWidth: 220 }}><Search size={18} className="lead" /><input aria-label="Buscar" placeholder="Cliente, processo ou número" value={busca} onChange={e => setBusca(e.target.value)} /></div>
           <label className="check"><input type="checkbox" checked={soPendentes} onChange={e => setSoPendentes(e.target.checked)} />Só com pendências</label>
@@ -111,6 +123,28 @@ export default function Documentos() {
             ))}
           </ul>
         </div>
+      )}</>}
+
+      {envio && (
+        <Modal titulo="Enviar documentos" onClose={() => setEnvio(null)} largo>
+          <div className="grid c2" style={{ marginBottom: 14 }}>
+            <label className="field"><span>Cliente</span>
+              <select className="select" value={envio.cliente} onChange={e => setEnvio({ cliente: e.target.value, processo: '' })} aria-label="Cliente dos documentos">
+                <option value="">Escolha o cliente…</option>
+                {[...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </label>
+            <label className="field"><span>Processo</span>
+              <select className="select" value={envio.processo} disabled={!envio.cliente} onChange={e => setEnvio({ ...envio, processo: e.target.value })} aria-label="Processo dos documentos">
+                <option value="">Documentos do cliente (sem processo)</option>
+                {processos.filter(p => p.cliente_id === envio.cliente).map(p => <option key={p.id} value={p.id}>{p.titulo ? `${p.titulo} · ` : ''}{p.numero}</option>)}
+              </select>
+            </label>
+          </div>
+          {envio.cliente
+            ? <EnvioLote key={`${envio.cliente}-${envio.processo}`} clienteId={envio.cliente} processoId={envio.processo || null} aoCancelar={() => { setEnvio(null); void carregar(); }} aoConcluir={() => { setEnvio(null); void carregar(); void recarregar(); }} />
+            : <p className="muted">Escolha o cliente para enviar os arquivos. Eles são organizados automaticamente por categoria e, se o Drive estiver conectado, vão para a pasta certa.</p>}
+        </Modal>
       )}
 
       {aberto && <Modal titulo={aberto.titulo} onClose={() => setAberto(null)} largo><p className="muted mono" style={{ margin: '0 0 14px' }}>{aberto.sub}</p><Dossie clienteId={aberto.cliente_id} processoId={aberto.processo_id} aoMudar={() => { void carregar(); void recarregar(); }} /></Modal>}

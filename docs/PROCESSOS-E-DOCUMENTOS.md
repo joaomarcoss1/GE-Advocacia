@@ -36,7 +36,32 @@ Sem a chave, o sistema continua funcionando com andamentos manuais, e a tela avi
 
 **Armazenamento.** Bucket privado `documentos` no Supabase, caminho `escritório/cliente/id`; o painel abre por URL assinada de 60 segundos e **cada abertura é registrada** (quem, quando). Excluir remove o arquivo do Storage e envia a cópia do Drive para a **lixeira do Drive** (recuperável).
 
-**Google Drive.** Uma conexão por escritório (somente administrador). Escopo `drive.file`: o sistema enxerga apenas o que ele mesmo criou. Estrutura: `GE Advocacia – <Escritório>/<Cliente>/Processo <número>/<Item> - <arquivo>`. Se o Drive falhar, o documento já está guardado e fica *pendente/erro* no painel; a sincronização é refeita (botão e rotina agendada). Se o acesso for revogado no Google, a conexão é desfeita e nada fica pendente para sempre.
+**Organização automática (categorias).** Todo documento recebe uma categoria, sugerida pelo item da lista e pelo nome do arquivo (e ajustável com um clique): *Procuração e contrato, Documentos pessoais, Petições e peças, Decisões e intimações, Audiências, Provas e anexos, Financeiro e custas, Outros*. A categoria vira a **subpasta numerada** no Drive e agrupa os documentos avulsos no dossiê. A sugestão é só uma ajuda: a equipe confirma na tela de envio.
+
+**Envio rápido, em lote.** Em *Documentos → Enviar documentos* (ou arrastando arquivos sobre o dossiê) escolhem-se vários arquivos de uma vez, inclusive fotos do celular (as grandes são reduzidas). Cada linha mostra categoria e item da lista já sugeridos. **Arquivo repetido** (mesmo conteúdo, pela impressão digital SHA-256) vem desmarcado com o aviso "Já enviado antes".
+
+**Biblioteca.** Aba *Biblioteca* em Documentos: todos os arquivos do escritório, com busca por nome, cliente, processo ou categoria e filtros (a conferir, enviados pelo cliente, Drive pendente/com erro). Abrir fica registrado (quem e quando).
+
+**Google Drive.** Uma conexão por escritório (somente administrador). Escopo `drive.file`: o sistema enxerga apenas o que ele mesmo criou. Estrutura:
+
+```
+GE Advocacia – <Escritório>/
+  <Cliente>/
+    Processo <número>/
+      01 · Procuração e contrato/
+        2026-10-08 · Procuração assinada · scan0001.pdf
+      03 · Petições e peças/
+        2026-10-08 · petição inicial.pdf
+```
+
+- Nome padronizado `AAAA-MM-DD · Item · original` (ordena por data, nunca passa de 120 caracteres, mantém a extensão).
+- Documentos do cliente sem processo ficam na pasta do cliente, também por categoria.
+- **Duas cópias**: a do sistema (bucket privado) e a do Drive. Se o Drive falhar, o documento já está guardado e o envio é refeito sozinho (botão e rotina de 6 em 6 horas, até 8 tentativas).
+- **Integridade**: depois do envio o sistema confere o tamanho que o Drive guardou; se vier diferente, descarta aquela cópia e refaz.
+- **Mudar a categoria** move o arquivo para a subpasta certa no Drive (primeiro no Drive; se falhar, nada muda).
+- **Pasta no Drive**: botão no dossiê abre (e cria, se preciso) a pasta do cliente ou do processo.
+- Excluir no sistema envia a cópia do Drive para a **lixeira do Drive** (o Google a mantém por 30 dias).
+- Sugestão de segurança: conecte uma conta Google **do escritório** (não pessoal), com verificação em duas etapas.
 
 **Configuração (Edge Function `documentos`).**
 1. Google Cloud: ative a *Google Drive API* no mesmo projeto OAuth da Agenda (`docs/GOOGLE-AGENDA.md`) e registre o URI de redirecionamento `https://<ref>.supabase.co/functions/v1/documentos`.

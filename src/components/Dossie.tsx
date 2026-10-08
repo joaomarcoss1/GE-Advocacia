@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, CircleDashed, Cloud, Eye, Link2, MinusCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
+import { Check, CircleDashed, Cloud, Eye, FolderOpen, Link2, MinusCircle, Plus, Trash2, UploadCloud } from 'lucide-react';
 import { Badge, Modal, useConfirm, useToast } from '@/components/ui';
 import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
+import EnvioLote, { AreaSoltar } from '@/components/EnvioLote';
 import { fmtTamanho } from '@/lib/anexos';
+import { CATEGORIAS, rotuloCategoria, type CategoriaDoc } from '@/lib/organizacao';
 import { ACEITA_DOCUMENTO } from '@/lib/checklist';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { abrirNovaAba, prepararDocumento } from '@/lib/documentos';
@@ -34,6 +36,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
   const [modelo, setModelo] = useState('');
   const [novoItem, setNovoItem] = useState('');
   const [novoLink, setNovoLink] = useState<{ url: string; expira: string } | null>(null);
+  const [lote, setLote] = useState<File[] | null>(null);
   const cliente = clientes.find(c => c.id === clienteId);
   const processo = processoId ? processos.find(p => p.id === processoId) : null;
 
@@ -86,6 +89,13 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
     if (!(await confirmar(`Excluir "${d.nome}"? O arquivo sai do sistema${d.drive_status === 'enviado' ? ' e da pasta do Drive' : ''}.`, { perigo: true, rotulo: 'Excluir' }))) return;
     try { await db.arquivos.remover(d.id); await atualizar(); } catch (e) { toast.erro((e as Error).message); }
   }
+  async function reclassificar(d: DocumentoArquivo, categoria: CategoriaDoc) {
+    try { await db.arquivos.reclassificar(d.id, categoria); toast.ok(`Movido para "${rotuloCategoria(categoria)}".`); await atualizar(); } catch (e) { toast.erro((e as Error).message); }
+  }
+  async function abrirPasta() {
+    setOcupado('pasta');
+    try { abrirNovaAba(await db.arquivos.drive.pasta({ cliente_id: clienteId, processo_id: processoId }), 'pasta'); } catch (e) { toast.erro((e as Error).message); } finally { setOcupado(null); }
+  }
   async function alternarDispensa(i: ChecklistItem) {
     try { await db.checklist.itens.update(i.id, { status: i.status === 'dispensado' ? 'pendente' : 'dispensado' }); await atualizar(); } catch (e) { toast.erro((e as Error).message); }
   }
@@ -125,6 +135,9 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
       <button className="doc-nome" onClick={() => abrir(d)} title="Abrir"><Eye size={15} /><span>{d.nome}</span></button>
       <small className="muted">{fmtTamanho(d.tamanho)} · {fmtData(isoParaBR(d.created_at).data)}{d.origem === 'link_cliente' ? ' · enviado pelo cliente' : ''}</small>
       <span className="doc-acoes">
+        <select className="select sm cat-sel" aria-label={`Categoria de ${d.nome}`} value={d.categoria ?? 'outros'} onChange={e => void reclassificar(d, e.target.value as CategoriaDoc)}>
+          {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.rotulo}</option>)}
+        </select>
         {d.drive_status === 'enviado' && d.drive_link && <a className="btn ghost sm" href={d.drive_link} target="_blank" rel="noopener noreferrer"><Cloud size={14} />Drive</a>}
         {d.drive_status === 'pendente' && <Badge tom="warn">Drive pendente</Badge>}
         {d.drive_status === 'erro' && <span title={d.drive_erro ?? ''}><Badge tom="bad">Drive com erro</Badge></span>}
@@ -144,6 +157,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
         </div>
         <div className="row" style={{ gap: 8 }}>
           {drive.disponivel && <Badge tom={drive.conectado ? 'ok' : 'mute'}>{drive.conectado ? 'Drive conectado' : 'Drive não conectado'}</Badge>}
+          {drive.conectado && <button className="btn ghost sm" onClick={abrirPasta} disabled={ocupado === 'pasta'}><FolderOpen size={16} />{ocupado === 'pasta' ? 'Abrindo…' : 'Pasta no Drive'}</button>}
           <button className="btn gold sm" onClick={gerarLink}><Link2 size={16} />Link para o cliente</button>
         </div>
       </div>
@@ -179,11 +193,16 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
         <input className="input grow" style={{ minWidth: 200 }} aria-label="Novo item da lista" placeholder="Adicionar item à lista" value={novoItem} maxLength={160} onChange={e => setNovoItem(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void adicionarItem(); } }} />
         <button className="btn ghost" onClick={adicionarItem} disabled={!novoItem.trim()}><Plus size={16} />Adicionar</button>
-        <label className="btn ghost" aria-disabled={ocupado === 'avulso'}><UploadCloud size={16} />{ocupado === 'avulso' ? 'Enviando…' : 'Documento avulso'}
-          <input type="file" hidden multiple accept={ACEITA_DOCUMENTO} aria-label="Enviar documento avulso" disabled={ocupado === 'avulso'} onChange={e => { void enviar(null, e.target.files); e.target.value = ''; }} />
-        </label>
       </div>
-      {soltos.length > 0 && <div><div className="section-title" style={{ marginBottom: 8 }}>Outros documentos</div><ul className="docs">{soltos.map(chipDoc)}</ul></div>}
+      <AreaSoltar aoReceber={f => setLote(f)} />
+      {soltos.length > 0 && (
+        <div className="stack" style={{ gap: 14 }}>
+          <div className="section-title">Outros documentos</div>
+          {CATEGORIAS.map(c => ({ c, lista: soltos.filter(d => (d.categoria ?? 'outros') === c.id) })).filter(g => g.lista.length > 0).map(g => (
+            <div key={g.c.id}><div className="cat-titulo">{g.c.pasta}</div><ul className="docs">{g.lista.map(chipDoc)}</ul></div>
+          ))}
+        </div>
+      )}
 
       {modelos.length > 0 && (
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -207,6 +226,12 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
             ))}
           </ul>
         </div>
+      )}
+
+      {lote && (
+        <Modal titulo="Enviar documentos" onClose={() => setLote(null)} largo>
+          <EnvioLote clienteId={clienteId} processoId={processoId} arquivosIniciais={lote} aoCancelar={() => { setLote(null); void atualizar(); }} aoConcluir={() => { setLote(null); void atualizar(); }} />
+        </Modal>
       )}
 
       {novoLink && (

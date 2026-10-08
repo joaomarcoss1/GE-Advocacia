@@ -2,7 +2,7 @@
 
 ## Antes do primeiro escritório real
 - [ ] Criar o **repositório** e o **projeto Supabase** do GE (separados do Almeida).
-- [ ] Rodar `supabase/atualizacao_definitiva.sql` (ou as migrações 0001–0008 em ordem). Rodar duas vezes é seguro. A 0008 tira do `anon` qualquer acesso direto às tabelas e fecha as funções internas (`_*`); o ponto por PIN e a verificação de documentos continuam funcionando pelas funções públicas.
+- [ ] Rodar `supabase/atualizacao_definitiva.sql` (ou as migrações 0001–0009 em ordem). Rodar duas vezes é seguro. A 0008 tira do `anon` qualquer acesso direto às tabelas e fecha as funções internas (`_*`); o ponto por PIN e a verificação de documentos continuam funcionando pelas funções públicas.
 - [ ] Criar o primeiro usuário em *Authentication* e promovê-lo a administrador da plataforma:
   `insert into public.plataforma_admins (id, nome, email) values ('<uuid do usuário>', 'Nome', 'email');`
 - [ ] Publicar a Edge Function: `supabase functions deploy anexos`. A `service_role` fica **só** nos segredos da função.

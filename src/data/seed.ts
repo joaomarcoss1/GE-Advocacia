@@ -11,6 +11,7 @@ import { calcularFolha } from '@/lib/folha';
 import { classificar, previstoDoTipo, sequenciaDoDia, turnoDaData } from '@/lib/ponto';
 import { classificarMovimento, tarefaDoMovimento } from '@/lib/processos';
 import { validarMudancaFolha } from '@/lib/regras';
+import { sugerirCategoria } from '@/lib/organizacao';
 import type {
   AjusteFolha, Andamento, Cargo, ChecklistItem, ChecklistModelo, Cliente, Config, DocumentoArquivo, Escala, Feriado, Folha, Funcionario, Movimento, Ocorrencia, Processo, RegistroPonto, Tarefa, Usuario,
 } from '@/lib/types';
@@ -323,7 +324,7 @@ function gerarProcessos(def: DemoEscritorio, hoje: string, funcs: Funcionario[],
       const item = itens.find(i => i.processo_id === id('proc', 2) && i.nome === nome)!;
       const d = { id: id('doc', k + 1), cliente_id: id('cli', 3), processo_id: id('proc', 2), item_id: item.id, nome: `${nome.split(' ')[0].toLowerCase()}-${k + 1}.pdf`, mime: 'application/pdf', tamanho: pdf.length, sha256: null,
         origem: (k === 1 ? 'link_cliente' : 'painel') as 'painel' | 'link_cliente', enviado_por: null, enviado_por_nome: k === 1 ? 'Cliente (link de envio)' : def.gerente.nome, conferido: k === 0, conferido_em: k === 0 ? agoraIso : null,
-        drive_status: 'desligado' as const, drive_link: null, drive_erro: null, created_at: agoraIso };
+        drive_status: 'desligado' as const, drive_link: null, drive_erro: null, categoria: sugerirCategoria(nome, nome), created_at: agoraIso };
       arquivos.push(d); conteudos[d.id] = pdf;
       item.status = k === 0 ? 'conferido' : 'recebido'; item.recebido_em = agoraIso;
     });
