@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs';
 const ok = m => console.log(`✓ ${m}`);
 const falha = m => { console.log(`✗ ${m}`); process.exitCode = 1; };
 const aviso = m => console.log(`• ${m}`);
-const tempo = (url, init = {}) => fetch(url, { ...init, signal: AbortSignal.timeout(25_000) });
+// o DataJud às vezes demora: espera até 60 s e tenta de novo uma vez antes de dar o problema como real
+const tempo = async (url, init = {}) => { try { return await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) }); } catch (e) { if (!/timeout|aborted/i.test(String(e.message))) throw e; return await fetch(url, { ...init, signal: AbortSignal.timeout(60_000) }); } };
 
 // o mesmo código de leitura que a Edge Function usa (se o Node não entender TypeScript, só mostra a resposta bruta)
 let lib = null;
