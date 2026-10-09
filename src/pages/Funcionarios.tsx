@@ -122,7 +122,7 @@ export default function Funcionarios() {
         </div>
         <div className="table-wrap">
           <table className="tbl">
-            <thead><tr><th>Nome</th><th>Cargo</th><th>Escala</th><th>Vínculo</th><th className="num">Salário mensal</th><th>PIN</th><th>Situação</th><th /></tr></thead>
+            <thead><tr><th>Nome</th><th>Cargo</th><th>Escala</th><th>Vínculo</th><th className="num">Salário mensal</th><th>PIN</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
             <tbody>
               {lista.map(f => (
                 <tr key={f.id}>

@@ -14,6 +14,7 @@ import { autoLigado, backupVencido, marcarBackup, montarArquivo, salvarNaPasta }
 import { contar } from '@/lib/tarefas';
 import { useToast } from '@/components/ui';
 import { lembrarDestino } from '@/lib/pwa';
+import { plural } from '@/lib/format';
 
 const ATALHOS = {
   admin: ['/painel', '/painel/tarefas', '/painel/processos', '/painel/documentos'],
@@ -31,6 +32,10 @@ export default function Layout() {
   const [copiado, setCopiado] = useState(false);
   const [verificando, setVerificando] = useState(false);
   const [backupPendente, setBackupPendente] = useState(() => backupVencido(escritorio.slug));
+  // O lembrete de backup pode ser adiado por 24 horas (fica só neste aparelho)
+  const chaveAdiar = `ge.backup.adiado.${escritorio.slug}`;
+  const [backupAdiado, setBackupAdiado] = useState(() => { try { return Date.now() - Number(localStorage.getItem(chaveAdiar) ?? 0) < 86_400_000; } catch { return false; } });
+  const adiarBackup = () => { try { localStorage.setItem(chaveAdiar, String(Date.now())); } catch { /* sem armazenamento */ } setBackupAdiado(true); };
   const ehAdmin = sessao?.papel === 'admin';
   // Backup semanal: salva sozinho na pasta escolhida (se ligado e liberado pelo navegador); senão, lembra o administrador.
   useEffect(() => {
@@ -84,7 +89,7 @@ export default function Layout() {
   const avisos = (
     <>
       {modo === 'local' && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Demonstração</strong> · dados fictícios neste navegador.</div>}
-      {ehAdmin && backupPendente && !carregando && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Backup semanal pendente.</strong> <Link to="/painel/configuracoes?aba=backup">Fazer agora</Link></div>}
+      {ehAdmin && backupPendente && !backupAdiado && !carregando && <div className="demo-banner row" style={{ marginBottom: 20, gap: 10 }}><span><strong>Backup semanal pendente.</strong> <Link to="/painel/configuracoes?aba=backup">Fazer backup agora</Link></span><button type="button" className="link-btn fechar" onClick={adiarBackup}>Lembrar amanhã</button></div>}
       {atualizacaoPendente && (
         <div className="demo-banner" style={{ marginBottom: 20 }}>
           <strong>Atualização do banco pendente.</strong> O app espera a versão {SCHEMA_ESPERADO} do banco e o Supabase está na versão {versaoBanco ?? 'desconhecida'}.
@@ -109,7 +114,7 @@ export default function Layout() {
       papelRotulo={PAPEL_ROTULO[papel]}
       cartao={<div className="escritorio-card"><span className="rot">Escritório</span><strong>{escritorio.nome}</strong><span className="slug">/{escritorio.slug}</span></div>}
       avisos={avisos} carregando={carregando} dataExtenso={ext}
-      chipAlerta={pendentes > 0 && papel !== 'coordenador' ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${pendentes} aprovação(ões) pendente(s)`, curto: `${pendentes} pendente(s)` } : undefined}
+      chipAlerta={pendentes > 0 && papel !== 'coordenador' ? { to: papel === 'admin' ? '/painel/ponto' : '/painel/gerencia', texto: `${plural(pendentes, 'aprovação pendente', 'aprovações pendentes')}`, curto: `${plural(pendentes, 'pendente', 'pendentes')}` } : undefined}
       nomeImpressao={escritorio.nome}
       rodapeImpressao={`${escritorio.nome} · documento gerencial de conferência, gerado pelo GE Advocacia. Autenticidade: use o QR Code dos PDFs oficiais.`}
     />

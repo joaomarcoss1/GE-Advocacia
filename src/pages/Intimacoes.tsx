@@ -64,7 +64,7 @@ export default function Intimacoes() {
   return (
     <>
       <PageHeader titulo="Intimações">
-        <button className="btn gold" onClick={buscarAgora} disabled={buscando}><RefreshCw size={17} className={buscando ? 'girar' : ''} />{buscando ? 'Buscando…' : 'Buscar no DJEN'}</button>
+        <button className="btn gold" onClick={buscarAgora} disabled={buscando}><RefreshCw size={17} className={buscando ? 'gira' : ''} />{buscando ? 'Buscando…' : 'Buscar no DJEN'}</button>
       </PageHeader>
       <div className="grid c4" style={{ marginBottom: 18 }}>
         <Kpi label="Novas" valor={novas} alerta={novas > 0} icone={<Inbox />} />
@@ -83,7 +83,7 @@ export default function Intimacoes() {
             ))}
           </div>
           <div className="search-field grow" style={{ minWidth: 200 }}><Search size={18} className="lead" /><input aria-label="Buscar intimação" placeholder="Processo, órgão ou texto" value={busca} onChange={e => setBusca(e.target.value)} /></div>
-          {tribunais.length > 1 && <select className="select" style={{ maxWidth: 160 }} aria-label="Tribunal" value={tribunal} onChange={e => setTribunal(e.target.value)}><option value="">Todos os tribunais</option>{tribunais.map(t => <option key={t} value={t}>{t}</option>)}</select>}
+          {tribunais.length > 1 && <select className="select" style={{ minWidth: 190, maxWidth: 240 }} aria-label="Tribunal" value={tribunal} onChange={e => setTribunal(e.target.value)}><option value="">Todos os tribunais</option>{tribunais.map(t => <option key={t} value={t}>{t}</option>)}</select>}
         </div>
         <div className="table-wrap">
           <table className="tbl">

@@ -20,7 +20,7 @@ export default function AbaAuditoria() {
         <span className="hint">Registro automático e permanente: não pode ser editado nem apagado. Mostrando {visiveis.length} de {logs.length} mais recentes.</span>
       </div>
       <div className="table-wrap"><table className="tbl">
-        <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhe</th><th /></tr></thead>
+        <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Detalhe</th><th><span className="sr-only">Ações</span></th></tr></thead>
         <tbody>{visiveis.map(l => (
           <Fragment key={l.id}>
             <tr>

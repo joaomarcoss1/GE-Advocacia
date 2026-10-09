@@ -28,8 +28,11 @@ function useRotulosDeTabela() {
         }));
       });
       // Regiões de rolagem horizontal precisam ser alcançáveis pelo teclado (WCAG 2.1.1)
-      document.querySelectorAll<HTMLElement>('.table-wrap').forEach(w => {
-        if (!w.hasAttribute('tabindex')) { w.setAttribute('tabindex', '0'); w.setAttribute('role', 'region'); w.setAttribute('aria-label', 'Tabela (use as setas para rolar)'); }
+      // Cada região recebe um nome próprio (título da tela + número), para o leitor de tela distingui-las
+      const titulo = document.querySelector('h1')?.textContent?.trim() || 'Tabela';
+      document.querySelectorAll<HTMLElement>('.table-wrap').forEach((w, i, todas) => {
+        if (!w.hasAttribute('tabindex')) { w.setAttribute('tabindex', '0'); w.setAttribute('role', 'region'); }
+        w.setAttribute('aria-label', `${titulo}${todas.length > 1 ? `, tabela ${i + 1}` : ', tabela'} (use as setas para rolar)`);
       });
     };
     aplicar();
@@ -97,13 +100,13 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
       </aside>
 
       <div className="main">
-        <div className="topbar-desk">
+        <header className="topbar-desk">
           <span className="data">{dataExtenso}</span>
           <div className="row" style={{ gap: 10 }}>
             {chipAlerta && <NavLink to={chipAlerta.to} className="chip alert">{chipAlerta.texto}</NavLink>}
             <span className="chip">{papelRotulo}</span>
           </div>
-        </div>
+        </header>
         <main className="content" id="conteudo" tabIndex={-1}>
           <div className="cab-impressao so-impressao"><Logo /><div className="t"><strong>{atual?.rotulo ?? 'GE Advocacia'}</strong>{nomeImpressao}<br />Impresso em {dataExtenso}<br />por {sessao.nome}</div></div>
           {avisos}

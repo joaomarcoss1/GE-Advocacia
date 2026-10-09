@@ -10,7 +10,7 @@ import Credito from '@/components/Nexutec';
 export default function Stage({ children, escritorio }: { children?: ReactNode; escritorio?: string }) {
   const comConteudo = !!(children || escritorio);
   return (
-    <section className={`stage ${comConteudo ? 'com-conteudo' : 'livre'}`}>
+    <aside className={`stage ${comConteudo ? 'com-conteudo' : 'livre'}`} aria-label="GE Advocacia">
       <div className="stage-arte" aria-hidden="true">
         <span className="stage-moldura" />
         {!comConteudo && (
@@ -25,6 +25,6 @@ export default function Stage({ children, escritorio }: { children?: ReactNode; 
         {escritorio && <p className="stage-esc">{escritorio}</p>}
       </div>
       <Credito className="stage-credito" />
-    </section>
+    </aside>
   );
 }

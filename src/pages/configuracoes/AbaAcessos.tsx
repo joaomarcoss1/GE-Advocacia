@@ -51,7 +51,7 @@ export default function AbaAcessos() {
       </div>
       <div className="card" style={{ overflow: 'hidden' }}>
         <div className="table-wrap"><table className="tbl">
-          <thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Situação</th><th /></tr></thead>
+          <thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>{usuarios.map(u => (
             <tr key={u.id}>
               <td><strong>{u.nome}</strong>{u.id === sessao?.id && <> <Badge tom="gold">você</Badge></>}</td>

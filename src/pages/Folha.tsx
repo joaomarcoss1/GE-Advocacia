@@ -71,7 +71,7 @@ export default function Folha() {
         </div>
         <div className="table-wrap">
           <table className="tbl">
-            <thead><tr><th>Funcionário</th><th className="num">Salário</th><th className="num">Diária</th><th className="num">Dias</th><th className="num">Faltas</th><th className="num">Desc. faltas</th><th className="num">Adic.</th><th className="num">Desc.</th><th className="num">Líquido</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th>Funcionário</th><th className="num">Salário</th><th className="num">Diária</th><th className="num">Dias</th><th className="num">Faltas</th><th className="num">Desc. faltas</th><th className="num">Adic.</th><th className="num">Desc.</th><th className="num">Líquido</th><th>Status</th><th><span className="sr-only">Ações</span></th></tr></thead>
             <tbody>
               {linhas.map(l => {
                 const e = l.efetivo;

@@ -92,7 +92,7 @@ export default function Modelos() {
         {aba === 'pecas' && (
           <div className="table-wrap">
             <table className="tbl">
-              <thead><tr><th>Documento</th><th>Tipo</th><th>Área</th><th /></tr></thead>
+              <thead><tr><th>Documento</th><th>Tipo</th><th>Área</th><th><span className="sr-only">Ações</span></th></tr></thead>
               <tbody>
                 {visiveis.map(m => (
                   <tr key={m.id}>
@@ -115,7 +115,7 @@ export default function Modelos() {
         {aba === 'listas' && (
           <div className="table-wrap">
             <table className="tbl">
-              <thead><tr><th>Lista</th><th>Tipo de processo</th><th>Área</th><th>Itens</th>{gestao && <th />}</tr></thead>
+              <thead><tr><th>Lista</th><th>Tipo de processo</th><th>Área</th><th>Itens</th>{gestao && <th><span className="sr-only">Ações</span></th>}</tr></thead>
               <tbody>
                 {listasVisiveis.map(l => (
                   <tr key={l.id}>

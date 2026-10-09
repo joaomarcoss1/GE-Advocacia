@@ -29,7 +29,7 @@ export default function Inicio() {
   return (
     <div className="auth">
       <Stage />
-      <section className="auth-side">
+      <main className="auth-side">
         <div className="auth-card stack passo" style={{ gap: 22 }}>
           <div>
             <h1>Registro de ponto</h1>
@@ -59,7 +59,7 @@ export default function Inicio() {
           </div>
           <Credito className="credito-pagina" />
         </div>
-      </section>
+      </main>
     </div>
   );
 }

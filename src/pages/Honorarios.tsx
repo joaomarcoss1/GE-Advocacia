@@ -170,7 +170,7 @@ export default function Honorarios() {
         <div className="card">
           <div className="table-wrap">
             <table className="tbl">
-              <thead><tr><th>Proposta</th><th>Cliente</th><th>Valor</th><th>Situação</th><th /></tr></thead>
+              <thead><tr><th>Proposta</th><th>Cliente</th><th>Valor</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
               <tbody>
                 {propostas.map(p => (
                   <tr key={p.id}>

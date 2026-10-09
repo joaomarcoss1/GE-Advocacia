@@ -17,7 +17,7 @@ export function TabelaOcorrencias({ lista, admin, nome, metasDe, travado, onEdit
   return (
     <div className="table-wrap">
       <table className="tbl">
-        <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Situação</th><th>Folha</th><th>Observação</th><th /></tr></thead>
+        <thead><tr><th>Funcionário</th><th>Tipo</th><th>Período</th><th>Situação</th><th>Folha</th><th>Observação</th><th><span className="sr-only">Ações</span></th></tr></thead>
         <tbody>
           {lista.map(o => {
             const st = o.status_analise ?? 'aceita';
@@ -58,7 +58,7 @@ export function TabelaAtrasos({ atrasos, admin, nome, metasDe, travado, onAceita
       <div className="card-head"><span className="section-title">Atrasos e saídas antecipadas (últimos 90 dias)</span><span className="muted">{atrasos.length} registro(s)</span></div>
       <div className="table-wrap">
         <table className="tbl">
-          <thead><tr><th>Funcionário</th><th>Data</th><th>Marcação</th><th className="num">Tempo</th><th>Justificativa</th><th>Situação</th><th /></tr></thead>
+          <thead><tr><th>Funcionário</th><th>Data</th><th>Marcação</th><th className="num">Tempo</th><th>Justificativa</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>
             {atrasos.map(r => (
               <tr key={r.id}>

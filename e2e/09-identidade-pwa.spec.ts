@@ -131,8 +131,11 @@ test.describe('identidade visual e aplicativo instalável', () => {
     await entrar(page, CONTAS.adminA);
     expect(await page.locator('.mobilebar').evaluate(luminosidade)).toBeLessThan(0.5);    // cabeçalho escuro
     expect(await page.locator('.bottomnav').evaluate(luminosidade)).toBeLessThan(0.5);    // atalhos escuros
-    // bloco de título escuro: o título é branco (o fundo é um degradê azul-noite com brilho dourado no canto)
-    expect(await page.locator('.page-title').evaluate(el => getComputedStyle(el).color)).toBe('rgb(255, 255, 255)');
+    // o nome da tela aparece na barra superior; o título da página fica só para leitores de tela (sem repetir) e continua no DOM
+    await expect(page.locator('.mobilebar')).toContainText('Painel');
+    const caixa = await page.locator('.page-head > div').first().boundingBox();
+    expect(caixa === null || (caixa.width <= 2 && caixa.height <= 2)).toBe(true);
+    await expect(page.getByRole('heading', { level: 1, name: 'Painel' })).toBeAttached();
     expect(await page.locator('body').evaluate(luminosidade)).toBeGreaterThan(0.8);       // conteúdo claro
     expect(await page.locator('.card').first().evaluate(luminosidade)).toBeGreaterThan(0.9);   // cartões brancos
     await page.getByRole('button', { name: 'Abrir menu' }).first().click();

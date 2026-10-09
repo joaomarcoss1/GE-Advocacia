@@ -120,7 +120,7 @@ export default function Processos() {
             </div>
             <div className="table-wrap">
               <table className="tbl">
-                <thead><tr><th>Processo</th><th>Cliente</th><th>Responsável</th><th>Último andamento</th><th /></tr></thead>
+                <thead><tr><th>Processo</th><th>Cliente</th><th>Responsável</th><th>Último andamento</th><th><span className="sr-only">Ações</span></th></tr></thead>
                 <tbody>
                   {lista.map((p: Processo) => (
                     <tr key={p.id} className="clicavel" onClick={() => setAberto({ id: p.id })}>
@@ -144,7 +144,7 @@ export default function Processos() {
             <div className="filtros"><div className="grow" /><button className="btn gold sm" onClick={() => setNovoCliente('novo')}><Plus size={16} />Novo cliente</button></div>
             <div className="table-wrap">
               <table className="tbl">
-                <thead><tr><th>Cliente</th><th>Tipo</th><th>Contato</th><th className="num">Processos</th><th /></tr></thead>
+                <thead><tr><th>Cliente</th><th>Tipo</th><th>Contato</th><th className="num">Processos</th><th><span className="sr-only">Ações</span></th></tr></thead>
                 <tbody>
                   {[...clientes].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map(c => (
                     <tr key={c.id}>

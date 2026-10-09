@@ -30,7 +30,7 @@ export default function Login() {
   return (
     <div className="auth">
       <Stage />
-      <section className="auth-side">
+      <main className="auth-side">
         <form className="auth-card stack passo" style={{ gap: 18 }} onSubmit={enviar}>
           <div>
             <h1>Entrar</h1>
@@ -71,7 +71,7 @@ export default function Login() {
         <Link to="/" className="auth-link"><ArrowLeft size={15} />Voltar ao início</Link>
         <InstalarApp />
         <Credito className="credito-pagina" />
-      </section>
+      </main>
     </div>
   );
 }

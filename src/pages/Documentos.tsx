@@ -88,7 +88,7 @@ export default function Documentos() {
         </div>
         <div className="table-wrap">
           <table className="tbl">
-            <thead><tr><th>Cliente / processo</th><th>Andamento da lista</th><th>Falta enviar</th><th /></tr></thead>
+            <thead><tr><th>Cliente / processo</th><th>Andamento da lista</th><th>Falta enviar</th><th><span className="sr-only">Ações</span></th></tr></thead>
             <tbody>
               {visiveis.map(l => {
                 const pr = progressoDe(l.itens);

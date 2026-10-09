@@ -34,7 +34,7 @@ export default function Cargos() {
       </PageHeader>
       <div className="card table-wrap">
         <table className="tbl">
-          <thead><tr><th>Cargo</th><th>Categoria</th><th>Descrição</th><th className="num">Pessoas</th><th>Situação</th><th /></tr></thead>
+          <thead><tr><th>Cargo</th><th>Categoria</th><th>Descrição</th><th className="num">Pessoas</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>
             {cargos.map(c => (
               <tr key={c.id}>

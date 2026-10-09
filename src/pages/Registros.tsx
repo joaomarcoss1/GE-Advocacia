@@ -36,7 +36,7 @@ export function TabelaAprovacoes() {
       {pend.length ? (
         <div className="table-wrap">
           <table className="tbl">
-            <thead><tr><th>Funcionário</th><th>Data</th><th>Marcação</th><th>Horário informado</th><th>Justificativa</th><th /></tr></thead>
+            <thead><tr><th>Funcionário</th><th>Data</th><th>Marcação</th><th>Horário informado</th><th>Justificativa</th><th><span className="sr-only">Ações</span></th></tr></thead>
             <tbody>
               {pend.map(r => (
                 <tr key={r.id}>
@@ -158,7 +158,7 @@ export default function Registros() {
             </div>
             <div className="table-wrap">
               <table className="tbl">
-                <thead><tr><th>Data</th><th>Funcionário</th><th>Marcação</th><th>Previsto</th><th>Real</th><th>Diferença</th><th>Situação</th><th>Justificativa</th><th /></tr></thead>
+                <thead><tr><th>Data</th><th>Funcionário</th><th>Marcação</th><th>Previsto</th><th>Real</th><th>Diferença</th><th>Situação</th><th>Justificativa</th><th><span className="sr-only">Ações</span></th></tr></thead>
                 <tbody>
                   {lista.slice(0, 400).map(r => {
                     const st = STATUS_MARCACAO[r.status];

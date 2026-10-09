@@ -36,7 +36,7 @@ export default function BaterPonto() {
     return (
       <div className="auth">
         <Stage />
-        <section className="auth-side">
+        <main className="auth-side">
           <div className="auth-card stack passo" style={{ gap: 16 }}>
             <h1>{p.falhaEsc === 'ESCRITORIO_SUSPENSO' ? 'Acesso suspenso' : 'Escritório não encontrado'}</h1>
             <p className="page-sub">{p.falhaEsc === 'ESCRITORIO_SUSPENSO'
@@ -44,11 +44,11 @@ export default function BaterPonto() {
               : `Não existe um escritório com o endereço "${slug}". Confira o endereço combinado com o administrador.`}</p>
             <Link to="/" className="btn ghost">Informar outro endereço<ArrowRight size={16} /></Link>
           </div>
-        </section>
+        </main>
       </div>
     );
   }
-  if (p.carregando || !p.ctx) return <div className="auth"><Stage /><section className="auth-side" aria-busy="true"><span className="sr-only">Carregando…</span></section></div>;
+  if (p.carregando || !p.ctx) return <div className="auth"><Stage /><main className="auth-side" aria-busy="true"><span className="sr-only">Carregando…</span></main></div>;
 
   return (
     <div className={`auth ${p.quiosque ? 'quiosque' : ''}`}>
@@ -64,7 +64,7 @@ export default function BaterPonto() {
         <ReguaDoDia minutos={p.agora.minutos} />
       </Stage>
 
-      <section className="auth-side">
+      <main className="auth-side">
         <div className="auth-card">
           <Etapas atual={p.etapa === 'pessoa' ? 1 : p.etapa === 'pin' ? 2 : 3} />
           <div key={p.etapa} className="passo">
@@ -79,7 +79,7 @@ export default function BaterPonto() {
           <InstalarApp />
         </div>
         <Credito className="credito-pagina" />
-      </section>
+      </main>
     </div>
   );
 }

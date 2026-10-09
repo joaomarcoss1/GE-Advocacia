@@ -42,7 +42,7 @@ export default function Gerencia() {
         {aba === 'faltas' && (faltas.length ? (
           <div className="table-wrap">
             <table className="tbl">
-              <thead><tr><th>Funcionário</th><th>Data</th><th>Dia</th><th /></tr></thead>
+              <thead><tr><th>Funcionário</th><th>Data</th><th>Dia</th><th><span className="sr-only">Ações</span></th></tr></thead>
               <tbody>
                 {faltas.map(f => (
                   <tr key={f.func.id + f.data}>

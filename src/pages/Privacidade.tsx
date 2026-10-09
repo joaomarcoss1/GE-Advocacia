@@ -22,7 +22,7 @@ export default function Privacidade() {
 
   return (
     <div className="verif">
-      <div className="verif-card" style={{ width: 'min(760px, 100%)' }}>
+      <main className="verif-card" style={{ width: 'min(760px, 100%)' }}>
         <div className="verif-logo"><Logo /></div>
         <div>
           <h1>Como tratamos os seus dados</h1>
@@ -75,7 +75,7 @@ export default function Privacidade() {
         </div>
         <Link to={slug ? `/ponto/${slug}` : '/'} className="auth-link"><ArrowLeft size={15} />Voltar</Link>
         <p className="secure" style={{ marginTop: 0 }}><LockKeyhole size={13} />GE Advocacia · aviso de privacidade (texto-base)</p>
-      </div>
+      </main>
     </div>
   );
 }

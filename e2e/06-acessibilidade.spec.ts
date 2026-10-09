@@ -6,7 +6,7 @@ import { CONTAS, entrar, relogio, semear } from './util';
 const PUBLICAS = ['/', '/entrar', '/ponto/silva-ribeiro', '/verificar', '/privacidade/silva-ribeiro', '/diagnostico'];
 const ADMIN = ['/painel', '/painel/gerencia', '/painel/funcionarios', '/painel/cargos', '/painel/escalas', '/painel/ponto', '/painel/ocorrencias',
   '/painel/feriados', '/painel/folha', '/painel/relatorios', '/painel/configuracoes', '/painel/configuracoes?aba=privacidade', '/painel/configuracoes?aba=acessos', '/painel/tarefas', '/painel/agenda',
-  '/painel/processos', '/painel/documentos', '/painel/configuracoes?aba=integracoes', '/painel/configuracoes?aba=backup'];
+  '/painel/processos', '/painel/documentos', '/painel/configuracoes?aba=integracoes', '/painel/configuracoes?aba=backup', '/painel/intimacoes', '/painel/modelos', '/painel/honorarios'];
 const TELAS = [
   { nome: 'computador', largura: 1366, altura: 800 },
   { nome: 'celular', largura: 390, altura: 844 },

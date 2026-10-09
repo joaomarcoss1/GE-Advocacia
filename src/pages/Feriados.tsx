@@ -55,7 +55,7 @@ export default function Feriados() {
       )}
       <div className="card table-wrap">
         <table className="tbl">
-          <thead><tr><th>Data</th><th>Dia</th><th>Feriado</th><th>Tipo</th><th /></tr></thead>
+          <thead><tr><th>Data</th><th>Dia</th><th>Feriado</th><th>Tipo</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>
             {doAno.map(f => (
               <tr key={f.id}>

@@ -59,7 +59,7 @@ export default function BibliotecaDocs({ docs }: { docs: DocumentoArquivo[] }) {
       </div>
       <div className="table-wrap">
         <table className="tbl">
-          <thead><tr><th>Documento</th><th>Cliente / processo</th><th>Recebido</th><th>Situação</th><th /></tr></thead>
+          <thead><tr><th>Documento</th><th>Cliente / processo</th><th>Recebido</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>
           <tbody>
             {filtrados.slice(0, limite).map(d => (
               <tr key={d.id}>
