@@ -30,6 +30,9 @@ Regra: ouro é acento, nunca fundo grande. Sem amarelo vivo e sem degradê metá
 - Marcos: `<main>` em todas as telas, `<aside>` na faixa de marca, `<header>` no topo; tabelas rolam por teclado com nome próprio.
 - O teste `e2e/06-acessibilidade` (axe-core, WCAG 2.1 AA) cobre todas as telas, inclusive Intimações, Modelos e Honorários.
 
+## Tipografia
+Escala única em rem, tokens `--fs-*`: 2xs 11 px · xs 12 · sm 13 · md 14 · lg 15 · base 16 · xl 18 · 2xl 20 · 3xl 24. O menor texto do sistema é 11 px (antes havia 57 tamanhos, de 8,8 a 25 px). Títulos grandes e números de destaque seguem com `clamp()` próprio.
+
 ## Movimento
 Entrada de tela em fade de 200 ms; cartões entram juntos; `prefers-reduced-motion` desliga tudo. Durações: `--dur-1` 120 ms, `--dur-2` 200 ms, `--dur-3` 320 ms.
 
