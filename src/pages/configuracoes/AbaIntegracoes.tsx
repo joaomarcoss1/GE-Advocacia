@@ -69,15 +69,15 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
             <li>Dica: conecte uma conta Google do escritório (não a pessoal) e ative a verificação em duas etapas nela.</li>
           </ul>
         </div>
-        <label className="check" style={{ marginTop: 12 }}><input type="checkbox" checked={c.automacao.enviar_drive} onChange={e => auto({ enviar_drive: e.target.checked })} />Enviar sozinho para o Drive cada documento recebido</label>
+        <label className="check mt-12" ><input type="checkbox" checked={c.automacao.enviar_drive} onChange={e => auto({ enviar_drive: e.target.checked })} />Enviar sozinho para o Drive cada documento recebido</label>
       </CartaoIntegracao>
 
       <section className="integracao">
-        <div className="row between" style={{ flexWrap: 'wrap' }}>
+        <div className="row between fx-wrap" >
           <strong>Acompanhamento de processos</strong>
           <Badge tom={fonte?.disponivel ? (fonte.simulada ? 'mute' : 'ok') : 'mute'}>{!fonte ? '…' : fonte.simulada ? 'Simulado (demonstração)' : fonte.disponivel ? 'Consulta automática ativa' : 'Indisponível'}</Badge>
         </div>
-        <label className="check" style={{ marginTop: 12 }}><input type="checkbox" checked={c.automacao.tarefa_andamento} onChange={e => auto({ tarefa_andamento: e.target.checked })} />Criar uma tarefa para o responsável quando o andamento exigir ação (sentença, intimação, citação...)</label>
+        <label className="check mt-12" ><input type="checkbox" checked={c.automacao.tarefa_andamento} onChange={e => auto({ tarefa_andamento: e.target.checked })} />Criar uma tarefa para o responsável quando o andamento exigir ação (sentença, intimação, citação...)</label>
       </section>
     </div>
   );

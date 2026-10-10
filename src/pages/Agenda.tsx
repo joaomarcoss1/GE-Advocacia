@@ -86,13 +86,13 @@ export default function Agenda() {
       </CartaoIntegracao>
 
       <div className="row between" style={{ margin: '18px 0 12px' }}>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row g-6" >
           <button className="icon-btn" aria-label="Semana anterior" onClick={() => setIni(addDays(ini, -7))}><ChevronLeft size={20} /></button>
           <button className="btn ghost sm" onClick={() => setIni(segunda(hoje))}>Hoje</button>
           <button className="icon-btn" aria-label="Próxima semana" onClick={() => setIni(addDays(ini, 7))}><ChevronRight size={20} /></button>
           <strong className="semana-rotulo">{fmtDataCurta(dias[0])} – {fmtDataCurta(dias[6])}</strong>
         </div>
-        <select className="select" aria-label="Pessoa" value={resp} onChange={e => setResp(e.target.value)} style={{ maxWidth: 260 }}>
+        <select className="select maxw-260" aria-label="Pessoa" value={resp} onChange={e => setResp(e.target.value)} >
           <option value="">Toda a equipe</option>
           {funcionarios.filter(f => f.ativo).map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
         </select>
@@ -120,7 +120,7 @@ export default function Agenda() {
           );
         })}
       </div>
-      {!agenda.length && <p style={{ marginTop: 14 }}><Badge tom="mute">Sem compromissos</Badge></p>}
+      {!agenda.length && <p className="mt-14"><Badge tom="mute">Sem compromissos</Badge></p>}
 
       {(nova || edicao) && <TarefaModal tarefa={edicao} padrao={nova ? { tipo: 'reuniao', data: nova, diaInteiro: false } : undefined} googleConectado={google.status.conectado} onClose={() => { setNova(null); setEdicao(null); }} onSalvo={aposSalvar} />}
       {atual && !edicao && !nova && <TarefaDetalhe tarefa={atual} google={google.status} sync={google.estados[atual.id]} onClose={() => setAberta(null)} onEditar={() => setEdicao(atual)} onMudou={atualizar} />}

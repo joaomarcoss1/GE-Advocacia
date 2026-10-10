@@ -15,7 +15,7 @@ export default function Anexos({ metas }: { metas: AnexoMeta[] }) {
   const toast = useToast();
   const [ver, setVer] = useState<AnexoAberto | null>(null);
   useEffect(() => () => { ver?.revogar?.(); }, [ver]);
-  if (!metas.length) return <span className="muted" style={{ fontSize: '.86rem' }}>Sem anexo</span>;
+  if (!metas.length) return <span className="muted fs-md" >Sem anexo</span>;
 
   async function abrir(m: AnexoMeta) {
     try {
@@ -38,8 +38,8 @@ export default function Anexos({ metas }: { metas: AnexoMeta[] }) {
       </div>
       {ver && (
         <Modal largo titulo={ver.nome} onClose={() => setVer(null)} rodape={<a className="btn" href={ver.url} download={ver.nome}><Download />Baixar</a>}>
-          <img src={ver.url} alt={`Anexo: ${ver.nome}`} style={{ maxWidth: '100%', maxHeight: '70vh', display: 'block', margin: '0 auto', borderRadius: 8 }} />
-          <p className="hint" style={{ textAlign: 'center', marginTop: 8 }}>O endereço desta imagem expira em 60 segundos.</p>
+          <img src={ver.url} alt={`Anexo: ${ver.nome}`} style={{ maxWidth: '100%', maxHeight: '70vh', display: 'block', margin: '0 auto', borderRadius: 'var(--r-2)' }} />
+          <p className="hint mt-8" style={{ textAlign: 'center' }}>O endereço desta imagem expira em 60 segundos.</p>
         </Modal>
       )}
     </>

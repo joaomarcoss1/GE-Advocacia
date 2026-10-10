@@ -16,7 +16,7 @@ export default function LayoutPlataforma() {
     <Shell
       itens={ITENS} atalhos={['/plataforma', '/plataforma/diagnostico']} inicio="/plataforma" sessao={sessao} sair={sair} papelRotulo="Plataforma"
       cartao={<div className="escritorio-card"><span className="rot">Área</span><strong>Gestão da plataforma</strong><span className="slug"><ShieldCheck size={12} style={{ verticalAlign: '-2px' }} /> sem acesso aos dados dos escritórios</span></div>}
-      avisos={modo === 'local' ? <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Modo demonstração</strong> · dados fictícios, salvos só neste navegador.</div> : undefined}
+      avisos={modo === 'local' ? <div className="demo-banner mb-20" ><strong>Modo demonstração</strong> · dados fictícios, salvos só neste navegador.</div> : undefined}
       carregando={false} dataExtenso={dataExtensa(new Date().toISOString())} nomeImpressao="GE Advocacia · Plataforma"
       rodapeImpressao="GE Advocacia · relatório da plataforma."
     />

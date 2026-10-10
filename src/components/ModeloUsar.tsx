@@ -84,7 +84,7 @@ export default function ModeloUsar({ modelo, onClose }: { modelo: ModeloDocument
       <button className="btn gold" onClick={baixar}><Download size={16} />Baixar em Word</button>
     </>}>
       <div className="stack">
-        <p className="muted" style={{ margin: 0 }}>{rotuloCategoriaModelo(modelo.categoria)}{modelo.descricao ? ` · ${modelo.descricao}` : ''}</p>
+        <p className="muted m-0" >{rotuloCategoriaModelo(modelo.categoria)}{modelo.descricao ? ` · ${modelo.descricao}` : ''}</p>
         <div className="grid c3">
           <Field label="Cliente">
             <select className="select" value={clienteId} onChange={e => { setClienteId(e.target.value); setProcessoId(''); mudou(); }}>
@@ -120,7 +120,7 @@ export default function ModeloUsar({ modelo, onClose }: { modelo: ModeloDocument
             <Field label="Êxito (%)"><input className="input" value={exito} maxLength={40} placeholder="10%" onChange={e => { setExito(e.target.value); mudou(); }} /></Field>
           </div>
         )}
-        <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row between fx-wrap g-8" >
           <span>{restantes === 0 ? <Badge tom="ok">Nenhum campo em branco</Badge> : <Badge tom="warn">{plural(restantes, 'campo', 'campos')} em branco, destacados em amarelo</Badge>}
             {editado !== null && <small className="muted"> · texto editado (mudar a seleção acima refaz o texto)</small>}</span>
           <button className="btn ghost sm" onClick={() => setEditando(e => !e)}><Pencil size={14} />{editando ? 'Ver prévia' : 'Editar texto'}</button>

@@ -23,7 +23,7 @@ interface Props {
 
 const Botoes = ({ admin, onAceitar, onRecusar }: { admin: boolean; onAceitar(): void; onRecusar(): void }) => (
   admin ? (
-    <div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
+    <div className="row g-8 fx-nowrap" >
       <button className="btn sm" onClick={onAceitar}><Check />Aceitar</button>
       <button className="btn ghost danger sm" onClick={onRecusar}><X />Recusar</button>
     </div>
@@ -50,7 +50,7 @@ export default function FilaAnalise({ fila, admin, nome, func, escalaDe, feriado
                 <span className="avatar">{iniciaisDe(nome(o.funcionario_id))}</span>
                 <div className="grow">
                   <strong>{nome(o.funcionario_id)}</strong>
-                  <div className="muted" style={{ fontSize: '.88rem' }}>{OCORRENCIA_LABEL[o.tipo]} · {fmtData(o.data_inicio)}{o.data_fim !== o.data_inicio && ` → ${fmtData(o.data_fim)}`}{imp && ` · ${plural(imp.dias, 'dia', 'dias')} útil(eis)`}</div>
+                  <div className="muted fs-md" >{OCORRENCIA_LABEL[o.tipo]} · {fmtData(o.data_inicio)}{o.data_fim !== o.data_inicio && ` → ${fmtData(o.data_fim)}`}{imp && ` · ${plural(imp.dias, 'dia', 'dias')} útil(eis)`}</div>
                 </div>
                 <Badge tom="warn">Falta com justificativa</Badge>
               </div>
@@ -74,7 +74,7 @@ export default function FilaAnalise({ fila, admin, nome, func, escalaDe, feriado
                 <span className="avatar">{iniciaisDe(nome(r.funcionario_id))}</span>
                 <div className="grow">
                   <strong>{nome(r.funcionario_id)}</strong>
-                  <div className="muted" style={{ fontSize: '.88rem' }}>{saida ? 'Saída antecipada' : 'Atraso'} de {minParaHoras(Math.abs(r.diferenca_minutos ?? 0))} · {fmtData(r.data)} · previsto {r.horario_previsto ?? '—'}, registrado {isoParaBR(r.horario_real).hhmm}</div>
+                  <div className="muted fs-md" >{saida ? 'Saída antecipada' : 'Atraso'} de {minParaHoras(Math.abs(r.diferenca_minutos ?? 0))} · {fmtData(r.data)} · previsto {r.horario_previsto ?? '—'}, registrado {isoParaBR(r.horario_real).hhmm}</div>
                 </div>
                 <Badge tom="warn">{saida ? 'Saída antecipada' : 'Atraso'}</Badge>
               </div>

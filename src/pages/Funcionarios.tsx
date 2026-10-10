@@ -112,7 +112,7 @@ export default function Funcionarios() {
       </PageHeader>
       <div className="card">
         <div className="card-head">
-          <div style={{ position: 'relative', flex: '1 1 260px', maxWidth: 360 }}>
+          <div className="pos-rel" style={{ flex: '1 1 260px', maxWidth: 360 }}>
             <Search size={17} style={{ position: 'absolute', left: 12, top: 12, color: 'var(--muted)' }} />
             <input className="input" style={{ paddingLeft: 36 }} placeholder="Buscar por nome ou CPF" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
@@ -126,15 +126,15 @@ export default function Funcionarios() {
             <tbody>
               {lista.map(f => (
                 <tr key={f.id}>
-                  <td className="nome"><div className="row" style={{ flexWrap: 'nowrap' }}><span className="avatar" style={{ width: 34, height: 34, fontSize: '.85rem' }}>{iniciais(f.nome)}</span>
-                    <div><strong>{f.nome}</strong>{f.oab && <div className="muted" style={{ fontSize: '.82rem' }}>{f.oab}</div>}</div></div></td>
+                  <td className="nome"><div className="row fx-nowrap" ><span className="avatar fs-md" style={{ width: 34, height: 34 }}>{iniciais(f.nome)}</span>
+                    <div><strong>{f.nome}</strong>{f.oab && <div className="muted fs-sm" >{f.oab}</div>}</div></div></td>
                   <td>{cargoNome(f.cargo_id)}</td>
                   <td>{f.escala_id ? escalaNome(f.escala_id) : <Badge tom="warn">Sem escala</Badge>}</td>
                   <td>{VINCULO_LABEL[f.vinculo]}</td>
                   <td className="num">{brl(f.salario_mensal)}</td>
                   <td>{f.tem_pin ? <Badge tom="ok">Definido</Badge> : <Badge tom="warn">Pendente</Badge>}</td>
                   <td>{f.ativo ? <Badge tom="ok">Ativo</Badge> : <Badge tom="mute">Desligado {fmtData(f.data_desligamento)}</Badge>}</td>
-                  <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                  <td className="right nowrap" >
                     <button className="icon-btn" title="Definir PIN" aria-label={`Definir PIN de ${f.nome}`} onClick={() => { setPinDe(f); setPin(''); }}><KeyRound size={17} /></button>
                     <button className="icon-btn" title="Editar" aria-label={`Editar ${f.nome}`} onClick={() => setEd({ ...f, salarioTxt: String(f.salario_mensal).replace('.', ','), diariaTxt: f.diaria_fixa ? String(f.diaria_fixa).replace('.', ',') : '' })}><Pencil size={17} /></button>
                     <button className="icon-btn" title={f.ativo ? (semHistorico(f) ? 'Desligar' : 'Desligar (mantém todo o histórico)') : 'Reativar'} aria-label={f.ativo ? `Desligar ${f.nome}` : `Reativar ${f.nome}`} onClick={() => alternarAtivo(f)}>{f.ativo ? <UserMinus size={17} /> : <UserPlus size={17} />}</button>
@@ -158,9 +158,9 @@ export default function Funcionarios() {
             <Field label="Novo PIN (6 a 8 números)" dica="O PIN é guardado com criptografia e não pode ser consultado depois. Entregue-o ao funcionário e peça para não compartilhar. Sequências e repetições (123456, 111111) são recusadas.">
               <input className="input pin-input" inputMode="numeric" maxLength={8} value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, ''))} autoFocus />
             </Field>
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <div className="row g-8 fx-wrap" >
               <button type="button" className="btn ghost sm" onClick={() => setPin(gerarPin())}><Wand2 size={15} />Gerar PIN aleatório</button>
-              {pin.length > 0 && validarPin(pin) && <span className="hint" style={{ color: 'var(--bad)' }}>{validarPin(pin)}</span>}
+              {pin.length > 0 && validarPin(pin) && <span className="hint c-bad" >{validarPin(pin)}</span>}
             </div>
           </div>
         </Modal>

@@ -44,9 +44,9 @@ export default function Dashboard() {
       </div>
 
       {alertas.length > 0 && (
-        <div className="card card-pad" style={{ marginBottom: 18, borderColor: 'var(--gold-line)', background: 'var(--gold-tint)' }}>
-          <div className="row" style={{ color: 'var(--gold-deep)', marginBottom: 6 }}><AlertTriangle size={18} /><strong>Pendências de cadastro</strong></div>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>{alertas.slice(0, 6).map(a => <li key={a.texto}>{a.texto} <Link to={`/painel/funcionarios?${a.para}`}>Resolver</Link></li>)}</ul>{alertas.length > 6 && <p className="hint" style={{ margin: '6px 0 0' }}>e mais {plural(alertas.length - 6, 'pendência', 'pendências')}.</p>}
+        <div className="card card-pad mb-18" style={{ borderColor: 'var(--gold-line)', background: 'var(--gold-tint)' }}>
+          <div className="row mb-6" style={{ color: 'var(--gold-deep)' }}><AlertTriangle size={18} /><strong>Pendências de cadastro</strong></div>
+          <ul className="m-0" style={{ paddingLeft: 20 }}>{alertas.slice(0, 6).map(a => <li key={a.texto}>{a.texto} <Link to={`/painel/funcionarios?${a.para}`}>Resolver</Link></li>)}</ul>{alertas.length > 6 && <p className="hint" style={{ margin: '6px 0 0' }}>e mais {plural(alertas.length - 6, 'pendência', 'pendências')}.</p>}
           <Link to="/painel/funcionarios" className="hint">Ir para funcionários →</Link>
         </div>
       )}
@@ -55,23 +55,23 @@ export default function Dashboard() {
         <div className="card"><div className="card-head"><span className="section-title">Presença de hoje</span></div><Presenca /></div>
         <div className="stack">
           <div className="card card-pad">
-            <div className="section-title" style={{ marginBottom: 12 }}>Ocorrências no mês</div>
+            <div className="section-title mb-12" >Ocorrências no mês</div>
             {mes.map(l => {
               const n = l.calc.faltas + l.calc.atrasos + l.calc.saidas_antecipadas;
               return (
-                <div key={l.func.id} style={{ marginBottom: 10 }}>
-                  <div className="row between" style={{ fontSize: '.9rem' }}><span>{l.func.nome.split(' ').slice(0, 2).join(' ')}</span><span className="mono muted">{plural(l.calc.faltas, 'falta', 'faltas')} · {plural(l.calc.atrasos + l.calc.saidas_antecipadas, 'atraso', 'atrasos')}</span></div>
-                  <div style={{ height: 8, background: 'var(--navy-tint)', borderRadius: 99, overflow: 'hidden', display: 'flex' }} title={`${plural(n, 'ocorrência', 'ocorrências')}`}>
+                <div key={l.func.id} className="mb-10">
+                  <div className="row between fs-md" ><span>{l.func.nome.split(' ').slice(0, 2).join(' ')}</span><span className="mono muted">{plural(l.calc.faltas, 'falta', 'faltas')} · {plural(l.calc.atrasos + l.calc.saidas_antecipadas, 'atraso', 'atrasos')}</span></div>
+                  <div style={{ height: 8, background: 'var(--navy-tint)', borderRadius: 'var(--r-pill)', overflow: 'hidden', display: 'flex' }} title={`${plural(n, 'ocorrência', 'ocorrências')}`}>
                     <div style={{ width: `${(l.calc.faltas / maxOcorr) * 100}%`, background: 'var(--bad)' }} />
                     <div style={{ width: `${((l.calc.atrasos + l.calc.saidas_antecipadas) / maxOcorr) * 100}%`, background: 'var(--brass)' }} />
                   </div>
                 </div>
               );
             })}
-            <div className="row hint" style={{ marginTop: 6 }}><span><span className="dot" style={{ display: 'inline-block', background: 'var(--bad)' }} /> Faltas</span><span><span className="dot" style={{ display: 'inline-block', background: 'var(--brass)' }} /> Atrasos</span></div>
+            <div className="row hint mt-6" ><span><span className="dot" style={{ display: 'inline-block', background: 'var(--bad)' }} /> Faltas</span><span><span className="dot" style={{ display: 'inline-block', background: 'var(--brass)' }} /> Atrasos</span></div>
           </div>
           <div className="card card-pad">
-            <div className="section-title" style={{ marginBottom: 10 }}>Próximos feriados</div>
+            <div className="section-title mb-10" >Próximos feriados</div>
             {proximos.map(f => <div className="sum-line" key={f.id}><span>{f.nome}</span><span className="mono muted">{fmtData(f.data).slice(0, 5)}</span></div>)}
             {!proximos.length && <p className="muted">Nenhum feriado cadastrado à frente. <Link to="/painel/feriados">Importar</Link></p>}
           </div>

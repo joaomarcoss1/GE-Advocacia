@@ -44,7 +44,7 @@ export default function BibliotecaDocs({ docs }: { docs: DocumentoArquivo[] }) {
   return (
     <div className="card">
       <div className="filtros">
-        <div className="search-field grow" style={{ minWidth: 220 }}><Search size={18} className="lead" /><input aria-label="Buscar documentos" placeholder="Nome do arquivo, cliente, processo ou categoria" value={busca} onChange={e => { setBusca(e.target.value); setLimite(PASSO); }} /></div>
+        <div className="search-field grow minw-220" ><Search size={18} className="lead" /><input aria-label="Buscar documentos" placeholder="Nome do arquivo, cliente, processo ou categoria" value={busca} onChange={e => { setBusca(e.target.value); setLimite(PASSO); }} /></div>
         <select className="select" aria-label="Categoria" value={categoria} onChange={e => { setCategoria(e.target.value); setLimite(PASSO); }}>
           <option value="">Todas as categorias</option>
           {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.rotulo}</option>)}
@@ -63,11 +63,11 @@ export default function BibliotecaDocs({ docs }: { docs: DocumentoArquivo[] }) {
           <tbody>
             {filtrados.slice(0, limite).map(d => (
               <tr key={d.id}>
-                <td><div className="doc-nome-lib"><FileText size={15} aria-hidden="true" /><span title={d.nome}>{d.nome}</span></div><div className="muted" style={{ fontSize: '.8rem' }}>{rotuloCategoria(d.categoria)} · {fmtTamanho(d.tamanho)}</div></td>
-                <td><strong>{nomeCliente(d.cliente_id)}</strong>{rotuloProcesso(d.processo_id) && <div className="muted mono" style={{ fontSize: '.8rem' }}>{rotuloProcesso(d.processo_id)}</div>}</td>
-                <td className="muted">{fmtData(isoParaBR(d.created_at).data)}{d.origem === 'link_cliente' && <div style={{ fontSize: '.8rem' }}>pelo cliente</div>}</td>
+                <td><div className="doc-nome-lib"><FileText size={15} aria-hidden="true" /><span title={d.nome}>{d.nome}</span></div><div className="muted fs-sm" >{rotuloCategoria(d.categoria)} · {fmtTamanho(d.tamanho)}</div></td>
+                <td><strong>{nomeCliente(d.cliente_id)}</strong>{rotuloProcesso(d.processo_id) && <div className="muted mono fs-sm" >{rotuloProcesso(d.processo_id)}</div>}</td>
+                <td className="muted">{fmtData(isoParaBR(d.created_at).data)}{d.origem === 'link_cliente' && <div className="fs-sm">pelo cliente</div>}</td>
                 <td>
-                  <span className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                  <span className="row g-6 fx-wrap" >
                     {d.conferido ? <Badge tom="ok">Conferido</Badge> : <Badge tom="warn">A conferir</Badge>}
                     {d.drive_status === 'enviado' && <Badge tom="mute">No Drive</Badge>}
                     {d.drive_status === 'pendente' && <Badge tom="warn">Drive pendente</Badge>}
@@ -86,7 +86,7 @@ export default function BibliotecaDocs({ docs }: { docs: DocumentoArquivo[] }) {
         {docs.length > 0 && filtrados.length === 0 && <Vazio tipo="busca" titulo="Nenhum documento com esses filtros" />}
       </div>
       {filtrados.length > limite && <div className="row" style={{ justifyContent: 'center', padding: 14 }}><button className="btn ghost" onClick={() => setLimite(l => l + PASSO)}>Mostrar mais ({filtrados.length - limite})</button></div>}
-      {filtrados.length > 0 && <p className="muted" style={{ margin: '4px 18px 14px', fontSize: '.85rem' }}>{filtrados.length} documento{filtrados.length > 1 ? 's' : ''}</p>}
+      {filtrados.length > 0 && <p className="muted fs-md" style={{ margin: '4px 18px 14px' }}>{filtrados.length} documento{filtrados.length > 1 ? 's' : ''}</p>}
     </div>
   );
 }

@@ -10,7 +10,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
     <>
       <h1>Identifique-se</h1>
       {p.cerca && ctx && <StatusLocal local={p.local} raio={ctx.ponto.geofence_raio_m} onVerificar={p.checarLocal} />}
-      {p.modo === 'local' && <span className="badge gold" style={{ marginTop: 12 }}>Modo demonstração · dados fictícios</span>}
+      {p.modo === 'local' && <span className="badge gold mt-12" >Modo demonstração · dados fictícios</span>}
 
       <form className="search" role="search" onSubmit={e => { e.preventDefault(); p.buscar(); }}>
         <div className="search-field">
@@ -21,15 +21,15 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
         </div>
         <button className="btn gold" type="submit">Buscar</button>
       </form>
-      {p.tentou && p.termo.length < 3 && <p className="hint" style={{ marginTop: 10, color: 'var(--bad)' }}>Digite ao menos 3 letras para buscar.</p>}
+      {p.tentou && p.termo.length < 3 && <p className="hint mt-10 c-bad" >Digite ao menos 3 letras para buscar.</p>}
 
       {p.termo.length >= 3 ? (
         <div className="results" aria-live="polite">
-          <div className="section-title" style={{ marginBottom: 10 }}>{p.buscando ? 'Buscando…' : p.filtradas.length ? `${plural(p.filtradas.length, 'resultado', 'resultados')}` : 'Nenhum resultado'}</div>
+          <div className="section-title mb-10" >{p.buscando ? 'Buscando…' : p.filtradas.length ? `${plural(p.filtradas.length, 'resultado', 'resultados')}` : 'Nenhum resultado'}</div>
           {p.filtradas.map(x => (
             <div key={x.id} className="result">
               <span className="avatar">{iniciais(x.nome)}</span>
-              <span className="grow"><strong>{x.nome}</strong><br /><span className="muted" style={{ fontSize: '.86rem' }}>{x.cargo_nome ?? 'Equipe'}</span></span>
+              <span className="grow"><strong>{x.nome}</strong><br /><span className="muted fs-md" >{x.cargo_nome ?? 'Equipe'}</span></span>
               <button className="btn sm" onClick={() => p.escolherPessoa(x)}>Selecionar<ArrowRight size={15} /></button>
             </div>
           ))}

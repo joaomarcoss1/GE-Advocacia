@@ -67,23 +67,23 @@ export default function Documentos() {
         {drive.conectado && resumo.drive_pendente > 0 && <button className="btn ghost" onClick={sincronizar} disabled={sincronizando}><Cloud size={17} />{sincronizando ? 'Enviando…' : `Enviar ${resumo.drive_pendente} ao Drive`}</button>}
       </PageHeader>
 
-      <div className="grid c4" style={{ marginBottom: 18 }}>
+      <div className="grid c4 mb-18" >
         <Kpi label="Itens pendentes" valor={pendentesTotal} alerta={pendentesTotal > 0} icone={<FileText />} />
         <Kpi label="Documentos recebidos" valor={resumo.total} icone={<FolderOpen />} />
         <Kpi label="A conferir" valor={resumo.sem_conferir} />
         <Kpi label={drive.disponivel ? (drive.conectado ? 'Drive: pendentes' : 'Drive') : 'Drive'} valor={drive.conectado ? resumo.drive_pendente : '—'} alerta={drive.conectado && resumo.drive_pendente > 0} />
       </div>
 
-      <div className="seg" role="tablist" aria-label="Visões dos documentos" style={{ marginBottom: 14 }}>
+      <div className="seg mb-14" role="tablist" aria-label="Visões dos documentos" >
         <button role="tab" aria-selected={aba === 'pendencias'} className={aba === 'pendencias' ? 'on' : ''} onClick={() => setAba('pendencias')}>Pendências por processo</button>
         <button role="tab" aria-selected={aba === 'biblioteca'} className={aba === 'biblioteca' ? 'on' : ''} onClick={() => setAba('biblioteca')}>Biblioteca ({docs.length})</button>
       </div>
 
       {aba === 'biblioteca' && <BibliotecaDocs docs={docs} />}
 
-      {aba === 'pendencias' && <><div className="card" style={{ marginBottom: 18 }}>
+      {aba === 'pendencias' && <><div className="card mb-18" >
         <div className="filtros">
-          <div className="search-field grow" style={{ minWidth: 220 }}><Search size={18} className="lead" /><input aria-label="Buscar" placeholder="Cliente, processo ou número" value={busca} onChange={e => setBusca(e.target.value)} /></div>
+          <div className="search-field grow minw-220" ><Search size={18} className="lead" /><input aria-label="Buscar" placeholder="Cliente, processo ou número" value={busca} onChange={e => setBusca(e.target.value)} /></div>
           <label className="check"><input type="checkbox" checked={soPendentes} onChange={e => setSoPendentes(e.target.checked)} />Só com pendências</label>
         </div>
         <div className="table-wrap">
@@ -95,7 +95,7 @@ export default function Documentos() {
                 const faltam = l.itens.filter(i => i.obrigatorio && i.status === 'pendente');
                 return (
                   <tr key={l.chave} className="clicavel" onClick={() => setAberto(l)}>
-                    <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberto(l); }}><strong>{l.titulo}</strong></button><div className="muted mono" style={{ fontSize: '.8rem' }}>{l.sub}</div></td>
+                    <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberto(l); }}><strong>{l.titulo}</strong></button><div className="muted mono fs-sm" >{l.sub}</div></td>
                     <td style={{ minWidth: 150 }}>{l.itens.length ? <><div className="barra" aria-hidden="true"><i style={{ width: `${pr.pct}%` }} /></div><small className="muted">{pr.feitos} de {pr.total}</small></> : <span className="muted">Sem lista</span>}</td>
                     <td className="muted">{faltam.slice(0, 2).map(i => i.nome).join(', ')}{faltam.length > 2 ? ` +${faltam.length - 2}` : ''}</td>
                     <td className="right">{pr.total > 0 && pr.pct === 100 ? <Badge tom="ok">Completo</Badge> : <button className="btn ghost sm" onClick={e => { e.stopPropagation(); setAberto(l); }}>Abrir</button>}</td>
@@ -127,7 +127,7 @@ export default function Documentos() {
 
       {envio && (
         <Modal titulo="Enviar documentos" onClose={() => setEnvio(null)} largo>
-          <div className="grid c2" style={{ marginBottom: 14 }}>
+          <div className="grid c2 mb-14" >
             <label className="field"><span>Cliente</span>
               <select className="select" value={envio.cliente} onChange={e => setEnvio({ cliente: e.target.value, processo: '' })} aria-label="Cliente dos documentos">
                 <option value="">Escolha o cliente…</option>

@@ -18,13 +18,13 @@ export function ConfirmarMarcacao({ p }: { p: Ponto }) {
   const precisa = exigeJustificativa(previa.status);
   return (
     <div className="stack">
-      <div className="card card-pad" style={{ background: 'var(--navy-tint)', boxShadow: 'none' }}>
+      <div className="card card-pad no-shadow" style={{ background: 'var(--navy-tint)' }}>
         <div className="section-title">{TIPO_MARCACAO_LABEL[escolha]}</div>
-        <div className="row between" style={{ marginTop: 10 }}>
-          <span>Previsto <strong style={{ fontFamily: 'var(--serif)', fontSize: '1.6rem', fontWeight: 600 }}>{previa.previsto ?? '—'}</strong></span>
-          <span>Agora <strong style={{ fontFamily: 'var(--serif)', fontSize: '1.6rem', fontWeight: 600 }}>{p.agora.hhmm}</strong></span>
+        <div className="row between mt-10" >
+          <span>Previsto <strong className="fw-600 fs-3xl" style={{ fontFamily: 'var(--serif)' }}>{previa.previsto ?? '—'}</strong></span>
+          <span>Agora <strong className="fw-600 fs-3xl" style={{ fontFamily: 'var(--serif)' }}>{p.agora.hhmm}</strong></span>
         </div>
-        <div style={{ marginTop: 10 }}>
+        <div className="mt-10">
           <span className={`badge ${previa.status === 'atraso' || previa.status === 'saida_antecipada' ? 'bad' : previa.status === 'extra' ? 'gold' : 'ok'}`}>
             {STATUS_TXT[previa.status]}{previa.diferenca !== 0 && previa.status !== 'extra' ? ` · ${previa.diferenca > 0 ? '+' : '−'}${minParaHoras(previa.diferenca)}` : ''}
           </span>
@@ -37,7 +37,7 @@ export function ConfirmarMarcacao({ p }: { p: Ponto }) {
             <textarea id="just" className="textarea" value={p.just} onChange={e => p.setJust(e.target.value)} placeholder="Ex.: audiência no fórum, trânsito, consulta médica…" />
           </div>
           <SeletorAnexos arquivos={p.arqAtraso} onChange={p.setArqAtraso} rotulo="Anexar atestado ou comprovante (opcional)" dica="PDF ou foto. Ajuda o administrador a aceitar sua justificativa." />
-          <p className="hint" style={{ margin: 0 }}>Este registro vai para <strong>análise do administrador</strong>. Se aceito, não há desconto; se recusado, desconta apenas o tempo de {previa.status === 'atraso' ? 'atraso' : 'saída antecipada'} (não a diária inteira).</p>
+          <p className="hint m-0" >Este registro vai para <strong>análise do administrador</strong>. Se aceito, não há desconto; se recusado, desconta apenas o tempo de {previa.status === 'atraso' ? 'atraso' : 'saída antecipada'} (não a diária inteira).</p>
         </>
       )}
       {p.ctx?.ponto.geofence_ativo && <p className="hint"><MapPin size={14} style={{ verticalAlign: 'middle' }} /> Sua localização será conferida novamente no momento do registro.</p>}
@@ -66,7 +66,7 @@ export function FormAusencia({ p }: { p: Ponto }) {
       </div>
       <Field label="Observação (opcional)"><textarea className="textarea" value={f.obs} onChange={e => set({ ...f, obs: e.target.value })} placeholder="Ex.: consulta médica, dias de repouso indicados…" /></Field>
       <SeletorAnexos arquivos={p.ausArq} onChange={p.setAusArq} rotulo={f.tipo === 'atestado' ? 'Anexar o atestado (obrigatório)' : 'Anexar comprovante'} dica="PDF ou foto do documento, de até 2 MB. Fotos são reduzidas automaticamente." />
-      <p className="hint" style={{ margin: 0 }}>O administrador vai analisar. <strong>Aceito:</strong> a diária do dia é paga normalmente. <strong>Recusado:</strong> o dia é descontado da folha. Atestados são dados de saúde: ficam guardados com acesso restrito e cada abertura é registrada.</p>
+      <p className="hint m-0" >O administrador vai analisar. <strong>Aceito:</strong> a diária do dia é paga normalmente. <strong>Recusado:</strong> o dia é descontado da folha. Atestados são dados de saúde: ficam guardados com acesso restrito e cada abertura é registrada.</p>
       <button className="btn gold block" disabled={p.enviando || !f.inicio || !f.fim || (f.tipo === 'atestado' && p.ausArq.length === 0)} onClick={p.enviarAusencia}>{p.enviando ? 'Enviando…' : 'Enviar para análise'}</button>
       <button className="btn ghost block" onClick={() => p.setAus(false)}>Cancelar</button>
     </div>

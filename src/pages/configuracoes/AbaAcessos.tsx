@@ -62,7 +62,7 @@ export default function AbaAcessos() {
                 </select>
               </td>
               <td><button className={`btn sm ${u.ativo ? 'ghost' : ''}`} onClick={() => salvarAcesso(u, { ativo: !u.ativo })}>{u.ativo ? 'Ativo' : 'Inativo'}</button></td>
-              <td className="right" style={{ whiteSpace: 'nowrap' }}>
+              <td className="right nowrap" >
                 <button className="icon-btn" title="Redefinir senha" aria-label={`Redefinir senha de ${u.email}`} onClick={() => { setSenhaDe({ u, senha: '' }); setVerSenha(false); }}><KeyRound size={18} /></button>
                 <button className="icon-btn" title="Remover" aria-label={`Remover ${u.email}`} onClick={() => excluirUsuario(u)}><Trash2 size={18} /></button>
               </td>
@@ -83,7 +83,7 @@ export default function AbaAcessos() {
               <label className={`role-opt ${novo.papel === 'coordenador' ? 'on' : ''}`}><input type="radio" name="papel" checked={novo.papel === 'coordenador'} onChange={() => setNovo({ ...novo, papel: 'coordenador' })} /><span><strong>Coordenação</strong><br /><span className="muted">Delega e acompanha tarefas, prazos e reuniões. Não vê ponto, salários, folha nem atestados.</span></span></label>
             </div>
             <Field label="Senha inicial (mín. 10 caracteres)" dica="Use letras e números; quanto mais longa, melhor. Anote e repasse com segurança.">
-              <div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}>
+              <div className="row fx-nowrap g-6" >
                 <input className="input" type={verSenha ? 'text' : 'password'} autoComplete="new-password" value={novo.senha} onChange={e => setNovo({ ...novo, senha: e.target.value })} />
                 <button type="button" className="icon-btn" aria-label={verSenha ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setVerSenha(v => !v)}>{verSenha ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 <button type="button" className="icon-btn" aria-label="Gerar senha forte" title="Gerar senha forte" onClick={() => { setNovo({ ...novo, senha: gerarSenha() }); setVerSenha(true); }}><Wand2 size={18} /></button>
@@ -99,7 +99,7 @@ export default function AbaAcessos() {
           <div className="stack">
             <p>Usuário: <strong>{senhaDe.u.nome}</strong> <span className="muted">· {senhaDe.u.email}</span></p>
             <Field label="Nova senha (mín. 10 caracteres, com letras e números)">
-              <div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}>
+              <div className="row fx-nowrap g-6" >
                 <input className="input" type={verSenha ? 'text' : 'password'} autoComplete="new-password" value={senhaDe.senha} onChange={e => setSenhaDe({ ...senhaDe, senha: e.target.value })} autoFocus />
                 <button type="button" className="icon-btn" aria-label={verSenha ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setVerSenha(v => !v)}>{verSenha ? <EyeOff size={18} /> : <Eye size={18} />}</button>
                 <button type="button" className="icon-btn" aria-label="Gerar senha forte" title="Gerar senha forte" onClick={() => { setSenhaDe({ ...senhaDe, senha: gerarSenha() }); setVerSenha(true); }}><Wand2 size={18} /></button>

@@ -15,8 +15,8 @@ export default function AbaAuditoria() {
 
   return (
     <>
-      <div className="row between" style={{ gap: 12, flexWrap: 'wrap' }}>
-        <input className="input" style={{ maxWidth: 340 }} placeholder="Filtrar por pessoa, ação ou texto…" value={filtro} onChange={e => setFiltro(e.target.value)} aria-label="Filtrar auditoria" />
+      <div className="row between g-12 fx-wrap" >
+        <input className="input maxw-340" placeholder="Filtrar por pessoa, ação ou texto…" value={filtro} onChange={e => setFiltro(e.target.value)} aria-label="Filtrar auditoria" />
         <span className="hint">Registro automático e permanente: não pode ser editado nem apagado. Mostrando {visiveis.length} de {logs.length} mais recentes.</span>
       </div>
       <div className="table-wrap"><table className="tbl">

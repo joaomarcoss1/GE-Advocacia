@@ -60,9 +60,9 @@ export default function DetalheFolha({ det, ajustesLista, onFechar, onReabrir, o
       <button className="btn ghost" onClick={() => onNovoAjuste(det.func.id)} disabled={det.travada} title={det.travada ? 'Folha fechada: reabra para lançar ajustes' : undefined}><Plus size={16} />Ajuste</button>
       <button className="btn" onClick={() => onHolerite(det)}><ReceiptText size={16} />Demonstrativo PDF</button>
     </>}>
-      <div className="grid c2" style={{ alignItems: 'start' }}>
+      <div className="grid c2 ai-start" >
         <div>
-          <div className="section-title" style={{ marginBottom: 8 }}>Cálculo do período</div>
+          <div className="section-title mb-8" >Cálculo do período</div>
           <div className="sum-line"><span>Salário mensal</span><span className="mono">{brl(e.salario_mensal)}</span></div>
           <div className="sum-line"><span>Valor da diária</span><span className="mono">{brl(e.valor_diaria)}</span></div>
           <div className="sum-line"><span>Dias previstos no período</span><span className="mono">{e.dias_previstos}</span></div>
@@ -74,19 +74,19 @@ export default function DetalheFolha({ det, ajustesLista, onFechar, onReabrir, o
           <div className="sum-line"><span>Adicionais / horas extras</span><span className="mono">+ {brl(e.adicionais)}</span></div>
           <div className="sum-line neg"><span>Descontos / adiantamentos</span><span className="mono">− {brl(e.descontos)}</span></div>
           <div className="sum-line total"><span>Líquido</span><span className="mono">{brl(e.valor_final)}</span></div>
-          <div className="row" style={{ marginTop: 12 }}>
+          <div className="row mt-12" >
             <Badge tom="ok">{plural(e.dias_trabalhados, 'presente', 'presentes')}</Badge>
             {e.dias_abonados > 0 && <Badge tom="gold">{plural(e.dias_abonados, 'abonado', 'abonados')}</Badge>}
             {e.atrasos + e.saidas_antecipadas > 0 && <Badge tom="warn">{plural(e.atrasos, 'atraso', 'atrasos')} · {plural(e.saidas_antecipadas, 'saída', 'saídas')} antec.</Badge>}
             {e.pendencias > 0 && <Badge tom="warn">{plural(e.pendencias, 'ajuste', 'ajustes')} aguardando aprovação</Badge>}
           </div>
-          {det.salva?.motivo_reabertura && det.salva.status === 'aberta' && <p className="hint" style={{ marginTop: 10 }}>Última reabertura: {det.salva.motivo_reabertura}</p>}
+          {det.salva?.motivo_reabertura && det.salva.status === 'aberta' && <p className="hint mt-10" >Última reabertura: {det.salva.motivo_reabertura}</p>}
           <div className="section-title" style={{ margin: '18px 0 8px' }}>Valores do funcionário</div>
           <div className="grid c2">
             <Field label="Salário mensal (R$)"><input className="input" inputMode="decimal" value={valores.salario} onChange={ev => setValores({ ...valores, salario: ev.target.value })} /></Field>
             <Field label="Diária fixa (R$)" dica="Opcional: substitui salário ÷ dias."><input className="input" inputMode="decimal" placeholder="automática" value={valores.diaria} onChange={ev => setValores({ ...valores, diaria: ev.target.value })} /></Field>
           </div>
-          <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={salvarValores}><Save size={15} />Salvar valores</button>
+          <button className="btn ghost sm mt-10" onClick={salvarValores}><Save size={15} />Salvar valores</button>
           <div className="section-title" style={{ margin: '18px 0 8px' }}>Ajustes lançados</div>
           {ajustesLista.map(a => (
             <div className="sum-line" key={a.id}>
@@ -99,9 +99,9 @@ export default function DetalheFolha({ det, ajustesLista, onFechar, onReabrir, o
           {!ajustesLista.length && <p className="muted">Nenhum ajuste no período.</p>}
         </div>
         <div>
-          <div className="section-title" style={{ marginBottom: 4 }}>Dia a dia</div>
-          <p className="hint" style={{ marginBottom: 8 }}>Use “Ajustar” para corrigir um dia: <strong>Presente</strong> (paga), <strong>Abonado</strong> (paga) ou <strong>Falta</strong> (desconta). “Automático” volta à apuração do ponto.{det.travada ? ' Folha fechada: reabra para editar.' : ''}</p>
-          <div style={{ maxHeight: 460, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 12 }}>
+          <div className="section-title mb-4" >Dia a dia</div>
+          <p className="hint mb-8" >Use “Ajustar” para corrigir um dia: <strong>Presente</strong> (paga), <strong>Abonado</strong> (paga) ou <strong>Falta</strong> (desconta). “Automático” volta à apuração do ponto.{det.travada ? ' Folha fechada: reabra para editar.' : ''}</p>
+          <div style={{ maxHeight: 460, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 'var(--r-3)' }}>
             {e.detalhe.filter(d => d.situacao !== 'fora_contrato').map(d => {
               const s = SITUACAO_DIA[d.situacao];
               const editavel = ['presente', 'abonado', 'falta', 'futuro', 'hoje'].includes(d.situacao);
@@ -109,10 +109,10 @@ export default function DetalheFolha({ det, ajustesLista, onFechar, onReabrir, o
               return (
                 <div className="dia-cell" key={d.data} style={{ gridTemplateColumns: '74px 1fr auto' }}>
                   <span className="mono">{fmtData(d.data).slice(0, 5)} <span className="muted">{['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][new Date(d.data + 'T12:00:00Z').getUTCDay()]}</span></span>
-                  <span><Badge tom={s.tom}>{s.rotulo}</Badge>{d.manual && <> <Badge tom="gold">ajustado</Badge></>}{d.analise && <> <Badge tom={d.analise === 'pendente' ? 'warn' : 'bad'}>{d.analise === 'pendente' ? 'atestado em análise' : 'atestado recusado'}</Badge></>}{d.atraso_min ? <> <Badge tom={d.atraso_analise === 'aceita' ? 'ok' : d.atraso_analise === 'pendente' ? 'warn' : 'bad'}>atraso {minParaHoras(d.atraso_min)}{d.atraso_analise === 'aceita' ? ' aceito' : d.atraso_analise === 'pendente' ? ' em análise' : d.atraso_analise === 'recusada' ? ' recusado' : ''}</Badge></> : null}{(d.nota || d.incompleto) && <span className="muted" style={{ fontSize: '.82rem' }}> {d.nota ?? ''}{d.incompleto ? ' marcação incompleta' : ''}</span>}</span>
+                  <span><Badge tom={s.tom}>{s.rotulo}</Badge>{d.manual && <> <Badge tom="gold">ajustado</Badge></>}{d.analise && <> <Badge tom={d.analise === 'pendente' ? 'warn' : 'bad'}>{d.analise === 'pendente' ? 'atestado em análise' : 'atestado recusado'}</Badge></>}{d.atraso_min ? <> <Badge tom={d.atraso_analise === 'aceita' ? 'ok' : d.atraso_analise === 'pendente' ? 'warn' : 'bad'}>atraso {minParaHoras(d.atraso_min)}{d.atraso_analise === 'aceita' ? ' aceito' : d.atraso_analise === 'pendente' ? ' em análise' : d.atraso_analise === 'recusada' ? ' recusado' : ''}</Badge></> : null}{(d.nota || d.incompleto) && <span className="muted fs-sm" > {d.nota ?? ''}{d.incompleto ? ' marcação incompleta' : ''}</span>}</span>
                   {editavel ? (
-                    <select className="select" style={{ minHeight: 34, padding: '4px 8px', fontSize: '.88rem', width: 122 }} aria-label={`Ajustar ${fmtData(d.data)}`} disabled={det.travada}
-                      value={atual} onChange={ev => definirDia(d.data, ev.target.value)}>
+                    <select className="select fs-md" style={{ minHeight: 34, padding: '4px 8px', width: 122 }} aria-label={`Ajustar ${fmtData(d.data)}`} disabled={det.travada}
+ value={atual} onChange={ev => definirDia(d.data, ev.target.value)}>
                       <option value="auto">Automático</option><option value="presente">Presente</option><option value="abonado">Abonado</option><option value="falta">Falta</option>
                     </select>
                   ) : <span />}

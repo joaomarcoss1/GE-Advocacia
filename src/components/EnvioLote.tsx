@@ -140,9 +140,9 @@ export default function EnvioLote({ clienteId, processoId = null, arquivosInicia
           ))}
         </ul>
       )}
-      <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
+      <div className="row between fx-wrap g-8" >
         <small className="muted">{linhas.length ? `${aEnviar.length} de ${plural(linhas.length, 'selecionado', 'selecionados')}` : 'Nenhum arquivo escolhido.'}</small>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row g-8" >
           <button className="btn ghost" onClick={aoCancelar} disabled={enviando}>Fechar</button>
           <button className="btn gold" onClick={enviar} disabled={enviando || aEnviar.length === 0}>{enviando ? 'Enviando…' : aEnviar.length ? `Salvar ${aEnviar.length} documento${aEnviar.length > 1 ? 's' : ''}` : 'Salvar'}</button>
         </div>

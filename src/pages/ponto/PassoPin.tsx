@@ -7,7 +7,7 @@ export default function PassoPin({ p }: { p: Ponto }) {
   const { pin, setPin } = p;
   const primeiro = p.pessoa.nome.split(' ')[0];
   return (
-    <div className="stack" style={{ gap: 18 }}>
+    <div className="stack g-18" >
       <div>
         <span className="eyebrow">Olá, {primeiro}</span>
         <h1>Digite seu PIN</h1>

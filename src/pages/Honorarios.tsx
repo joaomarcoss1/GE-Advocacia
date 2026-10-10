@@ -63,14 +63,14 @@ export default function Honorarios() {
       <PageHeader titulo="Honorários">
         {aba === 'parametros' && <button className="btn gold" onClick={salvarParametros} disabled={!sujo || salvandoParams}><Save size={17} />{salvandoParams ? 'Salvando…' : sujo ? 'Salvar parâmetros' : 'Salvo'}</button>}
       </PageHeader>
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card mb-18" >
         <Abas valor={aba} onChange={setAba} itens={[{ id: 'simulador', rotulo: 'Simulador' }, { id: 'propostas', rotulo: `Propostas (${propostas.length})` }, { id: 'parametros', rotulo: 'Parâmetros do escritório' }, { id: 'legal', rotulo: 'Base legal' }]} />
       </div>
 
       {aba === 'simulador' && carregado && (
         <div className="grid c2 honorarios-grid">
           <div className="card card-pad stack" aria-label="Dados do caso">
-            <h2 className="section-title" style={{ margin: 0 }}>O caso</h2>
+            <h2 className="section-title m-0" >O caso</h2>
             <Field label="Serviço">
               <select className="select" value={caso.servico_id} onChange={e => escolherServico(e.target.value)}>
                 {GRUPOS.map(g => <optgroup key={g} label={g}>{SERVICOS.filter(s => s.grupo === g).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}</optgroup>)}
@@ -109,7 +109,7 @@ export default function Honorarios() {
             )}
           </div>
 
-          <div className="stack" style={{ gap: 14 }}>
+          <div className="stack g-14" >
             {semCustos ? (
               <div className="card card-pad preco-card">
                 <small className="muted">Antes de calcular</small>
@@ -172,7 +172,7 @@ export default function Honorarios() {
               </div>
             )}
 
-            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <div className="row g-8 fx-wrap" >
               <button className="btn gold" onClick={() => setSalvarProposta(true)}><Save size={16} />Salvar proposta</button>
               <button className="btn ghost" onClick={() => void baixarProposta({ titulo: sv?.nome ?? 'Honorários', cliente: nomeCliente(clienteId || null), servico: sv?.nome ?? '', modalidade: caso.modalidade, valor: caso.modalidade === 'parcelado' || caso.modalidade === 'fixo' ? r.recomendado : r.fixo, exitoPct: r.exitoPct, forma, duracao: caso.duracao_meses, custas: r.custasEstimadas })}><Download size={16} />Baixar proposta (Word)</button>
             </div>
@@ -189,7 +189,7 @@ export default function Honorarios() {
               <tbody>
                 {propostas.map(p => (
                   <tr key={p.id}>
-                    <td><strong>{p.titulo}</strong><div className="muted" style={{ fontSize: '.84rem' }}>{servicoPorId(p.servico)?.nome ?? p.servico} · {MODALIDADES.find(m => m.id === p.modalidade)?.rotulo}</div></td>
+                    <td><strong>{p.titulo}</strong><div className="muted fs-sm" >{servicoPorId(p.servico)?.nome ?? p.servico} · {MODALIDADES.find(m => m.id === p.modalidade)?.rotulo}</div></td>
                     <td>{p.cliente_id ? nomeCliente(p.cliente_id) : <span className="muted">—</span>}</td>
                     <td>{p.modalidade === 'exito' ? `${String(p.exito_pct).replace('.', ',')}% de êxito` : brl(p.valor_proposto)}{p.modalidade === 'misto' && p.exito_pct > 0 ? ` + ${String(p.exito_pct).replace('.', ',')}%` : ''}</td>
                     <td>
@@ -197,7 +197,7 @@ export default function Honorarios() {
                         {STATUS_PROPOSTA.map(s => <option key={s.id} value={s.id}>{s.rotulo}</option>)}
                       </select>
                     </td>
-                    <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                    <td className="right nowrap" >
                       <button className="btn ghost sm" onClick={() => { setCaso(p.entrada); setClienteId(p.cliente_id ?? ''); setProcessoId(p.processo_id ?? ''); setAba('simulador'); }}>Reabrir</button>
                       <button className="icon-btn" aria-label={`Baixar proposta ${p.titulo}`} onClick={() => void baixarProposta({ titulo: p.titulo, cliente: nomeCliente(p.cliente_id), servico: servicoPorId(p.servico)?.nome ?? p.servico, modalidade: p.modalidade, valor: p.valor_proposto, exitoPct: p.exito_pct, forma: p.forma_pagamento ?? '', duracao: p.entrada.duracao_meses, custas: p.resultado.custasEstimadas ?? 0, obs: p.observacoes })}><Download size={16} /></button>
                       <button className="icon-btn" aria-label={`Excluir ${p.titulo}`} onClick={async () => { if (await confirmar(`Excluir a proposta "${p.titulo}"?`, { perigo: true, rotulo: 'Excluir' })) { try { await db.honorarios.propostas.remove(p.id); await carregar(); } catch (er) { toast.erro((er as Error).message); } } }}><Trash2 size={16} /></button>
@@ -214,12 +214,12 @@ export default function Honorarios() {
       {aba === 'parametros' && carregado && <HonorariosParametros p={params} onChange={setParams} />}
 
       {aba === 'legal' && (
-        <div className="stack" style={{ gap: 14 }}>
+        <div className="stack g-14" >
           <div className="cartao-integracao"><strong>Apoio técnico, não parecer jurídico.</strong> As referências abaixo orientam o cálculo; a redação vigente, a tabela da Seccional e as alíquotas devem ser conferidas pelo advogado e pela contabilidade antes de fechar o contrato.</div>
           {(['OAB', 'Federal', 'TJMA', 'Tributário'] as const).map(amb => (
             <div key={amb} className="card">
               <div className="card-head"><span className="section-title">{amb === 'OAB' ? 'OAB' : amb === 'Federal' ? 'Leis federais' : amb === 'TJMA' ? 'Tribunal de Justiça do Maranhão' : 'Tributos'}</span></div>
-              <ul className="stack" style={{ listStyle: 'none', margin: 0, padding: '14px 22px 18px', gap: 14 }}>
+              <ul className="stack m-0 g-14" style={{ listStyle: 'none', padding: '14px 22px 18px' }}>
                 {BASE_LEGAL.filter(n => n.ambito === amb).map(n => <li key={n.titulo}><strong>{n.titulo}</strong><div className="muted">{n.texto}</div></li>)}
               </ul>
             </div>

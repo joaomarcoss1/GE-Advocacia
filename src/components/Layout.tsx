@@ -88,17 +88,17 @@ export default function Layout() {
 
   const avisos = (
     <>
-      {modo === 'local' && <div className="demo-banner" style={{ marginBottom: 20 }}><strong>Demonstração</strong> · dados fictícios neste navegador.</div>}
-      {ehAdmin && backupPendente && !backupAdiado && !carregando && <div className="demo-banner row" style={{ marginBottom: 20, gap: 10 }}><span><strong>Backup semanal pendente.</strong> <Link to="/painel/configuracoes?aba=backup">Fazer backup agora</Link></span><button type="button" className="link-btn fechar" onClick={adiarBackup}>Lembrar amanhã</button></div>}
+      {modo === 'local' && <div className="demo-banner mb-20" ><strong>Demonstração</strong> · dados fictícios neste navegador.</div>}
+      {ehAdmin && backupPendente && !backupAdiado && !carregando && <div className="demo-banner row mb-20 g-10" ><span><strong>Backup semanal pendente.</strong> <Link to="/painel/configuracoes?aba=backup">Fazer backup agora</Link></span><button type="button" className="link-btn fechar" onClick={adiarBackup}>Lembrar amanhã</button></div>}
       {atualizacaoPendente && (
-        <div className="demo-banner" style={{ marginBottom: 20 }}>
+        <div className="demo-banner mb-20" >
           <strong>Atualização do banco pendente.</strong> O app espera a versão {SCHEMA_ESPERADO} do banco e o Supabase está na versão {versaoBanco ?? 'desconhecida'}.
           <ol style={{ margin: '8px 0 10px 18px', padding: 0 }}>
             <li>Clique em <em>Copiar SQL</em>.</li>
             <li>No Supabase, abra <strong>SQL Editor → New query</strong>, cole e clique em <strong>Run</strong> (é seguro repetir).</li>
             <li>Volte aqui e clique em <em>Verificar novamente</em>.</li>
           </ol>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row g-8 fx-wrap" >
             <button className="btn sm" onClick={async () => { try { await navigator.clipboard.writeText(sqlAtualizacao); setCopiado(true); setTimeout(() => setCopiado(false), 3000); } catch { window.prompt('Copie o SQL (Ctrl+C):', sqlAtualizacao); } }}>{copiado ? 'SQL copiado ✓' : 'Copiar SQL'}</button>
             <button className="btn ghost sm" disabled={verificando} onClick={async () => { setVerificando(true); try { await recarregar(); } finally { setVerificando(false); } }}>{verificando ? 'Verificando…' : 'Verificar novamente'}</button>
             <a className="btn ghost sm" href="/diagnostico">Diagnóstico</a>

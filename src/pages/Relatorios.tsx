@@ -46,7 +46,7 @@ export default function Relatorios() {
   return (
     <>
       <PageHeader titulo="Relatórios" />
-      <div className="card card-pad row" style={{ marginBottom: 16, alignItems: 'flex-end' }}>
+      <div className="card card-pad row mb-16" style={{ alignItems: 'flex-end' }}>
         <Field label="De"><input className="input" type="date" value={ini} onChange={e => setIni(e.target.value)} /></Field>
         <Field label="Até"><input className="input" type="date" value={fim} onChange={e => setFim(e.target.value)} /></Field>
         {ini > fim && <Badge tom="bad">A data inicial é maior que a final</Badge>}
@@ -83,7 +83,7 @@ export default function Relatorios() {
         {aba === 'espelho' && (
           <>
             <div className="card-head">
-              <select className="select" style={{ maxWidth: 340 }} value={fid} onChange={e => setFid(e.target.value)} aria-label="Funcionário">
+              <select className="select maxw-340" value={fid} onChange={e => setFid(e.target.value)} aria-label="Funcionário">
                 <option value="">Selecione o funcionário…</option>{linhas.map(l => <option key={l.func.id} value={l.func.id}>{l.func.nome}</option>)}
               </select>
               <button className="btn ghost sm" disabled={!sel} onClick={() => gerarEspelhoPdf().catch(e => toast.erro((e as Error).message))}><FileDown size={16} />PDF do espelho</button>

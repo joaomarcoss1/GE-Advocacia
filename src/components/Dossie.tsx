@@ -157,12 +157,12 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
   if (!carregado) return <div className="esq linha" aria-busy="true" />;
   return (
     <div className="dossie stack">
-      <div className="row between" style={{ flexWrap: 'wrap', gap: 10 }}>
-        <div className="grow" style={{ minWidth: 220 }}>
+      <div className="row between fx-wrap g-10" >
+        <div className="grow minw-220" >
           <div className="row between"><strong>{prog.feitos} de {prog.total} documentos obrigatórios</strong><span className="muted">{prog.pct}%</span></div>
           <div className="barra" role="progressbar" aria-valuenow={prog.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Documentos recebidos"><i style={{ width: `${prog.pct}%` }} /></div>
         </div>
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row g-8" >
           {drive.disponivel && <Badge tom={drive.conectado ? 'ok' : 'mute'}>{drive.conectado ? 'Drive conectado' : 'Drive não conectado'}</Badge>}
           {drive.conectado && <button className="btn ghost sm" onClick={abrirPasta} disabled={ocupado === 'pasta'}><FolderOpen size={16} />{ocupado === 'pasta' ? 'Abrindo…' : 'Pasta no Drive'}</button>}
           <button className="btn gold sm" onClick={gerarLink}><Link2 size={16} />Link para o cliente</button>
@@ -196,14 +196,14 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
         })}
       </ul>
 
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <input className="input grow" style={{ minWidth: 200 }} aria-label="Novo item da lista" placeholder="Adicionar item à lista" value={novoItem} maxLength={160} onChange={e => setNovoItem(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void adicionarItem(); } }} />
+      <div className="row g-8 fx-wrap" >
+        <input className="input grow minw-200" aria-label="Novo item da lista" placeholder="Adicionar item à lista" value={novoItem} maxLength={160} onChange={e => setNovoItem(e.target.value)}
+ onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void adicionarItem(); } }} />
         <button className="btn ghost" onClick={adicionarItem} disabled={!novoItem.trim()}><Plus size={16} />Adicionar</button>
       </div>
       <AreaSoltar aoReceber={f => setLote(f)} />
       {soltos.length > 0 && (
-        <div className="stack" style={{ gap: 14 }}>
+        <div className="stack g-14" >
           <div className="section-title">Outros documentos</div>
           {CATEGORIAS.map(c => ({ c, lista: soltos.filter(d => (d.categoria ?? 'outros') === c.id) })).filter(g => g.lista.length > 0).map(g => (
             <div key={g.c.id}><div className="cat-titulo">{g.c.pasta}</div><ul className="docs">{g.lista.map(chipDoc)}</ul></div>
@@ -212,8 +212,8 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
       )}
 
       {modelos.length > 0 && (
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <select className="select" style={{ maxWidth: 280 }} aria-label="Modelo de lista de documentos" value={modelo} onChange={e => setModelo(e.target.value)}>
+        <div className="row g-8 fx-wrap" >
+          <select className="select maxw-280" aria-label="Modelo de lista de documentos" value={modelo} onChange={e => setModelo(e.target.value)}>
             {modelos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
           </select>
           <button className="btn ghost" onClick={aplicar}>Aplicar modelo</button>
@@ -228,7 +228,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
 
       {links.length > 0 && (
         <div>
-          <div className="section-title" style={{ marginBottom: 8 }}>Links ativos</div>
+          <div className="section-title mb-8" >Links ativos</div>
           <ul className="docs">
             {links.map(l => (
               <li key={l.id} className="doc">
@@ -253,7 +253,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
             <a className="btn" target="_blank" rel="noopener noreferrer" href={`https://wa.me/${telefone ? `55${telefone.replace(/^55/, '')}` : ''}?text=${encodeURIComponent(mensagem(novoLink.url))}`}>Enviar pelo WhatsApp</a></>}>
           <div className="stack">
             <p>Válido até <strong>{fmtData(isoParaBR(novoLink.expira).data)}</strong>. O link só aparece agora; depois dele, se perder, crie outro.</p>
-            <div className="row" style={{ flexWrap: 'nowrap', gap: 8 }}>
+            <div className="row fx-nowrap g-8" >
               <input className="input mono" readOnly aria-label="Endereço do link" value={novoLink.url} onFocus={e => e.currentTarget.select()} />
               <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(novoLink.url); toast.ok('Link copiado.'); } catch { toast.erro('Copie manualmente (Ctrl+C).'); } }}>Copiar</button>
             </div>

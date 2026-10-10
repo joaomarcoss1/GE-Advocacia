@@ -42,10 +42,10 @@ export function TabelaAprovacoes() {
                 <tr key={r.id}>
                   <td><strong>{nome(r.funcionario_id)}</strong></td>
                   <td className="mono">{fmtData(r.data)}</td>
-                  <td>{TIPO_MARCACAO_LABEL[r.tipo]}<div className="muted" style={{ fontSize: '.82rem' }}>previsto {r.horario_previsto ?? '—'}</div></td>
+                  <td>{TIPO_MARCACAO_LABEL[r.tipo]}<div className="muted fs-sm" >previsto {r.horario_previsto ?? '—'}</div></td>
                   <td className="mono"><strong>{isoParaBR(r.horario_real).hhmm}</strong></td>
-                  <td style={{ maxWidth: 320 }}>{r.justificativa}</td>
-                  <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                  <td className="maxw-320">{r.justificativa}</td>
+                  <td className="right nowrap" >
                     <button className="btn sm" onClick={() => aprovar(r)}><Check size={16} />Aprovar</button>{' '}
                     <button className="btn sm danger ghost" onClick={() => { setRejeitar(r); setMotivo(''); }}><X size={16} />Rejeitar</button>
                   </td>
@@ -176,8 +176,8 @@ export default function Registros() {
                           {r.retroativo && r.status_aprovacao === 'aprovado' && r.status !== 'manual' && <> <Badge tom="gold">Ajuste</Badge></>}
                           {travado(r.funcionario_id, r.data) && <> <Badge tom="mute">Folha fechada</Badge></>}
                         </td>
-                        <td style={{ maxWidth: 280 }} className="muted">{r.motivo_rejeicao ? `Rejeitado: ${r.motivo_rejeicao}` : r.justificativa}</td>
-                        <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                        <td className="muted maxw-280">{r.motivo_rejeicao ? `Rejeitado: ${r.motivo_rejeicao}` : r.justificativa}</td>
+                        <td className="right nowrap" >
                           <button className="icon-btn" disabled={travado(r.funcionario_id, r.data)} title={travado(r.funcionario_id, r.data) ? DICA_PERIODO_FECHADO : 'Corrigir horário'} aria-label={`Corrigir marcação de ${nome(r.funcionario_id)}`} onClick={() => setEdicao({ r, hora: isoParaBR(r.horario_real).hhmm, justificativa: r.justificativa ?? '' })}><Pencil size={17} /></button>
                           {admin && <button className="icon-btn" disabled={travado(r.funcionario_id, r.data)} title={travado(r.funcionario_id, r.data) ? DICA_PERIODO_FECHADO : 'Excluir marcação'} aria-label="Excluir marcação" onClick={() => remover(r)}><Trash2 size={17} /></button>}
                         </td>

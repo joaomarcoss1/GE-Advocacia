@@ -43,7 +43,7 @@ export default function Cargos() {
                 <td className="muted">{c.descricao}</td>
                 <td className="num">{funcionarios.filter(f => f.cargo_id === c.id && f.ativo).length}</td>
                 <td><Badge tom={c.ativo ? 'ok' : 'mute'}>{c.ativo ? 'Ativo' : 'Inativo'}</Badge></td>
-                <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                <td className="right nowrap" >
                   <button className="icon-btn" aria-label={`Editar ${c.nome}`} onClick={() => setEd(c)}><Pencil size={17} /></button>
                   <button className="icon-btn" aria-label={`Excluir ${c.nome}`} onClick={() => excluir(c)}><Trash2 size={17} /></button>
                 </td>

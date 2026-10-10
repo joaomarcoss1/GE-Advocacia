@@ -55,16 +55,16 @@ export default function AbaPonto({ c, setC }: { c: Config; setC(c: Config): void
         <Field label="Tolerância (min)" dica="Diferença até este valor conta como “no horário”."><input className="input" inputMode="numeric" value={p.tolerancia_min} onChange={e => ponto({ tolerancia_min: num(e.target.value) })} /></Field>
         <Field label="Atraso / saída antecipada a partir de (min)" dica="Exige justificativa e é contado como ocorrência."><input className="input" inputMode="numeric" value={p.limite_atraso_min} onChange={e => ponto({ limite_atraso_min: num(e.target.value) })} /></Field>
       </div>
-      <div className="card card-pad stack" style={{ boxShadow: 'none', background: 'var(--navy-tint)' }}>
+      <div className="card card-pad stack no-shadow" style={{ background: 'var(--navy-tint)' }}>
         <label className="check"><input type="checkbox" checked={p.geofence_ativo} onChange={e => ponto({ geofence_ativo: e.target.checked })} /><strong>Bloquear o ponto fora do escritório (GPS)</strong></label>
-        <p className="hint" style={{ margin: 0 }}>O funcionário só consegue registrar o ponto se o aparelho estiver dentro do raio abaixo. A conferência é refeita no servidor a cada registro. {!temLocal && <strong>Defina a localização antes de ativar.</strong>}</p>
+        <p className="hint m-0" >O funcionário só consegue registrar o ponto se o aparelho estiver dentro do raio abaixo. A conferência é refeita no servidor a cada registro. {!temLocal && <strong>Defina a localização antes de ativar.</strong>}</p>
         <Field label="Endereço do escritório (referência)"><input className="input" value={p.geofence_endereco} onChange={e => ponto({ geofence_endereco: e.target.value })} /></Field>
         <div className="grid c3">
           <Field label="Latitude"><input className="input" inputMode="decimal" value={p.geofence_lat ?? ''} onChange={e => ponto({ geofence_lat: coord(e.target.value) })} /></Field>
           <Field label="Longitude"><input className="input" inputMode="decimal" value={p.geofence_lng ?? ''} onChange={e => ponto({ geofence_lng: coord(e.target.value) })} /></Field>
           <Field label="Raio permitido (metros)"><input className="input" inputMode="numeric" value={p.geofence_raio_m} onChange={e => ponto({ geofence_raio_m: num(e.target.value) })} /></Field>
         </div>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <div className="row g-8 fx-wrap" >
           <button className="btn" disabled={lendoGps} onClick={definirMinhaLocalizacao}><LocateFixed size={16} />{lendoGps ? 'Obtendo localização…' : 'Usar minha localização'}</button>
           <button className="btn ghost" disabled={lendoGps || !temLocal} onClick={testarDistancia}><Crosshair size={16} />Testar minha distância</button>
           {temLocal && <a className="btn ghost" href={linkMapa(p.geofence_lat!, p.geofence_lng!)} target="_blank" rel="noreferrer"><ExternalLink size={16} />Ver no mapa</a>}
@@ -74,7 +74,7 @@ export default function AbaPonto({ c, setC }: { c: Config; setC(c: Config): void
             Você está a <strong>{fmtDistancia(teste.dist)}</strong> do centro (limite {fmtDistancia(p.geofence_raio_m)}) — {teste.dist <= p.geofence_raio_m ? 'dentro da área, o ponto seria permitido.' : 'fora da área, o ponto seria bloqueado.'} Precisão do GPS: ±{Math.round(teste.precisao)} m.
           </div>
         )}
-        <p className="hint" style={{ margin: 0 }}><strong>Usar minha localização</strong> define o centro da cerca onde você está agora e salva na hora. Faça isso de dentro do escritório, de preferência com o GPS/Wi-Fi ligado. Alterações de raio, coordenadas ou endereço digitados valem ao clicar em <em>Salvar</em>. Limite técnico: o GPS vem do aparelho; a cerca reduz fraudes comuns, e a auditoria e a aprovação de ajustes cobrem o resto.</p>
+        <p className="hint m-0" ><strong>Usar minha localização</strong> define o centro da cerca onde você está agora e salva na hora. Faça isso de dentro do escritório, de preferência com o GPS/Wi-Fi ligado. Alterações de raio, coordenadas ou endereço digitados valem ao clicar em <em>Salvar</em>. Limite técnico: o GPS vem do aparelho; a cerca reduz fraudes comuns, e a auditoria e a aprovação de ajustes cobrem o resto.</p>
       </div>
     </>
   );

@@ -39,11 +39,11 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
   }
 
   return (
-    <div className="stack" style={{ gap: 18 }}>
+    <div className="stack g-18" >
       <section className="card card-pad stack" aria-labelledby="h-custos">
-        <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <div><h2 id="h-custos" className="section-title" style={{ margin: 0 }}>Custos fixos mensais</h2><small className="muted">Tudo o que o escritório paga todo mês, independente de ter caso.</small></div>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <div className="row between fx-wrap g-8" >
+          <div><h2 id="h-custos" className="section-title m-0" >Custos fixos mensais</h2><small className="muted">Tudo o que o escritório paga todo mês, independente de ter caso.</small></div>
+          <div className="row g-8 fx-wrap" >
             <button className="btn ghost sm" onClick={importarFolha}><Users size={15} />Importar folha do sistema</button>
             <button className="btn ghost sm" onClick={adicionarComuns}>Adicionar contas comuns</button>
             <button className="btn sm" onClick={() => set('custos', [...p.custos, { id: id(), categoria: 'outros', descricao: '', valor_mensal: 0 }])}><Plus size={15} />Adicionar custo</button>
@@ -56,7 +56,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
         <ul className="lista-edicao">
           {p.custos.map(c => (
             <li key={c.id}>
-              <select className="select" style={{ maxWidth: 260 }} aria-label="Categoria do custo" value={c.categoria} onChange={e => setCusto(c.id, { categoria: e.target.value as CategoriaCusto })}>
+              <select className="select maxw-260" aria-label="Categoria do custo" value={c.categoria} onChange={e => setCusto(c.id, { categoria: e.target.value as CategoriaCusto })}>
                 {CATEGORIAS_CUSTO.map(k => <option key={k.id} value={k.id}>{k.rotulo}</option>)}
               </select>
               <input className="input grow" aria-label="Descrição do custo" placeholder="Descrição" maxLength={120} value={c.descricao} onChange={e => setCusto(c.id, { descricao: e.target.value })} />
@@ -69,7 +69,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-cap">
-        <h2 id="h-cap" className="section-title" style={{ margin: 0 }}>Capacidade de trabalho</h2>
+        <h2 id="h-cap" className="section-title m-0" >Capacidade de trabalho</h2>
         <div className="grid c3">
           <Field label="Advogados produtivos" dica="Quem fatura horas (sócios e associados)."><CampoNumero rotulo="Advogados produtivos" valor={p.advogados_produtivos} casas={1} min={0.5} onChange={v => set('advogados_produtivos', v || 1)} /></Field>
           <Field label="Horas faturáveis por mês, por advogado" dica="Realistas: de 80 a 120 h; o resto vai para captação, gestão e tempo ocioso."><CampoNumero rotulo="Horas faturáveis por mês" valor={p.horas_faturaveis_mes} casas={0} max={250} onChange={v => set('horas_faturaveis_mes', v || 10)} /></Field>
@@ -78,7 +78,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-trib">
-        <h2 id="h-trib" className="section-title" style={{ margin: 0 }}>Tributação</h2>
+        <h2 id="h-trib" className="section-title m-0" >Tributação</h2>
         <div className="grid c3">
           <Field label="Regime"><select className="select" value={p.regime} onChange={e => set('regime', e.target.value as Regime)}>{REGIMES.map(r => <option key={r.id} value={r.id}>{r.rotulo}</option>)}</select></Field>
           {p.regime === 'simples_iv' && <Field label="Receita bruta dos últimos 12 meses (R$)" dica="Define a faixa do Simples."><CampoNumero rotulo="Receita bruta 12 meses" valor={p.rbt12} onChange={v => set('rbt12', v)} /></Field>}
@@ -90,7 +90,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-margem">
-        <h2 id="h-margem" className="section-title" style={{ margin: 0 }}>Margem de lucro e risco</h2>
+        <h2 id="h-margem" className="section-title m-0" >Margem de lucro e risco</h2>
         <div className="grid c3">
           <Field label="Margem de lucro desejada (%)" dica="Sobre o valor cobrado, depois de custos e tributos."><CampoNumero rotulo="Margem de lucro" valor={p.margem_pct} max={80} onChange={v => set('margem_pct', v)} /></Field>
           <Field label="Inadimplência prevista (%)" dica="Parte do faturamento que não se recebe."><CampoNumero rotulo="Inadimplência" valor={p.inadimplencia_pct} max={40} onChange={v => set('inadimplencia_pct', v)} /></Field>
@@ -101,7 +101,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-reg">
-        <h2 id="h-reg" className="section-title" style={{ margin: 0 }}>Região de atuação</h2>
+        <h2 id="h-reg" className="section-title m-0" >Região de atuação</h2>
         <div className="grid c3">
           <Field label="Praça"><select className="select" value={p.regiao} onChange={e => { const r = REGIOES.find(x => x.id === e.target.value)!; onChange({ ...p, regiao: r.id as Regiao, fator_regional: r.fator }); }}>{REGIOES.map(r => <option key={r.id} value={r.id}>{r.rotulo}</option>)}</select></Field>
           <Field label="Fator de mercado" dica="Multiplica a tabela da OAB para a sua praça (1,00 = igual à tabela). Ponto de partida: ajuste ao que seu mercado paga."><CampoNumero rotulo="Fator de mercado" valor={p.fator_regional} casas={2} min={0.3} max={2} onChange={v => set('fator_regional', v || 1)} /></Field>
@@ -109,7 +109,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-esf">
-        <h2 id="h-esf" className="section-title" style={{ margin: 0 }}>Esforço e despesas do caso</h2>
+        <h2 id="h-esf" className="section-title m-0" >Esforço e despesas do caso</h2>
         <div className="grid c3">
           <Field label="Acompanhamento por mês de duração (h)" dica="Tempo de acompanhar o processo mês a mês (andamentos, clientes, prazos)."><CampoNumero rotulo="Acompanhamento por mês" valor={p.acompanhamento_h_mes} max={20} onChange={v => set('acompanhamento_h_mes', v)} /></Field>
           <Field label="Horas por audiência" dica="Preparação, deslocamento e participação."><CampoNumero rotulo="Horas por audiência" valor={p.horas_por_audiencia} max={40} onChange={v => set('horas_por_audiencia', v)} /></Field>
@@ -118,7 +118,7 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-custas">
-        <h2 id="h-custas" className="section-title" style={{ margin: 0 }}>Custas judiciais (TJMA)</h2>
+        <h2 id="h-custas" className="section-title m-0" >Custas judiciais (TJMA)</h2>
         <div className="grid c3">
           <Field label="Percentual sobre o valor da causa (%)" dica="Lei estadual 12.193/2023: 3% nas ações cíveis de 1º grau."><CampoNumero rotulo="Percentual das custas" valor={p.custas_pct} max={10} onChange={v => set('custas_pct', v)} /></Field>
           <Field label="Custas mínimas (R$)" dica="Corrigidas todo ano pelo TJMA. Confira a tabela vigente."><CampoNumero rotulo="Custas mínimas" valor={p.custas_piso} onChange={v => set('custas_piso', v)} /></Field>
@@ -128,15 +128,15 @@ export default function HonorariosParametros({ p, onChange }: { p: ParametrosHon
       </section>
 
       <section className="card card-pad stack" aria-labelledby="h-oab">
-        <div><h2 id="h-oab" className="section-title" style={{ margin: 0 }}>Tabela de honorários mínimos da OAB-MA</h2>
+        <div><h2 id="h-oab" className="section-title m-0" >Tabela de honorários mínimos da OAB-MA</h2>
           <small className="muted">Digite os valores mínimos da tabela vigente da Seccional (documento oficial no site da OAB-MA). Onde ficar preenchido, o sistema nunca sugere abaixo do mínimo. Deixe em branco o que não constar da tabela.</small></div>
         {grupos.map(g => (
           <details key={g} className="qualificacao">
             <summary>{g} <small className="muted">· {SERVICOS.filter(s => s.grupo === g && p.tabela_oab[s.id] > 0).length}/{SERVICOS.filter(s => s.grupo === g).length} preenchidos</small></summary>
-            <ul className="lista-edicao" style={{ marginTop: 10 }}>
+            <ul className="lista-edicao mt-10" >
               {SERVICOS.filter(s => s.grupo === g).map(s => (
                 <li key={s.id}>
-                  <span className="grow" style={{ minWidth: 220 }}>{s.nome}</span>
+                  <span className="grow minw-220" >{s.nome}</span>
                   <div style={{ width: 160 }}><CampoNumero rotulo={`Mínimo da OAB para ${s.nome}`} valor={p.tabela_oab[s.id] ?? 0} placeholder="R$ 0,00" onChange={v => { const t = { ...p.tabela_oab }; if (v > 0) t[s.id] = v; else delete t[s.id]; set('tabela_oab', t); }} /></div>
                 </li>
               ))}

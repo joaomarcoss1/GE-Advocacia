@@ -48,7 +48,7 @@ export default function MinhasTarefas({ p }: { p: Ponto }) {
   return (
     <div>
       <div className="section-title"><ListChecks size={14} style={{ verticalAlign: 'middle' }} /> Minhas tarefas</div>
-      {erro && <div className="notice bad" role="alert" style={{ marginTop: 8 }}>{erro}</div>}
+      {erro && <div className="notice bad mt-8" role="alert" >{erro}</div>}
       <div className="minhas-tarefas">
         {(lista ?? []).map(t => {
           const link = linkGoogleAgenda(t);
@@ -62,11 +62,11 @@ export default function MinhasTarefas({ p }: { p: Ponto }) {
                 <span className="badge">{t.papel === 'responsavel' ? STATUS_ROTULO[t.status] : t.papel === 'revisor' ? 'Revisão' : 'Participante'}</span>
               </div>
               <strong>{t.titulo}</strong>
-              <div className="muted" style={{ fontSize: '.88rem' }}>{quando(t)}{t.local ? ` · ${t.local}` : ''}</div>
-              {(t.processo_numero || t.cliente) && <div className="muted mono" style={{ fontSize: '.82rem' }}>{[t.processo_numero, t.cliente].filter(Boolean).join(' · ')}</div>}
-              {t.descricao && <p style={{ margin: '6px 0 0', fontSize: '.92rem', whiteSpace: 'pre-wrap' }}>{t.descricao}</p>}
-              {t.delegado_por && <div className="muted" style={{ fontSize: '.8rem', marginTop: 4 }}>Delegado por {t.delegado_por}</div>}
-              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <div className="muted fs-md" >{quando(t)}{t.local ? ` · ${t.local}` : ''}</div>
+              {(t.processo_numero || t.cliente) && <div className="muted mono fs-sm" >{[t.processo_numero, t.cliente].filter(Boolean).join(' · ')}</div>}
+              {t.descricao && <p className="fs-lg pre-wrap" style={{ margin: '6px 0 0' }}>{t.descricao}</p>}
+              {t.delegado_por && <div className="muted fs-sm mt-4" >Delegado por {t.delegado_por}</div>}
+              <div className="row g-8 mt-10" >
                 {acoes.map(a => <button key={a.status} className="btn sm" disabled={ocupado === t.id} onClick={() => mover(t, a.status)}>{a.rotulo}</button>)}
                 {link && <a className="btn ghost sm" href={link} target="_blank" rel="noopener noreferrer"><CalendarPlus size={15} />Google Agenda</a>}
               </div>

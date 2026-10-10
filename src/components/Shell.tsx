@@ -70,7 +70,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
       <div className={`scrim ${aberto ? 'on' : ''}`} onClick={() => setAberto(false)} aria-hidden="true" />
 
       <aside className={`side ${aberto ? 'open' : ''}`} aria-label="Menu principal">
-        <div className="row between" style={{ flexWrap: 'nowrap' }}>
+        <div className="row between fx-nowrap" >
           <NavLink to={inicio} className="side-brand" onClick={() => setAberto(false)} aria-label="GE Advocacia — início"><Logo /></NavLink>
           <button className="icon-btn" style={{ color: '#fff', display: aberto ? 'grid' : 'none' }} onClick={() => setAberto(false)} aria-label="Fechar menu"><X size={20} /></button>
         </div>
@@ -90,7 +90,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
         <InstalarApp className="side-instalar" />
         <div className="side-foot">
           <span className="avatar">{iniciais(sessao.nome)}</span>
-          <div style={{ minWidth: 0 }}>
+          <div className="minw-0">
             <div className="who">{sessao.nome}</div>
             <div className="papel">{papelRotulo}</div>
           </div>
@@ -102,7 +102,7 @@ export default function Shell({ itens, atalhos, inicio, sessao, sair, papelRotul
       <div className="main">
         <header className="topbar-desk">
           <span className="data">{dataExtenso}</span>
-          <div className="row" style={{ gap: 10 }}>
+          <div className="row g-10" >
             {chipAlerta && <NavLink to={chipAlerta.to} className="chip alert">{chipAlerta.texto}</NavLink>}
             <span className="chip">{papelRotulo}</span>
           </div>

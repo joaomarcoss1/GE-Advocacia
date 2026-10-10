@@ -17,7 +17,7 @@ export default function Presenca() {
         <tbody>
           {linhas.map(({ f, s }) => (
             <tr key={f.id}>
-              <td className="nowrap"><div className="row" style={{ flexWrap: 'nowrap' }}><span className="avatar" style={{ width: 32, height: 32, fontSize: '.8rem' }}>{iniciais(f.nome)}</span><strong>{f.nome}</strong></div></td>
+              <td className="nowrap"><div className="row fx-nowrap" ><span className="avatar fs-sm" style={{ width: 32, height: 32 }}>{iniciais(f.nome)}</span><strong>{f.nome}</strong></div></td>
               <td className="muted">{cargo(f.cargo_id)}</td>
               <td><Badge tom={s.tom}>{s.rotulo}</Badge></td>
               <td className="mono">{s.hora ?? '—'}</td>

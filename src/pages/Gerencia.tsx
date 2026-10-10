@@ -28,7 +28,7 @@ export default function Gerencia() {
   return (
     <>
       <PageHeader titulo="Gerência" />
-      <div className="grid c3" style={{ marginBottom: 18 }}>
+      <div className="grid c3 mb-18" >
         <Kpi label="Aprovações pendentes" valor={pendentes} alerta={pendentes > 0} dica="Ajustes de ponto solicitados pela equipe" />
         <Kpi label="Faltas sem justificativa" valor={faltas.length} alerta={faltas.length > 0} dica="Últimos 14 dias" />
         <Kpi label="Responsáveis pela gerência" valor={gerentes.length} dica={gerentes.map(g => g.nome.split(' ')[0]).join(', ') || 'Cadastre cargos da categoria Gerência'} />

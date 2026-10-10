@@ -33,8 +33,8 @@ export default function Folha() {
         <button className="btn ghost" onClick={() => novoAjuste()}><Plus size={18} />Lançar ajuste</button>
       </PageHeader>
 
-      <div className="card card-pad" style={{ marginBottom: 16 }}>
-        <div className="row" style={{ alignItems: 'flex-end', gap: 14 }}>
+      <div className="card card-pad mb-16" >
+        <div className="row g-14" style={{ alignItems: 'flex-end' }}>
           <Field label="Mês de competência"><input className="input" type="month" value={f.mes} onChange={e => f.setMes(e.target.value || f.mes)} /></Field>
           {periodos.length > 1 && (
             <Field label="Período">
@@ -47,14 +47,14 @@ export default function Folha() {
           <button className="btn ghost" onClick={f.pagar} disabled={!fechadas.length}><Wallet size={18} />Marcar como paga</button>
         </div>
         {pendAnalise > 0 && (
-          <div className="demo-banner" style={{ marginTop: 14 }} role="status">
+          <div className="demo-banner mt-14" role="status">
             <strong>{pendAnalise} item(ns) aguardando análise do administrador.</strong> Os valores abaixo são provisórios (atestado em análise conta como falta; atraso em análise desconta só os minutos). <Link to="/painel/ocorrencias">Analisar em Ocorrências →</Link>
           </div>
         )}
-        {emAndamento && <div className="demo-banner" style={{ marginTop: 14 }}><strong>Prévia:</strong> o período termina em {fmtData(per.fim)}. Dias que ainda não aconteceram contam como previstos e pagos; faltas só são apuradas para dias já passados.</div>}
+        {emAndamento && <div className="demo-banner mt-14" ><strong>Prévia:</strong> o período termina em {fmtData(per.fim)}. Dias que ainda não aconteceram contam como previstos e pagos; faltas só são apuradas para dias já passados.</div>}
       </div>
 
-      <div className="grid c4" style={{ marginBottom: 16 }}>
+      <div className="grid c4 mb-16" >
         <Kpi label="Líquido total" valor={brl(totalLiquido)} dica={`${plural(linhas.length, 'funcionário', 'funcionários')}`} />
         <Kpi label="Descontos por faltas" valor={brl(totalFaltas)} dica={`${plural(nFaltas, 'falta', 'faltas')} no período`} alerta={nFaltas > 0} />
         <Kpi label="Ajustes (adic. − desc.)" valor={brl(linhas.reduce((s, l) => s + l.efetivo.adicionais - l.efetivo.descontos, 0))} />
@@ -77,7 +77,7 @@ export default function Folha() {
                 const e = l.efetivo;
                 return (
                   <tr key={l.func.id}>
-                    <td className="nome"><strong>{l.func.nome}</strong><div className="muted" style={{ fontSize: '.82rem' }}>{f.cargoDe(l.func.cargo_id)}{!l.escala && <> · <span style={{ color: 'var(--bad)' }}>sem escala</span></>}</div></td>
+                    <td className="nome"><strong>{l.func.nome}</strong><div className="muted fs-sm" >{f.cargoDe(l.func.cargo_id)}{!l.escala && <> · <span className="c-bad">sem escala</span></>}</div></td>
                     <td className="num">{brl(e.salario_mensal)}</td>
                     <td className="num">{brl(e.valor_diaria)}</td>
                     <td className="num">{e.dias_trabalhados + e.dias_abonados}/{e.dias_previstos}</td>
@@ -87,7 +87,7 @@ export default function Folha() {
                     <td className="num">{e.descontos ? brl(e.descontos) : '—'}</td>
                     <td className="num"><strong>{brl(e.valor_final)}</strong></td>
                     <td>{l.salva ? <Badge tom={STATUS[l.salva.status].tom}>{STATUS[l.salva.status].rotulo}</Badge> : <Badge tom="mute">Prévia</Badge>}{l.desatualizada && <> <Badge tom="warn">Recalcular</Badge></>}</td>
-                    <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                    <td className="right nowrap" >
                       <button className="btn ghost sm" onClick={() => setDetalhe(l.func.id)}>Detalhes</button>{' '}
                       <button className="icon-btn" title="Demonstrativo em PDF" aria-label={`Demonstrativo de ${l.func.nome}`} onClick={() => f.gerarHolerite(l).catch(er => toast.erro((er as Error).message))}><ReceiptText size={17} /></button>
                     </td>
@@ -100,7 +100,7 @@ export default function Folha() {
           {!linhas.length && <Vazio tipo="pessoas" titulo="Ninguém na folha deste período" />}
         </div>
       </div>
-      <p className="hint" style={{ marginTop: 12 }}>Os valores são de conferência gerencial: encargos legais (INSS, IRRF, FGTS, férias e 13º) não são calculados aqui. Confirme os cálculos com a contabilidade do escritório.</p>
+      <p className="hint mt-12" >Os valores são de conferência gerencial: encargos legais (INSS, IRRF, FGTS, férias e 13º) não são calculados aqui. Confirme os cálculos com a contabilidade do escritório.</p>
 
       {det && (
         <DetalheFolha det={det} ajustesLista={f.ajustesDe(det.func.id)} onFechar={() => setDetalhe(null)} onReabrir={f.reabrir}

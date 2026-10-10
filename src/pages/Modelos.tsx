@@ -84,9 +84,9 @@ export default function Modelos() {
       <div className="card">
         <Abas valor={aba} onChange={setAba} itens={[{ id: 'pecas', rotulo: `Peças e documentos (${pecas.length})` }, { id: 'listas', rotulo: `Listas de documentos (${listas.length})` }]} />
         <div className="filtros" style={{ padding: '14px 20px 0' }}>
-          <div className="search-field grow" style={{ minWidth: 220 }}><Search size={18} className="lead" /><input aria-label="Buscar modelo" placeholder={aba === 'pecas' ? 'Buscar peça ou documento' : 'Buscar lista ou tipo de processo'} value={busca} onChange={e => setBusca(e.target.value)} /></div>
-          {aba === 'pecas' && <select className="select" style={{ maxWidth: 260 }} aria-label="Tipo de documento" value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Todos os tipos</option>{CATEGORIAS_MODELO.map(c => <option key={c.id} value={c.id}>{c.rotulo}</option>)}</select>}
-          <select className="select" style={{ maxWidth: 200 }} aria-label="Área" value={area} onChange={e => setArea(e.target.value)}><option value="">Todas as áreas</option>{AREAS.map(a => <option key={a.id} value={a.id}>{a.rotulo}</option>)}</select>
+          <div className="search-field grow minw-220" ><Search size={18} className="lead" /><input aria-label="Buscar modelo" placeholder={aba === 'pecas' ? 'Buscar peça ou documento' : 'Buscar lista ou tipo de processo'} value={busca} onChange={e => setBusca(e.target.value)} /></div>
+          {aba === 'pecas' && <select className="select maxw-260" aria-label="Tipo de documento" value={categoria} onChange={e => setCategoria(e.target.value)}><option value="">Todos os tipos</option>{CATEGORIAS_MODELO.map(c => <option key={c.id} value={c.id}>{c.rotulo}</option>)}</select>}
+          <select className="select maxw-200" aria-label="Área" value={area} onChange={e => setArea(e.target.value)}><option value="">Todas as áreas</option>{AREAS.map(a => <option key={a.id} value={a.id}>{a.rotulo}</option>)}</select>
         </div>
 
         {aba === 'pecas' && (
@@ -96,10 +96,10 @@ export default function Modelos() {
               <tbody>
                 {visiveis.map(m => (
                   <tr key={m.id}>
-                    <td><strong>{m.titulo}</strong>{m.descricao && <div className="muted" style={{ fontSize: '.84rem' }}>{m.descricao}</div>}</td>
+                    <td><strong>{m.titulo}</strong>{m.descricao && <div className="muted fs-sm" >{m.descricao}</div>}</td>
                     <td>{rotuloCategoriaModelo(m.categoria)}</td>
                     <td>{rotuloArea(m.area)}</td>
-                    <td className="right" style={{ whiteSpace: 'nowrap' }}>
+                    <td className="right nowrap" >
                       <button className="btn sm ghost" onClick={() => setUsando(m)} aria-label={`Usar modelo ${m.titulo}`}><FileText size={15} />Usar modelo</button>
                       {gestao && <><button className="icon-btn" aria-label={`Editar ${m.titulo}`} onClick={() => setEditando(m)}><Pencil size={16} /></button><button className="icon-btn" aria-label={`Excluir ${m.titulo}`} onClick={() => excluirPeca(m)}><Trash2 size={16} /></button></>}
                     </td>
@@ -119,18 +119,18 @@ export default function Modelos() {
               <tbody>
                 {listasVisiveis.map(l => (
                   <tr key={l.id}>
-                    <td><strong>{l.nome}</strong>{l.descricao && <div className="muted" style={{ fontSize: '.84rem' }}>{l.descricao}</div>}</td>
+                    <td><strong>{l.nome}</strong>{l.descricao && <div className="muted fs-sm" >{l.descricao}</div>}</td>
                     <td>{l.tipo ?? <span className="muted">—</span>}</td>
                     <td>{rotuloArea(l.area)}</td>
                     <td><Badge tom="mute">{l.itens.length}</Badge></td>
-                    {gestao && <td className="right" style={{ whiteSpace: 'nowrap' }}><button className="icon-btn" aria-label={`Editar ${l.nome}`} onClick={() => setEditLista(l)}><Pencil size={16} /></button><button className="icon-btn" aria-label={`Excluir ${l.nome}`} onClick={() => excluirLista(l)}><Trash2 size={16} /></button></td>}
+                    {gestao && <td className="right nowrap" ><button className="icon-btn" aria-label={`Editar ${l.nome}`} onClick={() => setEditLista(l)}><Pencil size={16} /></button><button className="icon-btn" aria-label={`Excluir ${l.nome}`} onClick={() => excluirLista(l)}><Trash2 size={16} /></button></td>}
                   </tr>
                 ))}
               </tbody>
             </table>
             {carregado && listas.length === 0 && <Vazio tipo="documento" titulo="Nenhuma lista de documentos" />}
             {listas.length > 0 && listasVisiveis.length === 0 && <Vazio tipo="busca" titulo="Nenhuma lista encontrada" />}
-            <p className="muted" style={{ padding: '4px 20px 16px', margin: 0 }}>Para usar uma lista: abra o cliente ou o processo, em Documentos, e escolha o modelo. Para salvar a lista de um processo como modelo, use "Salvar como modelo" no próprio dossiê.</p>
+            <p className="muted m-0" style={{ padding: '4px 20px 16px' }}>Para usar uma lista: abra o cliente ou o processo, em Documentos, e escolha o modelo. Para salvar a lista de um processo como modelo, use "Salvar como modelo" no próprio dossiê.</p>
           </div>
         )}
       </div>

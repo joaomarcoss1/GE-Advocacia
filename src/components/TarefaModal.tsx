@@ -106,7 +106,7 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
         <div className="grid c3">
           <Field label="Número do processo" dica={!processoOk ? undefined : proc ? 'Vem do cadastro do processo' : 'Formato CNJ'}>
             <input className="input" inputMode="numeric" value={proc ? proc.numero : f.processo} disabled={!!proc} onChange={e => set('processo', mascararCnj(e.target.value))} placeholder="0000000-00.0000.0.00.0000" aria-invalid={!processoOk} />
-            {!processoOk && <span className="hint" style={{ color: 'var(--bad)' }}>Número ou dígito verificador inválido.</span>}
+            {!processoOk && <span className="hint c-bad" >Número ou dígito verificador inválido.</span>}
           </Field>
           <Field label="Cliente"><input className="input" value={proc?.cliente_id ? clientes.find(c => c.id === proc.cliente_id)?.nome ?? f.cliente : f.cliente} disabled={!!proc?.cliente_id} maxLength={200} onChange={e => set('cliente', e.target.value)} /></Field>
           <Field label="Área">
@@ -119,7 +119,7 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
 
         <fieldset className="grupo-campos">
           <legend>{comAgenda ? 'Data e hora' : 'Prazo (opcional)'}</legend>
-          <div className="row" style={{ gap: 18 }}>
+          <div className="row g-18" >
             <label className="check"><input type="checkbox" checked={f.diaInteiro} onChange={e => set('diaInteiro', e.target.checked)} />Dia inteiro</label>
             {f.tipo === 'prazo' && <label className="check"><input type="checkbox" checked={f.prazoFatal} onChange={e => set('prazoFatal', e.target.checked)} />Prazo fatal</label>}
           </div>

@@ -49,7 +49,7 @@ export default function Feriados() {
       </PageHeader>
 
       {admin && faltamPadrao.length > 0 && (
-        <div className="card card-pad row between" style={{ marginBottom: 14, background: 'var(--gold-tint)' }}>
+        <div className="card card-pad row between mb-14" style={{ background: 'var(--gold-tint)' }}>
           <div><strong>{plural(faltamPadrao.length, 'feriado', 'feriados')} de {ano} ainda não cadastrados</strong><div className="muted">Nacionais e pontos facultativos (Carnaval, Corpus Christi).</div></div>
           <button className="btn" onClick={importar}><CalendarPlus size={18} />Importar feriados de {ano}</button>
         </div>
@@ -62,14 +62,14 @@ export default function Feriados() {
               <tr key={f.id}>
                 <td className="mono">{fmtData(f.data)}</td><td>{DIA_LABEL[diaSemana(f.data)]}</td><td><strong>{f.nome}</strong></td>
                 <td><Badge tom={f.tipo === 'nacional' ? '' : f.tipo === 'municipal' ? 'gold' : 'mute'}>{FERIADO_LABEL[f.tipo]}</Badge></td>
-                <td className="right" style={{ whiteSpace: 'nowrap' }}>{admin && <><button className="icon-btn" aria-label={`Editar ${f.nome}`} onClick={() => setEd(f)}><Pencil size={17} /></button><button className="icon-btn" aria-label={`Remover ${f.nome}`} onClick={() => excluir(f)}><Trash2 size={17} /></button></>}</td>
+                <td className="right nowrap" >{admin && <><button className="icon-btn" aria-label={`Editar ${f.nome}`} onClick={() => setEd(f)}><Pencil size={17} /></button><button className="icon-btn" aria-label={`Remover ${f.nome}`} onClick={() => excluir(f)}><Trash2 size={17} /></button></>}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {!doAno.length && <Vazio tipo="calendario" titulo={`Nenhum feriado em ${ano}`} />}
       </div>
-      <p className="hint" style={{ marginTop: 12 }}>Pontos facultativos (Carnaval, Corpus Christi) só valem se o escritório fechar: remova os que não forem adotados. {AVISO_FERIADOS_LOCAIS}</p>
+      <p className="hint mt-12" >Pontos facultativos (Carnaval, Corpus Christi) só valem se o escritório fechar: remova os que não forem adotados. {AVISO_FERIADOS_LOCAIS}</p>
 
       {ed && (
         <Modal titulo={ed.id ? "Editar feriado / recesso" : "Novo feriado / recesso"} onClose={() => setEd(null)} rodape={<><button className="btn ghost" onClick={() => setEd(null)}>Cancelar</button><button className="btn" onClick={salvar}>Salvar</button></>}>

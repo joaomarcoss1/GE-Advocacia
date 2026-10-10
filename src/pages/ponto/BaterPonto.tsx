@@ -37,7 +37,7 @@ export default function BaterPonto() {
       <div className="auth">
         <Stage />
         <main className="auth-side">
-          <div className="auth-card stack passo" style={{ gap: 16 }}>
+          <div className="auth-card stack passo g-16" >
             <h1>{p.falhaEsc === 'ESCRITORIO_SUSPENSO' ? 'Acesso suspenso' : 'Escritório não encontrado'}</h1>
             <p className="page-sub">{p.falhaEsc === 'ESCRITORIO_SUSPENSO'
               ? 'O acesso deste escritório está suspenso. Fale com o administrador.'
@@ -52,8 +52,8 @@ export default function BaterPonto() {
 
   return (
     <div className={`auth ${p.quiosque ? 'quiosque' : ''}`}>
-      <button type="button" className="icon-btn q-toggle no-print" style={{ color: 'var(--muted)' }} onClick={p.alternarQuiosque} aria-pressed={p.quiosque}
-        aria-label={p.quiosque ? 'Sair do modo quiosque' : 'Ativar modo quiosque (tela cheia para tablet)'} title={p.quiosque ? 'Sair do modo quiosque' : 'Modo quiosque'}>{p.quiosque ? <Minimize2 /> : <Maximize2 />}</button>
+      <button type="button" className="icon-btn q-toggle no-print c-muted" onClick={p.alternarQuiosque} aria-pressed={p.quiosque}
+ aria-label={p.quiosque ? 'Sair do modo quiosque' : 'Ativar modo quiosque (tela cheia para tablet)'} title={p.quiosque ? 'Sair do modo quiosque' : 'Modo quiosque'}>{p.quiosque ? <Minimize2 /> : <Maximize2 />}</button>
       <Stage escritorio={p.ctx.escritorio_nome}>
         <div aria-label={`Hora atual ${p.agora.hhmm}`}>
           <div className="hora"><span key={hh} className="tick">{hh}</span><span className="sep">:</span><span key={mm} className="tick">{mm}</span></div>
@@ -73,7 +73,7 @@ export default function BaterPonto() {
             {p.etapa === 'painel' && <PainelPonto p={p} />}
           </div>
         </div>
-        <div className="row" style={{ gap: 4, justifyContent: 'center' }}>
+        <div className="row g-4" style={{ justifyContent: 'center' }}>
           <Link to="/entrar" className="auth-link">Acesso administrativo <ArrowRight size={15} /></Link>
           <Link to={`/privacidade/${slug}`} className="auth-link"><LockKeyhole size={14} />Privacidade</Link>
           <InstalarApp />

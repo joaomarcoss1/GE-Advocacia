@@ -33,6 +33,15 @@ Regra: ouro é acento, nunca fundo grande. Sem amarelo vivo e sem degradê metá
 ## Tipografia
 Escala única em rem, tokens `--fs-*`: 2xs 11 px · xs 12 · sm 13 · md 14 · lg 15 · base 16 · xl 18 · 2xl 20 · 3xl 24. O menor texto do sistema é 11 px (antes havia 57 tamanhos, de 8,8 a 25 px). Títulos grandes e números de destaque seguem com `clamp()` próprio.
 
+## Raios de borda
+Escala única: `--r-1` 4 px (marcas e barras) · `--r-2` 8 px (botões e campos, `--radius-sm`) · `--r-3` 12 px (cartões, `--radius`) · `--r-4` 16 px · `--r-5` 20 px (janelas e folhas) · `--r-pill` (selos). Círculos usam `50%`. Antes havia 27 valores diferentes; não escreva raio em px direto na folha de estilos nem em `style={{}}`.
+
+## Estilos soltos nos componentes
+Espaços, tamanhos de fonte, cores de texto e alinhamentos comuns viram classes utilitárias no fim de `src/styles.css`: `m-0`, `mt-*`/`mb-*`, `g-*`, `fs-*` (tokens), `fw-600`, `c-muted`/`c-bad`/…, `nowrap`, `minw-*`/`maxw-*`. O que sobrou em `style={{}}` (cerca de cem usos, antes 338) é valor calculado na hora (largura de barra, posição) ou medida única de um componente.
+
+## Folha de estilos
+Regras repetidas do mesmo seletor foram fundidas (46 fusões, sem mudar nenhum pixel nas 88 capturas de referência). Sobram poucas camadas que se sobrepõem de propósito (por exemplo `.modal`, `.nav a.on::before`, que têm versão para o celular). Ao mexer, edite a regra existente em vez de acrescentar outra no fim.
+
 ## Movimento
 Entrada de tela em fade de 200 ms; cartões entram juntos; `prefers-reduced-motion` desliga tudo. Durações: `--dur-1` 120 ms, `--dur-2` 200 ms, `--dur-3` 320 ms.
 

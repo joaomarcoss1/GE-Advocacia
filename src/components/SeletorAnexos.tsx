@@ -26,12 +26,12 @@ export default function SeletorAnexos({ arquivos, onChange, rotulo = 'Anexar ate
 
   return (
     <div className="anexos">
-      <div className="row between" style={{ flexWrap: 'nowrap', gap: 10 }}>
+      <div className="row between fx-nowrap g-10" >
         <span className="anexos-rot"><Paperclip size={15} /> {rotulo}</span>
         <button type="button" className="btn ghost sm" disabled={desabilitado || lendo || arquivos.length >= MAX_ARQUIVOS} onClick={() => ref.current?.click()}>{lendo ? 'Preparando…' : 'Escolher arquivo'}</button>
       </div>
       <input ref={ref} type="file" accept={ACEITA} multiple hidden onChange={e => escolher(e.target.files)} aria-label={rotulo} data-testid="anexo-input" />
-      {dica && <p className="hint" style={{ margin: 0 }}>{dica}</p>}
+      {dica && <p className="hint m-0" >{dica}</p>}
       {arquivos.length > 0 && (
         <ul className="anexos-lista">
           {arquivos.map((a, i) => (
@@ -43,7 +43,7 @@ export default function SeletorAnexos({ arquivos, onChange, rotulo = 'Anexar ate
           ))}
         </ul>
       )}
-      {erro && <p className="hint" style={{ color: 'var(--bad)', margin: 0 }} role="alert">{erro}</p>}
+      {erro && <p className="hint c-bad m-0" role="alert">{erro}</p>}
     </div>
   );
 }

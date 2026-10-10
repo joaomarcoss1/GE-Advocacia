@@ -31,20 +31,20 @@ export default function Login() {
     <div className="auth">
       <Stage />
       <main className="auth-side">
-        <form className="auth-card stack passo" style={{ gap: 18 }} onSubmit={enviar}>
+        <form className="auth-card stack passo g-18" onSubmit={enviar}>
           <div>
             <h1>Entrar</h1>
           </div>
           <div className="field">
             <label htmlFor="email">E-mail</label>
-            <div style={{ position: 'relative' }}>
+            <div className="pos-rel">
               <Mail size={17} style={{ position: 'absolute', left: 14, top: 14, color: 'var(--faint)' }} />
               <input id="email" className="input" style={{ paddingLeft: 42 }} type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} />
             </div>
           </div>
           <div className="field">
             <label htmlFor="senha">Senha</label>
-            <div style={{ position: 'relative' }}>
+            <div className="pos-rel">
               <Lock size={17} style={{ position: 'absolute', left: 14, top: 14, color: 'var(--faint)' }} />
               <input id="senha" className="input" style={{ paddingLeft: 42, paddingRight: 46 }} type={ver ? 'text' : 'password'} autoComplete="current-password" required value={senha} onChange={e => setSenha(e.target.value)} />
               <button type="button" className="icon-btn" style={{ position: 'absolute', right: 4, top: 4 }} aria-label={ver ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setVer(v => !v)}>{ver ? <EyeOff size={18} /> : <Eye size={18} />}</button>
@@ -55,10 +55,10 @@ export default function Login() {
           {modo === 'local' && (
             <div className="demo-banner" data-testid="demo-contas">
               <strong>Demonstração</strong>
-              <div className="stack" style={{ gap: 6, marginTop: 8 }}>
+              <div className="stack g-6 mt-8" >
                 <button type="button" className="btn ghost sm" onClick={() => { setEmail(DEMO_PLATAFORMA.email); setSenha(DEMO_PLATAFORMA.senha); }}>Plataforma · {DEMO_PLATAFORMA.email}</button>
                 {DEMO_ESCRITORIOS.map(e => (
-                  <div key={e.slug} className="row" style={{ gap: 6 }}>
+                  <div key={e.slug} className="row g-6" >
                     <button type="button" className="btn ghost sm grow" onClick={() => { setEmail(e.admin.email); setSenha(e.admin.senha); }}>{e.nome} · administrador</button>
                     <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.gerente.email); setSenha(e.gerente.senha); }}>gerência</button>
                     <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.coordenador.email); setSenha(e.coordenador.senha); }}>coordenação</button>

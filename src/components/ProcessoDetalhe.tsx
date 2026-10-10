@@ -113,7 +113,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
       <Modal titulo={processo.titulo || processo.numero} onClose={onClose} largo
         rodape={gestao ? <><button className="btn ghost" onClick={excluir}><Trash2 size={16} />Excluir</button><button className="btn" onClick={() => setEditar(true)}><Pencil size={16} />Editar</button></> : <button className="btn" onClick={() => setEditar(true)}><Pencil size={16} />Editar</button>}>
         <div className="stack">
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row g-8" >
             <span className="mono">{processo.numero}</span>
             {processo.tribunal && <span title={tribunalPorAlias(processo.tribunal)?.nome}><Badge tom="gold">{processo.tribunal.toUpperCase()}</Badge></span>}
             {processo.situacao !== 'ativo' && <Badge tom="mute">{processo.situacao}</Badge>}
@@ -134,7 +134,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
 
           {aba === 'andamentos' && (
             <div className="stack">
-              <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              <div className="row g-8 fx-wrap" >
                 <button className="btn sm" onClick={consultar} disabled={ocupado}><RefreshCw size={16} />{ocupado ? 'Consultando…' : 'Atualizar andamentos'}</button>
                 <button className="btn ghost sm" onClick={() => setRegistro({ categoria: 'intimacao', nome: '', complemento: '', data: agoraBR().data })}>Registrar andamento</button>
                 {naoLidos > 0 && <button className="btn ghost sm" onClick={lerTudo}><CheckCheck size={16} />Marcar tudo como lido</button>}
@@ -148,14 +148,14 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
                     <Field label="O que aconteceu"><input className="input" value={registro.nome} maxLength={300} autoFocus onChange={e => setRegistro({ ...registro, nome: e.target.value })} placeholder="Ex.: Intimação para manifestação" /></Field>
                   </div>
                   <Field label="Detalhes (opcional)"><input className="input" value={registro.complemento} maxLength={2000} onChange={e => setRegistro({ ...registro, complemento: e.target.value })} /></Field>
-                  <div className="row" style={{ justifyContent: 'flex-end', gap: 8 }}><button className="btn ghost sm" onClick={() => setRegistro(null)}>Cancelar</button><button className="btn sm" onClick={registrar} disabled={ocupado}>Registrar</button></div>
+                  <div className="row g-8" style={{ justifyContent: 'flex-end' }}><button className="btn ghost sm" onClick={() => setRegistro(null)}>Cancelar</button><button className="btn sm" onClick={registrar} disabled={ocupado}>Registrar</button></div>
                 </div>
               )}
               <ol className="linha-tempo">
                 {movs.length === 0 && <li className="muted">Nenhum andamento ainda. Use “Atualizar andamentos”.</li>}
                 {movs.map(m => (
                   <li key={m.id} className={`${m.lido ? '' : 'novo'}`}>
-                    <div className="row" style={{ gap: 8 }}>
+                    <div className="row g-8" >
                       <Badge tom={TOM[m.categoria] ?? 'mute'}>{CATEGORIA_ROTULO[m.categoria]}</Badge>
                       <strong>{m.nome}</strong>
                       {!m.lido && <BellRing size={14} aria-label="Novo" className="novo-ic" />}
@@ -163,7 +163,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
                     {m.complemento && <div className="muted">{m.complemento}</div>}
                     <small className="muted">{dataHora(m.data_hora)} · {ORIGEM[m.origem]}{m.criado_por_nome ? ` por ${m.criado_por_nome}` : ''}</small>
                     {m.exige_acao && Date.now() - Date.parse(m.data_hora) <= 60 * 86_400_000 && (
-                      <div className="row" style={{ gap: 8, marginTop: 6 }}>
+                      <div className="row g-8 mt-6" >
                         {m.tarefa_id ? <Badge tom="ok">Tarefa criada</Badge> : (
                           <button className="btn ghost sm" onClick={() => setTarefaPadrao({ tipo: 'tarefa', titulo: `Analisar ${CATEGORIA_ROTULO[m.categoria].toLowerCase()} — ${processo.titulo || processo.numero}`, descricao: `${m.nome}${m.complemento ? ` — ${m.complemento}` : ''}`, processoId: processo.id, responsavel: processo.responsavel_id ?? '' })}>Criar tarefa</button>
                         )}
@@ -203,7 +203,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
               {processo.data_ajuizamento && <div><dt>Ajuizamento</dt><dd>{fmtData(processo.data_ajuizamento)}</dd></div>}
               {processo.valor_causa != null && <div><dt>Valor da causa</dt><dd>{processo.valor_causa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</dd></div>}
               <div><dt>Fase</dt><dd>{processo.fase}</dd></div>
-              {processo.observacoes && <div style={{ gridColumn: '1 / -1' }}><dt>Observações</dt><dd style={{ whiteSpace: 'pre-wrap' }}>{processo.observacoes}</dd></div>}
+              {processo.observacoes && <div style={{ gridColumn: '1 / -1' }}><dt>Observações</dt><dd className="pre-wrap">{processo.observacoes}</dd></div>}
             </dl>
           )}
         </div>

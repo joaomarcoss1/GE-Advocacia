@@ -18,9 +18,9 @@ export default function PainelPonto({ p }: { p: Ponto }) {
   return (
     <div className="stack">
       <div className="row between">
-        <div className="row" style={{ flexWrap: 'nowrap' }}>
+        <div className="row fx-nowrap" >
           <span className="avatar">{iniciais(pessoa.nome)}</span>
-          <div><strong style={{ fontWeight: 600, fontSize: '1.06rem' }}>{pessoa.nome}</strong><br /><span className="muted" style={{ fontSize: '.88rem' }}>{escala ? escala.nome : 'Sem escala definida'}</span></div>
+          <div><strong className="fw-600 fs-base">{pessoa.nome}</strong><br /><span className="muted fs-md" >{escala ? escala.nome : 'Sem escala definida'}</span></div>
         </div>
         <button className="btn ghost sm" onClick={p.voltar}>Sair</button>
       </div>
@@ -31,8 +31,8 @@ export default function PainelPonto({ p }: { p: Ponto }) {
           <div>
             <strong>{TIPO_MARCACAO_LABEL[sucesso.tipo]} registrada às {sucesso.hora}</strong>
             <div>{STATUS_TXT[sucesso.status]}{sucesso.dif !== 0 && sucesso.status !== 'extra' ? ` (${sucesso.dif > 0 ? '+' : '−'}${minParaHoras(sucesso.dif)})` : ''}</div>
-            {sucesso.analise === 'pendente' && <div style={{ marginTop: 6, fontSize: '.9rem' }}>Enviado para análise do administrador (aba Ocorrências).</div>}
-            {sucesso.aviso && <div style={{ marginTop: 6, fontSize: '.9rem', color: 'var(--bad)' }}>{sucesso.aviso}</div>}
+            {sucesso.analise === 'pendente' && <div className="mt-6 fs-md">Enviado para análise do administrador (aba Ocorrências).</div>}
+            {sucesso.aviso && <div className="mt-6 fs-md c-bad">{sucesso.aviso}</div>}
             {p.volta !== null && (
               <span className="volta">Voltando à tela inicial em {p.volta}s · <button type="button" className="link-btn" onClick={() => p.setVolta(null)}>continuar aqui</button></span>
             )}
@@ -49,7 +49,7 @@ export default function PainelPonto({ p }: { p: Ponto }) {
       {!ocupado && (
         <>
           {!p.turnoHoje && <div className="notice gold">Hoje não é dia de expediente na sua escala. As marcações serão registradas como extras.</div>}
-          <div className="stack" style={{ gap: 10 }}>
+          <div className="stack g-10" >
             {p.sequencia.map(t => {
               const Ic = ICONE[t];
               const feita = p.hojeRegs.find(r => r.tipo === t);
@@ -78,7 +78,7 @@ export default function PainelPonto({ p }: { p: Ponto }) {
 
       <div>
         <div className="section-title"><History size={14} style={{ verticalAlign: 'middle' }} /> Últimos registros</div>
-        <div className="timeline" style={{ marginTop: 8 }}>
+        <div className="timeline mt-8" >
           {p.hist.slice(0, 8).map(r => (
             <div className="tl-item" key={r.id}>
               <span className={`dot ${r.status_aprovacao === 'rejeitado' ? 'off' : ''}`} />
@@ -97,7 +97,7 @@ export default function PainelPonto({ p }: { p: Ponto }) {
       {p.justs.length > 0 && (
         <div>
           <div className="section-title"><FilePlus2 size={14} style={{ verticalAlign: 'middle' }} /> Atestados e justificativas enviados</div>
-          <div className="timeline" style={{ marginTop: 8 }}>
+          <div className="timeline mt-8" >
             {p.justs.slice(0, 5).map(j => (
               <div className="tl-item" key={j.id}>
                 <span className={`dot ${j.status_analise === 'recusada' ? 'off' : ''}`} />

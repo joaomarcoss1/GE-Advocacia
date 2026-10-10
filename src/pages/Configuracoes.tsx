@@ -56,7 +56,7 @@ export default function Configuracoes() {
           {aba === 'privacidade' && <AbaPrivacidade c={c} setC={setC} />}
           {aba === 'auditoria' && <AbaAuditoria />}
           {aba === 'dados' && <AbaDados />}
-          {COM_SALVAR.has(aba) && <div className="row" style={{ justifyContent: 'flex-end', marginTop: 8 }}><button className="btn" onClick={salvar}>Salvar alterações</button></div>}
+          {COM_SALVAR.has(aba) && <div className="row mt-8" style={{ justifyContent: 'flex-end' }}><button className="btn" onClick={salvar}>Salvar alterações</button></div>}
         </div>
       </div>
     </>

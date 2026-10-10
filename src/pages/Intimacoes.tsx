@@ -66,14 +66,14 @@ export default function Intimacoes() {
       <PageHeader titulo="Intimações">
         <button className="btn gold" onClick={buscarAgora} disabled={buscando}><RefreshCw size={17} className={buscando ? 'gira' : ''} />{buscando ? 'Buscando…' : 'Buscar no DJEN'}</button>
       </PageHeader>
-      <div className="grid c4" style={{ marginBottom: 18 }}>
+      <div className="grid c4 mb-18" >
         <Kpi label="Novas" valor={novas} icone={<Inbox />} />
         <Kpi label="Prazo em até 5 dias" valor={urgentes} alerta={urgentes > 0} />
         <Kpi label="Sem processo cadastrado" valor={semProcesso} />
         <Kpi label="Advogados monitorados" valor={oabsCadastradas} dica={sync ? `Última busca: ${fmtData(sync.executada_em.slice(0, 10))}` : 'Ainda não buscou'} />
       </div>
-      {oabsCadastradas === 0 && <div className="cartao-integracao" style={{ marginBottom: 14 }}><strong>Cadastre a OAB dos advogados.</strong> Em Funcionários, preencha o campo OAB com número e UF (ex.: OAB/MA 12345). O sistema busca no Diário de Justiça Eletrônico Nacional tudo o que for publicado para esses números.</div>}
-      {sync && sync.erros > 0 && <div className="cartao-integracao" style={{ marginBottom: 14 }}><strong>A última busca teve problema:</strong> {sync.mensagem}</div>}
+      {oabsCadastradas === 0 && <div className="cartao-integracao mb-14" ><strong>Cadastre a OAB dos advogados.</strong> Em Funcionários, preencha o campo OAB com número e UF (ex.: OAB/MA 12345). O sistema busca no Diário de Justiça Eletrônico Nacional tudo o que for publicado para esses números.</div>}
+      {sync && sync.erros > 0 && <div className="cartao-integracao mb-14" ><strong>A última busca teve problema:</strong> {sync.mensagem}</div>}
 
       <div className="card">
         <div className="filtros" style={{ padding: '14px 20px 0' }}>
@@ -82,7 +82,7 @@ export default function Intimacoes() {
               <button key={id} role="tab" aria-selected={filtro === id} className={filtro === id ? 'on' : ''} onClick={() => setFiltro(id)}>{r}</button>
             ))}
           </div>
-          <div className="search-field grow" style={{ minWidth: 200 }}><Search size={18} className="lead" /><input aria-label="Buscar intimação" placeholder="Processo, órgão ou texto" value={busca} onChange={e => setBusca(e.target.value)} /></div>
+          <div className="search-field grow minw-200" ><Search size={18} className="lead" /><input aria-label="Buscar intimação" placeholder="Processo, órgão ou texto" value={busca} onChange={e => setBusca(e.target.value)} /></div>
           {tribunais.length > 1 && <select className="select" style={{ minWidth: 190, maxWidth: 240 }} aria-label="Tribunal" value={tribunal} onChange={e => setTribunal(e.target.value)}><option value="">Todos os tribunais</option>{tribunais.map(t => <option key={t} value={t}>{t}</option>)}</select>}
         </div>
         <div className="table-wrap">
@@ -93,11 +93,11 @@ export default function Intimacoes() {
                 const d = i.prazo_fim ? dias(hoje, i.prazo_fim) : null;
                 return (
                   <tr key={i.id} className="clicavel" onClick={() => setAberta(i.id)}>
-                    <td className="mono" style={{ whiteSpace: 'nowrap' }}>{fmtData(i.data_disponibilizacao)}<div className="muted" style={{ fontSize: '.78rem' }}>{i.tribunal}</div></td>
+                    <td className="mono nowrap" >{fmtData(i.data_disponibilizacao)}<div className="muted fs-xs" >{i.tribunal}</div></td>
                     <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberta(i.id); }}><strong className="mono">{i.numero_processo ?? '—'}</strong></button>
-                      <div className="muted" style={{ fontSize: '.84rem' }}>{processos.find(p => p.id === i.processo_id)?.titulo ?? (i.processo_id ? '' : 'Processo não cadastrado')}</div></td>
+                      <div className="muted fs-sm" >{processos.find(p => p.id === i.processo_id)?.titulo ?? (i.processo_id ? '' : 'Processo não cadastrado')}</div></td>
                     <td><strong>{i.tipo_comunicacao}</strong>{i.tipo_documento ? ` · ${i.tipo_documento}` : ''}<div className="muted resumo-intimacao">{i.texto.slice(0, 160)}</div></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{i.prazo_fim ? <><span>{fmtData(i.prazo_fim)}</span><div><Badge tom={d! < 0 ? 'bad' : d! <= 5 ? 'warn' : 'mute'}>{d! < 0 ? `venceu há ${-d!} d` : d === 0 ? 'vence hoje' : `em ${d} d`}</Badge></div></> : <span className="muted">{i.exige_providencia ? 'definir' : '—'}</span>}</td>
+                    <td className="nowrap">{i.prazo_fim ? <><span>{fmtData(i.prazo_fim)}</span><div><Badge tom={d! < 0 ? 'bad' : d! <= 5 ? 'warn' : 'mute'}>{d! < 0 ? `venceu há ${-d!} d` : d === 0 ? 'vence hoje' : `em ${d} d`}</Badge></div></> : <span className="muted">{i.exige_providencia ? 'definir' : '—'}</span>}</td>
                     <td><Badge tom={STATUS[i.status].tom}>{STATUS[i.status].rotulo}</Badge></td>
                   </tr>
                 );
@@ -157,13 +157,13 @@ function Detalhe({ i, onClose, aoMudar }: { i: Intimacao; onClose(): void; aoMud
         {(i.status === 'nova' || i.status === 'lida') && <button className="btn gold" disabled={ocupado || !calc} onClick={criarTarefa}>Lançar prazo em Tarefas</button>}
       </>}>
         <div className="stack">
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <div className="row g-8 fx-wrap" >
             <Badge tom={STATUS[i.status].tom}>{STATUS[i.status].rotulo}</Badge><Badge tom="mute">{i.tribunal}</Badge><Badge tom="gold">{i.tipo_comunicacao}</Badge>
             {i.cancelada && <Badge tom="bad">Cancelada pelo tribunal</Badge>}{i.tarefa_id && <Badge tom="ok">Tarefa criada</Badge>}
           </div>
           <div className="grid c2">
             <div><small className="muted">Processo</small><div><strong className="mono">{i.numero_processo ?? '—'}</strong></div>
-              {proc ? <small className="muted">{proc.titulo ?? ''}{cliente ? ` · ${cliente}` : ''}</small> : i.numero_processo ? <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={() => setCadastrar(true)}>Cadastrar este processo</button> : null}</div>
+              {proc ? <small className="muted">{proc.titulo ?? ''}{cliente ? ` · ${cliente}` : ''}</small> : i.numero_processo ? <button className="btn ghost sm mt-6" onClick={() => setCadastrar(true)}>Cadastrar este processo</button> : null}</div>
             <div><small className="muted">Órgão · classe</small><div>{i.orgao ?? '—'}</div><small className="muted">{i.classe ?? ''}{i.tipo_documento ? ` · ${i.tipo_documento}` : ''}</small></div>
             <div><small className="muted">Disponibilizada em</small><div>{fmtData(i.data_disponibilizacao)}{i.meio ? ` · ${i.meio === 'D' ? 'Diário eletrônico' : i.meio}` : ''}</div></div>
             <div><small className="muted">Advogados intimados</small><div>{i.advogados.length ? i.advogados.map(a => `${a.nome}${a.oab ? ` (OAB/${a.uf ?? ''} ${a.oab})` : ''}`).join('; ') : '—'}</div></div>
@@ -173,7 +173,7 @@ function Detalhe({ i, onClose, aoMudar }: { i: Intimacao; onClose(): void; aoMud
           {i.link && <a className="btn ghost sm" style={{ alignSelf: 'flex-start' }} href={i.link} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} />Abrir no sistema do tribunal</a>}
           {(i.status === 'nova' || i.status === 'lida') && (
             <div className="card card-pad stack" aria-label="Prazo">
-              <div className="section-title" style={{ margin: 0 }}>Prazo</div>
+              <div className="section-title m-0" >Prazo</div>
               <div className="grid c3">
                 <Field label="Dias"><input className="input" type="number" min={1} max={365} value={prazoDias} onChange={e => setPrazoDias(Math.max(0, Math.min(365, Number(e.target.value) || 0)))} /></Field>
                 <Field label="Contagem"><select className="select" value={regime} onChange={e => setRegime(e.target.value as RegimePrazo)}><option value="uteis">Dias úteis (CPC, art. 219)</option><option value="corridos">Dias corridos</option></select></Field>

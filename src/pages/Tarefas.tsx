@@ -72,16 +72,16 @@ export default function Tarefas() {
         <button className="btn gold" onClick={() => setEdicao('nova')}><Plus size={18} />Delegar</button>
       </PageHeader>
 
-      <div className="grid c4" style={{ marginBottom: 18 }}>
+      <div className="grid c4 mb-18" >
         <Kpi label="Abertas" valor={k.abertas} icone={<ListChecks />} />
         <Kpi label="Atrasadas" valor={k.atrasadas} alerta={k.atrasadas > 0} icone={<AlertTriangle />} />
         <Kpi label="Hoje" valor={k.hoje} icone={<Clock3 />} />
         <Kpi label="Próximos 7 dias" valor={k.semana} icone={<CalendarCheck />} />
       </div>
 
-      <div className="card" style={{ marginBottom: 18 }}>
+      <div className="card mb-18" >
         <div className="filtros">
-          <div className="search-field grow" style={{ minWidth: 220 }}>
+          <div className="search-field grow minw-220" >
             <Search size={18} className="lead" />
             <input aria-label="Buscar tarefas" placeholder="Título, processo ou cliente" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
@@ -123,7 +123,7 @@ export default function Tarefas() {
             <tbody>
               {lista.map(t => (
                 <tr key={t.id} className="clicavel" onClick={() => setAberta(t.id)}>
-                  <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberta(t.id); }}><strong>{t.titulo}</strong></button>{t.processo_numero && <div className="muted mono" style={{ fontSize: '.8rem' }}>{t.processo_numero}</div>}</td>
+                  <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberta(t.id); }}><strong>{t.titulo}</strong></button>{t.processo_numero && <div className="muted mono fs-sm" >{t.processo_numero}</div>}</td>
                   <td>{TIPO_ROTULO[t.tipo]}</td>
                   <td className={atrasada(t) ? 'bad-text' : ''}>{quando(t)}</td>
                   <td>{nome(t.responsavel_id) ?? '—'}</td>

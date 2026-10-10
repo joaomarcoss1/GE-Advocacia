@@ -55,25 +55,25 @@ export default function AbaPrivacidade({ c, setC }: { c: Config; setC(c: Config)
       </div>
       <p className="hint">Clique em <em>Salvar alterações</em> (abaixo) para gravar os prazos.</p>
 
-      <div className="card card-pad stack" style={{ boxShadow: 'none', background: 'var(--surface-2)' }}>
+      <div className="card card-pad stack no-shadow" style={{ background: 'var(--surface-2)' }}>
         <div className="row between">
-          <div><strong style={{ fontWeight: 600 }}>Expurgo de dados vencidos</strong><div className="hint">Veja primeiro o que seria apagado; só então execute. Períodos com folha fechada também são alcançados (só a coordenada/anexos, nunca a marcação em si).</div></div>
+          <div><strong className="fw-600">Expurgo de dados vencidos</strong><div className="hint">Veja primeiro o que seria apagado; só então execute. Períodos com folha fechada também são alcançados (só a coordenada/anexos, nunca a marcação em si).</div></div>
           <div className="row"><button className="btn ghost" onClick={verPrevia}><ShieldCheck size={16} />Ver prévia</button><button className="btn danger" disabled={!previa} onClick={executar}><Eraser size={16} />Executar expurgo</button></div>
         </div>
         {previa && (
           <div className="grid c3" role="status">
-            <div className="card kpi" style={{ boxShadow: 'none' }}><div className="label">Anexos vencidos</div><div className="value">{previa.anexos}</div><div className="hint">mais de {previa.regras.anexos_meses} meses</div></div>
-            <div className="card kpi" style={{ boxShadow: 'none' }}><div className="label">Coordenadas de GPS</div><div className="value">{previa.geolocalizacao}</div><div className="hint">mais de {previa.regras.geolocalizacao_meses} meses</div></div>
-            <div className="card kpi" style={{ boxShadow: 'none' }}><div className="label">Tentativas de PIN</div><div className="value">{previa.tentativas_pin}</div><div className="hint">mais de {previa.regras.tentativas_dias} dias</div></div>
+            <div className="card kpi no-shadow" ><div className="label">Anexos vencidos</div><div className="value">{previa.anexos}</div><div className="hint">mais de {previa.regras.anexos_meses} meses</div></div>
+            <div className="card kpi no-shadow" ><div className="label">Coordenadas de GPS</div><div className="value">{previa.geolocalizacao}</div><div className="hint">mais de {previa.regras.geolocalizacao_meses} meses</div></div>
+            <div className="card kpi no-shadow" ><div className="label">Tentativas de PIN</div><div className="value">{previa.tentativas_pin}</div><div className="hint">mais de {previa.regras.tentativas_dias} dias</div></div>
           </div>
         )}
       </div>
 
-      <div className="row between" style={{ marginTop: 6 }}>
+      <div className="row between mt-6" >
         <div className="section-title">Acessos a documentos sensíveis</div>
         <a className="btn ghost sm" href={`/privacidade/${escritorio.slug}`} target="_blank" rel="noreferrer"><ExternalLink size={14} />Aviso de privacidade (texto-base)</a>
       </div>
-      <p className="hint" style={{ margin: 0 }}>Cada abertura de atestado é registrada (quem e quando) e esse registro não pode ser editado nem apagado.</p>
+      <p className="hint m-0" >Cada abertura de atestado é registrada (quem e quando) e esse registro não pode ser editado nem apagado.</p>
       <div className="grid c3">
         <Field label="Funcionário"><select className="select" value={filtroFunc} onChange={e => setFiltroFunc(e.target.value)}><option value="">Todos</option>{funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}</select></Field>
         <Field label="De"><input className="input" type="date" value={de} onChange={e => setDe(e.target.value)} /></Field>

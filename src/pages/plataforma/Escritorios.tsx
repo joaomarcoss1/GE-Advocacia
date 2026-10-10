@@ -101,7 +101,7 @@ export default function Escritorios() {
         <button className="btn gold" onClick={() => setNovo({ ...vazioNovo })}><Plus size={18} />Novo escritório</button>
       </PageHeader>
 
-      <div className="grid c4" style={{ marginBottom: 20 }}>
+      <div className="grid c4 mb-20" >
         <Kpi label="Escritórios" valor={totais.n} dica="cadastrados na plataforma" />
         <Kpi label="Ativos" valor={totais.ativos} dica="com acesso liberado" />
         <Kpi label="Suspensos" valor={totais.suspensos} alerta={totais.suspensos > 0} dica="sem acesso" />
@@ -125,10 +125,10 @@ export default function Escritorios() {
               <div><b>{e.admins}</b><span>Admins</span></div>
             </div>
             <div className="link-ponto"><span className="grow">{linkPonto(e.slug)}</span><button className="icon-btn" style={{ width: 30, height: 30 }} aria-label={`Copiar endereço do ponto de ${e.nome}`} onClick={() => copiar(linkPonto(e.slug))}><Copy size={15} /></button></div>
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row g-8" >
               <button className="btn sm" onClick={() => abrir(e)}><Building2 size={15} />Gerenciar</button>
               <button className="btn ghost sm" onClick={() => alternar(e)}><Power size={15} />{e.ativo ? 'Suspender' : 'Reativar'}</button>
-              <span className="muted" style={{ marginLeft: 'auto', fontSize: '.78rem' }}>desde {fmtData(e.created_at)}</span>
+              <span className="muted fs-xs" style={{ marginLeft: 'auto' }}>desde {fmtData(e.created_at)}</span>
             </div>
           </article>
         ))}
@@ -143,13 +143,13 @@ export default function Escritorios() {
               <input className="input" value={novo.slug} onChange={e => setNovo({ ...novo, slug: slugDe(e.target.value), slugEditado: true })} />
             </Field>
             <Field label="Fuso horário"><select className="select" value={novo.fuso} onChange={e => setNovo({ ...novo, fuso: e.target.value })}>{FUSOS_BR.map(f => <option key={f.id} value={f.id}>{f.rotulo}</option>)}</select></Field>
-            <div className="section-title" style={{ marginTop: 6 }}>Administrador do escritório</div>
+            <div className="section-title mt-6" >Administrador do escritório</div>
             <div className="grid c2">
               <Field label="Nome"><input className="input" value={novo.adminNome} onChange={e => setNovo({ ...novo, adminNome: e.target.value })} /></Field>
               <Field label="E-mail"><input className="input" type="email" autoComplete="off" value={novo.adminEmail} onChange={e => setNovo({ ...novo, adminEmail: e.target.value })} /></Field>
             </div>
             <Field label="Senha inicial" dica="Mínimo de 10 caracteres, com letras e números. O administrador deve trocá-la no primeiro acesso.">
-              <div className="row" style={{ flexWrap: 'nowrap' }}>
+              <div className="row fx-nowrap" >
                 <input className="input" autoComplete="new-password" value={novo.adminSenha} onChange={e => setNovo({ ...novo, adminSenha: e.target.value })} />
                 <button type="button" className="btn ghost" onClick={() => setNovo({ ...novo, adminSenha: gerarSenha() })}><Wand2 size={16} />Gerar</button>
               </div>
@@ -165,7 +165,7 @@ export default function Escritorios() {
           <button className="btn ghost" onClick={() => alternar(ger).then(() => setGer(null))}><Power size={16} />{ger.ativo ? 'Suspender' : 'Reativar'}</button>
           <button className="btn" onClick={() => salvarEdicao(ger.ativo)} disabled={salvando}>Salvar alterações</button>
         </>}>
-          <div className="grid c2" style={{ alignItems: 'start' }}>
+          <div className="grid c2 ai-start" >
             <div className="stack">
               <div className="section-title">Dados</div>
               <Field label="Nome"><input className="input" value={edicao.nome} onChange={e => setEdicao({ ...edicao, nome: e.target.value })} /></Field>
@@ -175,11 +175,11 @@ export default function Escritorios() {
             </div>
             <div className="stack">
               <div className="row between"><span className="section-title">Quem acessa o painel</span><button className="btn ghost sm" onClick={() => setNovoAdmin({ nome: '', email: '', senha: '' })}><UserPlus size={15} />Novo administrador</button></div>
-              <div className="card" style={{ boxShadow: 'none' }}>
+              <div className="card no-shadow" >
                 {usuarios.map(u => (
                   <div className="sum-line" key={u.id} style={{ padding: '10px 14px' }}>
-                    <span><strong style={{ fontWeight: 600 }}>{u.nome}</strong><br /><span className="muted" style={{ fontSize: '.82rem' }}>{u.email}</span></span>
-                    <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                    <span><strong className="fw-600">{u.nome}</strong><br /><span className="muted fs-sm" >{u.email}</span></span>
+                    <span className="row g-6 fx-nowrap" >
                       <Badge tom={u.papel === 'admin' ? 'gold' : ''}>{u.papel === 'admin' ? 'Administrador' : u.papel === 'coordenador' ? 'Coordenação' : 'Gerência'}</Badge>
                       {!u.ativo && <Badge tom="mute">Inativo</Badge>}
                       <button className="icon-btn" style={{ width: 32, height: 32 }} aria-label={`Redefinir a senha de ${u.email}`} title="Redefinir senha" onClick={() => setSenhaDe({ u, senha: '' })}><KeyRound size={16} /></button>
@@ -189,17 +189,17 @@ export default function Escritorios() {
                 {!usuarios.length && <p className="muted" style={{ padding: 14 }}>Nenhum acesso cadastrado.</p>}
               </div>
               {novoAdmin && (
-                <div className="stack card card-pad" style={{ boxShadow: 'none' }}>
+                <div className="stack card card-pad no-shadow" >
                   <Field label="Nome"><input className="input" value={novoAdmin.nome} onChange={e => setNovoAdmin({ ...novoAdmin, nome: e.target.value })} /></Field>
                   <Field label="E-mail"><input className="input" type="email" autoComplete="off" value={novoAdmin.email} onChange={e => setNovoAdmin({ ...novoAdmin, email: e.target.value })} /></Field>
-                  <Field label="Senha inicial"><div className="row" style={{ flexWrap: 'nowrap' }}><input className="input" autoComplete="new-password" value={novoAdmin.senha} onChange={e => setNovoAdmin({ ...novoAdmin, senha: e.target.value })} /><button type="button" className="btn ghost" onClick={() => setNovoAdmin({ ...novoAdmin, senha: gerarSenha() })}><Wand2 size={16} />Gerar</button></div></Field>
+                  <Field label="Senha inicial"><div className="row fx-nowrap" ><input className="input" autoComplete="new-password" value={novoAdmin.senha} onChange={e => setNovoAdmin({ ...novoAdmin, senha: e.target.value })} /><button type="button" className="btn ghost" onClick={() => setNovoAdmin({ ...novoAdmin, senha: gerarSenha() })}><Wand2 size={16} />Gerar</button></div></Field>
                   <div className="row"><button className="btn sm" onClick={criarAdmin} disabled={salvando}>Criar administrador</button><button className="btn ghost sm" onClick={() => setNovoAdmin(null)}>Cancelar</button></div>
                 </div>
               )}
               {senhaDe && (
-                <div className="stack card card-pad" style={{ boxShadow: 'none' }}>
-                  <strong style={{ fontWeight: 600 }}>Nova senha para {senhaDe.u.email}</strong>
-                  <div className="row" style={{ flexWrap: 'nowrap' }}><input className="input" aria-label="Nova senha" autoComplete="new-password" value={senhaDe.senha} onChange={e => setSenhaDe({ ...senhaDe, senha: e.target.value })} /><button type="button" className="btn ghost" onClick={() => setSenhaDe({ ...senhaDe, senha: gerarSenha() })}><Wand2 size={16} />Gerar</button></div>
+                <div className="stack card card-pad no-shadow" >
+                  <strong className="fw-600">Nova senha para {senhaDe.u.email}</strong>
+                  <div className="row fx-nowrap" ><input className="input" aria-label="Nova senha" autoComplete="new-password" value={senhaDe.senha} onChange={e => setSenhaDe({ ...senhaDe, senha: e.target.value })} /><button type="button" className="btn ghost" onClick={() => setSenhaDe({ ...senhaDe, senha: gerarSenha() })}><Wand2 size={16} />Gerar</button></div>
                   <Medidor senha={senhaDe.senha} />
                   <div className="row"><button className="btn sm" onClick={redefinir} disabled={salvando}>Redefinir senha</button><button className="btn ghost sm" onClick={() => setSenhaDe(null)}>Cancelar</button></div>
                 </div>

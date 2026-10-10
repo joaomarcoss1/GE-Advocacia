@@ -69,7 +69,7 @@ export default function Processos() {
         <button className="btn gold" onClick={() => setNovo(true)}><Plus size={18} />Novo processo</button>
       </PageHeader>
 
-      <div className="grid c4" style={{ marginBottom: 18 }}>
+      <div className="grid c4 mb-18" >
         <Kpi label="Processos ativos" valor={ativos.length} icone={<Scale />} />
         <Kpi label="Andamentos novos" valor={novidades.length} icone={<BellRing />} />
         <Kpi label="Exigem ação" valor={exigemAcao} alerta={exigemAcao > 0} icone={<AlertTriangle />} />
@@ -90,8 +90,8 @@ export default function Processos() {
                   if (!p) return null;
                   return (
                     <li key={n.id} className="novidade">
-                      <div className="grow" style={{ minWidth: 0 }}>
-                        <div className="row" style={{ gap: 8 }}><Badge tom={TOM[n.categoria] ?? 'mute'}>{CATEGORIA_ROTULO[n.categoria]}</Badge><strong>{n.nome}</strong>{n.tarefa_id && <Badge tom="ok">Tarefa criada</Badge>}</div>
+                      <div className="grow minw-0" >
+                        <div className="row g-8" ><Badge tom={TOM[n.categoria] ?? 'mute'}>{CATEGORIA_ROTULO[n.categoria]}</Badge><strong>{n.nome}</strong>{n.tarefa_id && <Badge tom="ok">Tarefa criada</Badge>}</div>
                         {n.complemento && <div className="muted">{n.complemento}</div>}
                         <small className="muted">{p.titulo || p.numero} · <span className="mono">{p.numero}</span> · {cli(p.cliente_id)?.nome ?? 'Sem cliente'} · {dataHora(n.data_hora)}</small>
                       </div>
@@ -107,7 +107,7 @@ export default function Processos() {
         {aba === 'processos' && (
           <>
             <div className="filtros">
-              <div className="search-field grow" style={{ minWidth: 220 }}>
+              <div className="search-field grow minw-220" >
                 <Search size={18} className="lead" />
                 <input aria-label="Buscar processos" placeholder="Número, apelido ou cliente" value={busca} onChange={e => setBusca(e.target.value)} />
               </div>
@@ -124,7 +124,7 @@ export default function Processos() {
                 <tbody>
                   {lista.map((p: Processo) => (
                     <tr key={p.id} className="clicavel" onClick={() => setAberto({ id: p.id })}>
-                      <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberto({ id: p.id }); }}><strong>{p.titulo || p.numero}</strong></button><div className="muted mono" style={{ fontSize: '.8rem' }}>{p.numero}{p.area ? ` · ${AREA_ROTULO[p.area]}` : ''}</div></td>
+                      <td><button className="link-linha" onClick={e => { e.stopPropagation(); setAberto({ id: p.id }); }}><strong>{p.titulo || p.numero}</strong></button><div className="muted mono fs-sm" >{p.numero}{p.area ? ` · ${AREA_ROTULO[p.area]}` : ''}</div></td>
                       <td>{cli(p.cliente_id)?.nome ?? '—'}</td>
                       <td>{nomeResp(p.responsavel_id) ?? '—'}</td>
                       <td>{p.ultima_movimentacao_em ? dataHora(p.ultima_movimentacao_em) : <span className="muted">—</span>}{!p.monitorar && <> <Badge tom="mute">sem acompanhamento</Badge></>}</td>

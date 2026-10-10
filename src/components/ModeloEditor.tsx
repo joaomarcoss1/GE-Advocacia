@@ -58,7 +58,7 @@ export function ModeloEditor({ modelo, onClose, aoSalvar }: { modelo: ModeloDocu
           <Field label="Área"><select className="select" value={area} onChange={e => setArea(e.target.value as AreaJuridica | '')}><option value="">Geral</option>{AREAS.map(a => <option key={a.id} value={a.id}>{a.rotulo}</option>)}</select></Field>
           <Field label="Quando usar (opcional)"><input className="input" value={descricao} maxLength={400} onChange={e => setDescricao(e.target.value)} /></Field>
         </div>
-        <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <div className="row between fx-wrap g-8" >
           <Field label="Inserir campo do sistema">
             <select className="select" value="" onChange={e => inserir(e.target.value)} aria-label="Inserir campo do sistema">
               <option value="">Escolha um campo…</option>

@@ -64,7 +64,7 @@ function Lista({ itens }: { itens: Item[] }) {
     <>
       {itens.map(i => (
         <div key={i.rotulo} className="sum-line" style={{ padding: '14px 22px', alignItems: 'flex-start' }}>
-          <span><strong style={{ fontWeight: 600 }}>{i.rotulo}</strong><br /><span className="muted" style={{ fontSize: '.88rem', wordBreak: 'break-word' }}>{i.detalhe}</span></span>
+          <span><strong className="fw-600">{i.rotulo}</strong><br /><span className="muted fs-md" style={{ wordBreak: 'break-word' }}>{i.detalhe}</span></span>
           <span className={`badge ${i.ok === null ? 'mute' : i.ok ? 'ok' : 'bad'}`}>{i.ok === null ? '—' : i.ok ? 'OK' : 'Atenção'}</span>
         </div>
       ))}
@@ -113,11 +113,11 @@ export default function Diagnostico({ embutido }: { embutido?: boolean }) {
   const conteudo = (
     <>
       <h1 className="page-title">Estado da instalação</h1>
-      <div className="card" style={{ marginTop: 20 }}>
+      <div className="card mt-20" >
         <div className="card-head"><span className="section-title">Esta instalação</span></div>
         {status ? <Lista itens={status} /> : <div className="empty">Verificando…</div>}
       </div>
-      <div className="card card-pad stack" style={{ marginTop: 16 }}>
+      <div className="card card-pad stack mt-16" >
         <span className="section-title">Teste de conexão</span>
         <div className="grid c2">
           <Field label="E-mail (opcional)"><input className="input" type="email" autoCapitalize="none" value={email} onChange={e => setEmail(e.target.value)} /></Field>
@@ -125,7 +125,7 @@ export default function Diagnostico({ embutido }: { embutido?: boolean }) {
         </div>
         <button className="btn" onClick={rodar} disabled={rodando}>{rodando ? 'Verificando…' : 'Rodar diagnóstico'}</button>
       </div>
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card mt-16" >
         <Lista itens={itens} />
         {!itens.length && <div className="empty">Clique em “Rodar diagnóstico”.</div>}
       </div>
@@ -135,7 +135,7 @@ export default function Diagnostico({ embutido }: { embutido?: boolean }) {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 20px 60px' }}>
       {conteudo}
-      <p style={{ marginTop: 18 }}><Link to="/entrar" className="auth-link">← Voltar ao login</Link></p>
+      <p className="mt-18"><Link to="/entrar" className="auth-link">← Voltar ao login</Link></p>
     </div>
   );
 }

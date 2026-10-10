@@ -30,15 +30,15 @@ export default function Inicio() {
     <div className="auth">
       <Stage />
       <main className="auth-side">
-        <div className="auth-card stack passo" style={{ gap: 22 }}>
+        <div className="auth-card stack passo g-22" >
           <div>
             <h1>Registro de ponto</h1>
           </div>
-          <form onSubmit={ir} className="stack" style={{ gap: 12 }}>
+          <form onSubmit={ir} className="stack g-12" >
             <div className="field">
               <label htmlFor="slug">Endereço do escritório</label>
               <div className="search-field" style={{ height: 52 }}>
-                <span className="muted" style={{ paddingLeft: 14, whiteSpace: 'nowrap' }}>/ponto/</span>
+                <span className="muted nowrap" style={{ paddingLeft: 14 }}>/ponto/</span>
                 <input id="slug" autoFocus autoComplete="off" spellCheck={false} placeholder="meu-escritorio" value={slug} onChange={e => setSlug(e.target.value)} />
               </div>
             </div>
@@ -47,12 +47,12 @@ export default function Inicio() {
           {modo === 'local' && (
             <div className="demo-banner">
               <strong>Demonstração</strong>
-              <div className="row" style={{ gap: 6, marginTop: 8 }}>
+              <div className="row g-6 mt-8" >
                 {DEMO_ESCRITORIOS.map(e => <Link key={e.slug} className="btn ghost sm" to={`/ponto/${e.slug}`}>{e.nome}</Link>)}
               </div>
             </div>
           )}
-          <div className="stack" style={{ gap: 4 }}>
+          <div className="stack g-4" >
             <Link to="/entrar" className="auth-link"><LogIn size={15} />Acesso administrativo <ArrowRight size={15} /></Link>
             <Link to="/verificar" className="auth-link"><BadgeCheck size={15} />Verificar a autenticidade de um documento</Link>
             <InstalarApp />

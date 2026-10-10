@@ -69,7 +69,7 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
     <Modal titulo={tarefa.titulo} onClose={onClose} largo
       rodape={podeEditar ? <><button className="btn ghost" onClick={excluir}><Trash2 size={16} />Excluir</button><button className="btn" onClick={onEditar}><Pencil size={16} />Editar</button></> : undefined}>
       <div className="stack">
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row g-8" >
           <Badge tom="gold">{TIPO_ROTULO[tarefa.tipo]}</Badge>
           {tarefa.prazo_fatal && <Badge tom="bad">Prazo fatal</Badge>}
           <Badge tom={tomPrioridade(tarefa.prioridade)}>{PRIORIDADE_ROTULO[tarefa.prioridade]}</Badge>
@@ -87,7 +87,7 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
           {tarefa.participantes.length > 0 && <div><dt>Participantes</dt><dd>{tarefa.participantes.map(nome).filter(Boolean).join(', ')}</dd></div>}
           <div><dt>Delegado por</dt><dd>{tarefa.criado_por_nome ?? '—'}</dd></div>
         </dl>
-        {tarefa.descricao && <p style={{ whiteSpace: 'pre-wrap' }}>{tarefa.descricao}</p>}
+        {tarefa.descricao && <p className="pre-wrap">{tarefa.descricao}</p>}
 
         {podeEditar && (
           <label className="field-inline">
@@ -100,7 +100,7 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
 
         {tarefa.inicio && (
           <section className="bloco-agenda" aria-label="Agenda">
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row g-8" >
               {link && <a className="btn ghost sm" href={link} target="_blank" rel="noopener noreferrer"><CalendarPlus size={16} />Adicionar ao Google Agenda<ExternalLink size={13} /></a>}
               <button className="btn ghost sm" onClick={() => baixarIcs([tarefa], escritorio.nome, 'compromisso.ics')}><Download size={16} />Baixar .ics</button>
               {google.conectado && ABERTA(tarefa.status) && (
@@ -109,12 +109,12 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
               {google.conectado && sync?.event_id && <button className="btn ghost sm" onClick={tirarDaAgenda} disabled={ocupado}>Remover da agenda</button>}
             </div>
             {sync?.event_id && !sync.erro && <p className="hint">Sincronizado em {sync.sync_em ? `${fmtData(isoParaBR(sync.sync_em).data)} ${isoParaBR(sync.sync_em).hhmm}` : '—'}. Os envolvidos recebem o convite por e-mail.</p>}
-            {sync?.erro && <p className="hint" style={{ color: 'var(--bad)' }}>Não sincronizou: {sync.erro}</p>}
+            {sync?.erro && <p className="hint c-bad" >Não sincronizou: {sync.erro}</p>}
           </section>
         )}
 
         <section aria-label="Andamentos">
-          <div className="section-title" style={{ marginBottom: 10 }}>Andamentos</div>
+          <div className="section-title mb-10" >Andamentos</div>
           <ol className="andamentos">
             {andamentos.length === 0 && <li className="muted">Nenhum andamento.</li>}
             {andamentos.map(a => (
@@ -124,7 +124,7 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
               </li>
             ))}
           </ol>
-          <div className="row" style={{ gap: 8, marginTop: 12, flexWrap: 'nowrap' }}>
+          <div className="row g-8 mt-12 fx-nowrap" >
             <input className="input" aria-label="Novo andamento" placeholder="Registrar andamento" value={texto} maxLength={2000} onChange={e => setTexto(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void comentar(); } }} />
             <button className="btn" onClick={comentar} disabled={ocupado || !texto.trim()} aria-label="Registrar andamento"><Send size={16} /></button>

@@ -75,7 +75,7 @@ export default function Ocorrencias() {
 
       <div className="card" style={{ marginTop: fila.total ? 18 : 0 }}>
         <div className="card-head">
-          <select className="select" style={{ maxWidth: 320 }} value={filtro} onChange={e => setFiltro(e.target.value)} aria-label="Filtrar por funcionário">
+          <select className="select maxw-320" value={filtro} onChange={e => setFiltro(e.target.value)} aria-label="Filtrar por funcionário">
             <option value="">Todos os funcionários</option>{funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
           </select>
           <span className="muted">{plural(lista.length, 'registro', 'registros')}</span>

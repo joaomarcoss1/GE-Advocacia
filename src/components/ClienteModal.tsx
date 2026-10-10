@@ -40,7 +40,7 @@ export default function ClienteModal({ cliente, onClose, onSalvo }: { cliente: C
         </div>
         <details className="qualificacao" open={!!(f.rg || f.estado_civil || f.profissao || f.endereco)}>
           <summary>Qualificação para procurações e peças <small className="muted">(opcional)</small></summary>
-          <div className="stack" style={{ marginTop: 10 }}>
+          <div className="stack mt-10" >
             <div className="grid c3">
               <Field label="RG e órgão emissor"><input className="input" value={f.rg} maxLength={40} onChange={e => set('rg', e.target.value)} placeholder="1234567 SSP/MA" /></Field>
               <Field label="Nacionalidade"><input className="input" value={f.nacionalidade} maxLength={60} onChange={e => set('nacionalidade', e.target.value)} placeholder="brasileiro(a)" /></Field>

@@ -37,7 +37,7 @@ export default function AbaBackup() {
 
   return (
     <div className="stack">
-      <div className="row between" style={{ flexWrap: 'wrap' }}>
+      <div className="row between fx-wrap" >
         <div>
           <strong>Último backup neste computador</strong>
           <div className="muted">{ultimo ? `${fmtData(isoParaBR(ultimo).data)} ${isoParaBR(ultimo).hhmm} · há ${plural(dias, 'dia', 'dias')}` : 'Nenhum ainda'}</div>
@@ -48,7 +48,7 @@ export default function AbaBackup() {
       <Field label="Senha do arquivo (recomendado)" dica="O backup tem dados pessoais e salários. Com senha, o arquivo é cifrado e só abre com ela. Guarde a senha: não há como recuperá-la.">
         <input className="input" type="password" autoComplete="new-password" value={senha} onChange={e => setSenha(e.target.value)} style={{ maxWidth: 360 }} />
       </Field>
-      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+      <div className="row g-8 fx-wrap" >
         <button className="btn" onClick={() => fazer(false)} disabled={ocupado}><Download size={17} />{ocupado ? 'Gerando…' : 'Baixar backup agora'}</button>
         {suportaPasta() && pasta && <button className="btn ghost" onClick={() => fazer(true)} disabled={ocupado}><FolderOpen size={17} />Salvar em “{pasta}”</button>}
         {suportaPasta() && <button className="btn ghost" onClick={escolher}>{pasta ? 'Trocar pasta' : 'Escolher pasta de backup'}</button>}

@@ -58,7 +58,7 @@ export default function Escalas() {
         {escalas.map(e => (
           <div className="card card-pad stack" key={e.id}>
             <div className="row between">
-              <div><h2 style={{ fontSize: '1.1rem' }}>{e.nome}</h2><div className="muted">{resumo(e)}</div></div>
+              <div><h2 className="fs-xl">{e.nome}</h2><div className="muted">{resumo(e)}</div></div>
               <Badge tom={e.ativo ? 'ok' : 'mute'}>{e.ativo ? 'Ativa' : 'Inativa'}</Badge>
             </div>
             <div className="table-wrap">
