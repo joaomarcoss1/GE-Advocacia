@@ -7,6 +7,7 @@ import Medidor from '@/components/Medidor';
 import { gerarSenha, validarSenha } from '@/lib/seguranca';
 import { SLUG_REGEX, slugDe } from '@/lib/slug';
 import type { EscritorioPlataforma, Usuario } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 type UsuarioResumo = Pick<Usuario, 'id' | 'nome' | 'email' | 'papel' | 'ativo'>;
 const vazioNovo = { nome: '', slug: '', slugEditado: false, fuso: 'America/Fortaleza', adminNome: '', adminEmail: '', adminSenha: '' };
@@ -170,7 +171,7 @@ export default function Escritorios() {
               <Field label="Nome"><input className="input" value={edicao.nome} onChange={e => setEdicao({ ...edicao, nome: e.target.value })} /></Field>
               <Field label="Fuso horário"><select className="select" value={edicao.fuso} onChange={e => setEdicao({ ...edicao, fuso: e.target.value })}>{FUSOS_BR.map(f => <option key={f.id} value={f.id}>{f.rotulo}</option>)}</select></Field>
               <Field label="Endereço do ponto"><div className="link-ponto"><span className="grow">{linkPonto(ger.slug)}</span></div></Field>
-              <p className="hint">A plataforma enxerga apenas contagens ({ger.funcionarios} funcionário(s), {ger.usuarios} acesso(s)). Folha, ponto, salários e atestados do escritório ficam fora do seu alcance.</p>
+              <p className="hint">A plataforma enxerga apenas contagens ({plural(ger.funcionarios, 'funcionário', 'funcionários')}, {plural(ger.usuarios, 'acesso', 'acessos')}). Folha, ponto, salários e atestados do escritório ficam fora do seu alcance.</p>
             </div>
             <div className="stack">
               <div className="row between"><span className="section-title">Quem acessa o painel</span><button className="btn ghost sm" onClick={() => setNovoAdmin({ nome: '', email: '', senha: '' })}><UserPlus size={15} />Novo administrador</button></div>

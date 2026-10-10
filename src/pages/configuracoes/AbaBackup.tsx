@@ -4,6 +4,7 @@ import { Badge, Field, useToast } from '@/components/ui';
 import { useDados } from '@/context/Dados';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { autoLigado, baixarArquivo, diasSem, escolherPasta, ligarAuto, marcarBackup, montarArquivo, nomeDaPasta, salvarNaPasta, suportaPasta, ultimoBackup } from '@/lib/backup';
+import { plural } from '@/lib/format';
 
 /** Backup do escritório no computador: manual (com senha) e, se o navegador permitir, salvo sozinho toda semana numa pasta. */
 export default function AbaBackup() {
@@ -39,7 +40,7 @@ export default function AbaBackup() {
       <div className="row between" style={{ flexWrap: 'wrap' }}>
         <div>
           <strong>Último backup neste computador</strong>
-          <div className="muted">{ultimo ? `${fmtData(isoParaBR(ultimo).data)} ${isoParaBR(ultimo).hhmm} · há ${dias} dia(s)` : 'Nenhum ainda'}</div>
+          <div className="muted">{ultimo ? `${fmtData(isoParaBR(ultimo).data)} ${isoParaBR(ultimo).hhmm} · há ${plural(dias, 'dia', 'dias')}` : 'Nenhum ainda'}</div>
         </div>
         <Badge tom={dias >= 7 ? 'warn' : 'ok'}>{dias >= 7 ? 'Semanal pendente' : 'Em dia'}</Badge>
       </div>

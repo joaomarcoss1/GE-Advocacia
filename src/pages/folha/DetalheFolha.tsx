@@ -3,7 +3,7 @@ import { LockOpen, Pencil, Plus, ReceiptText, Save, Trash2 } from 'lucide-react'
 import { Badge, Field, Modal, useConfirm, useToast } from '@/components/ui';
 import { useDados } from '@/context/Dados';
 import { fmtData } from '@/lib/datetime';
-import { brl, minParaHoras } from '@/lib/format';
+import { brl, minParaHoras, plural } from '@/lib/format';
 import { SITUACAO_DIA } from '@/lib/rotulos';
 import { AJUSTE_LABEL, AJUSTE_POSITIVO, type AjusteFolha, type Funcionario, type SituacaoManual } from '@/lib/types';
 import type { Linha } from './useFolha';
@@ -75,10 +75,10 @@ export default function DetalheFolha({ det, ajustesLista, onFechar, onReabrir, o
           <div className="sum-line neg"><span>Descontos / adiantamentos</span><span className="mono">− {brl(e.descontos)}</span></div>
           <div className="sum-line total"><span>Líquido</span><span className="mono">{brl(e.valor_final)}</span></div>
           <div className="row" style={{ marginTop: 12 }}>
-            <Badge tom="ok">{e.dias_trabalhados} presente(s)</Badge>
-            {e.dias_abonados > 0 && <Badge tom="gold">{e.dias_abonados} abonado(s)</Badge>}
-            {e.atrasos + e.saidas_antecipadas > 0 && <Badge tom="warn">{e.atrasos} atraso(s) · {e.saidas_antecipadas} saída(s) antec.</Badge>}
-            {e.pendencias > 0 && <Badge tom="warn">{e.pendencias} ajuste(s) aguardando aprovação</Badge>}
+            <Badge tom="ok">{plural(e.dias_trabalhados, 'presente', 'presentes')}</Badge>
+            {e.dias_abonados > 0 && <Badge tom="gold">{plural(e.dias_abonados, 'abonado', 'abonados')}</Badge>}
+            {e.atrasos + e.saidas_antecipadas > 0 && <Badge tom="warn">{plural(e.atrasos, 'atraso', 'atrasos')} · {plural(e.saidas_antecipadas, 'saída', 'saídas')} antec.</Badge>}
+            {e.pendencias > 0 && <Badge tom="warn">{plural(e.pendencias, 'ajuste', 'ajustes')} aguardando aprovação</Badge>}
           </div>
           {det.salva?.motivo_reabertura && det.salva.status === 'aberta' && <p className="hint" style={{ marginTop: 10 }}>Última reabertura: {det.salva.motivo_reabertura}</p>}
           <div className="section-title" style={{ margin: '18px 0 8px' }}>Valores do funcionário</div>

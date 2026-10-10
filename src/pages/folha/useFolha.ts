@@ -7,6 +7,7 @@ import { pendenciasDeAnalise, periodosDoMes, type FolhaCalculada } from '@/lib/f
 import { calcularPeriodo, type LinhaFolha } from '@/lib/folhaLote';
 import { criarSelo } from '@/lib/selo';
 import type { Folha, Funcionario, StatusFolha } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 // PDF/Excel pesam ~1 MB: só são baixados quando o usuário exporta.
 const exportar = () => import('@/lib/export');
@@ -47,7 +48,7 @@ export function useFolha() {
 
   async function gerar() {
     if (emAndamento && !(await confirmar('O período ainda não terminou: dias futuros entram como previstos e pagos, e o valor pode mudar até o fim do período. Gerar como prévia mesmo assim?', { rotulo: 'Gerar prévia' }))) return;
-    try { await db.folhas.upsertMany(abertas.map(l => paraSalvar(l, 'aberta'))); await auditar('Folha gerada', rotuloPeriodo); toast.ok(`Folha de ${abertas.length} funcionário(s) calculada.`); await recarregar(); }
+    try { await db.folhas.upsertMany(abertas.map(l => paraSalvar(l, 'aberta'))); await auditar('Folha gerada', rotuloPeriodo); toast.ok(`Folha de ${plural(abertas.length, 'funcionário', 'funcionários')} calculada.`); await recarregar(); }
     catch (e) { toast.erro((e as Error).message); }
   }
   async function fechar() {
@@ -58,7 +59,7 @@ export function useFolha() {
     catch (e) { toast.erro((e as Error).message); }
   }
   async function pagar() {
-    if (!(await confirmar(`Marcar ${fechadas.length} folha(s) como paga(s)?`, { rotulo: 'Marcar como paga' }))) return;
+    if (!(await confirmar(`${fechadas.length === 1 ? 'Marcar 1 folha como paga?' : `Marcar ${fechadas.length} folhas como pagas?`}`, { rotulo: 'Marcar como paga' }))) return;
     try { for (const l of fechadas) await db.folhas.update(l.salva!.id, { status: 'paga' }); await auditar('Folha paga', rotuloPeriodo); toast.ok('Pagamento registrado.'); await recarregar(); }
     catch (e) { toast.erro((e as Error).message); }
   }

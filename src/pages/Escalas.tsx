@@ -6,7 +6,7 @@ import { useDados } from '@/context/Dados';
 import { ESCALAS_MODELO, escalaVazia, turnoVazio } from '@/lib/config';
 import { DIA_CURTO, DIA_LABEL, DIAS_ESCALA, type Escala, type TurnoDia } from '@/lib/types';
 import { horasSemanais, minutosJornada, temIntervalo } from '@/lib/ponto';
-import { num } from '@/lib/format';
+import { num, plural } from '@/lib/format';
 
 function resumo(e: Escala) {
   const ativos = DIAS_ESCALA.filter(d => e.dias[d]?.ativo);
@@ -77,7 +77,7 @@ export default function Escalas() {
               </table>
             </div>
             <div className="row between">
-              <span className="muted">{num(horasSemanais(e), 1)}h por semana · {funcionarios.filter(f => f.escala_id === e.id && f.ativo).length} pessoa(s)</span>
+              <span className="muted">{num(horasSemanais(e), 1)}h por semana · {plural(funcionarios.filter(f => f.escala_id === e.id && f.ativo).length, 'pessoa', 'pessoas')}</span>
               {!somenteLeitura && (
                 <span>
                   <button className="icon-btn" aria-label="Duplicar" onClick={() => setEd({ nome: `${e.nome} (cópia)`, ativo: true, dias: JSON.parse(JSON.stringify(e.dias)) })}><Copy size={17} /></button>

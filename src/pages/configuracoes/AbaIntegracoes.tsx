@@ -6,6 +6,7 @@ import { CartaoIntegracao, PassosAtivacao } from '@/components/Integracao';
 import { ErroNegocio } from '@/lib/erros';
 import { useDados } from '@/context/Dados';
 import type { Config, DriveStatus } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 /** Integrações do escritório: Google Drive (documentos), acompanhamento de processos e automações. */
 export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config): void }) {
@@ -40,7 +41,7 @@ export default function AbaIntegracoes({ c, setC }: { c: Config; setC(c: Config)
   }
   async function reenviar() {
     setOcupado(true);
-    try { const r = await db.arquivos.drive.sincronizar(); toast.ok(r.erros ? `${r.enviados} enviado(s); ${r.erros} com erro.` : r.enviados ? `${r.enviados} documento(s) enviado(s).` : 'Nada pendente.'); } catch (e) { toast.erro((e as Error).message); } finally { setOcupado(false); }
+    try { const r = await db.arquivos.drive.sincronizar(); toast.ok(r.erros ? `${plural(r.enviados, 'enviado', 'enviados')}; ${r.erros} com erro.` : r.enviados ? `${plural(r.enviados, 'documento enviado', 'documentos enviados')}.` : 'Nada pendente.'); } catch (e) { toast.erro((e as Error).message); } finally { setOcupado(false); }
   }
   const auto = (patch: Partial<Config['automacao']>) => setC({ ...c, automacao: { ...c.automacao, ...patch } });
 

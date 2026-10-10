@@ -7,6 +7,7 @@ import { formaDePagamento, type PropostaHonorarios } from '@/lib/precificacao';
 import { baixarDocx } from '@/lib/docx';
 import { blocos, brl, extrairVariaveis, nomeArquivoModelo, preencher, rotuloCategoriaModelo, trechos, type ModeloDocumento } from '@/lib/modelos';
 import { valoresDoModelo } from '@/lib/modelosUso';
+import { plural } from '@/lib/format';
 
 /** Mostra o texto com os campos em branco destacados (a mesma leitura que vai para o .docx). */
 export function Previa({ texto }: { texto: string }) {
@@ -120,7 +121,7 @@ export default function ModeloUsar({ modelo, onClose }: { modelo: ModeloDocument
           </div>
         )}
         <div className="row between" style={{ flexWrap: 'wrap', gap: 8 }}>
-          <span>{restantes === 0 ? <Badge tom="ok">Nenhum campo em branco</Badge> : <Badge tom="warn">{restantes} campo(s) em branco, destacados em amarelo</Badge>}
+          <span>{restantes === 0 ? <Badge tom="ok">Nenhum campo em branco</Badge> : <Badge tom="warn">{plural(restantes, 'campo', 'campos')} em branco, destacados em amarelo</Badge>}
             {editado !== null && <small className="muted"> · texto editado (mudar a seleção acima refaz o texto)</small>}</span>
           <button className="btn ghost sm" onClick={() => setEditando(e => !e)}><Pencil size={14} />{editando ? 'Ver prévia' : 'Editar texto'}</button>
         </div>

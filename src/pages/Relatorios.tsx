@@ -10,6 +10,7 @@ const exportar = () => import('@/lib/export');
 import { calcularPeriodo } from '@/lib/folhaLote';
 import { SITUACAO_DIA } from '@/lib/rotulos';
 import { OCORRENCIA_LABEL } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 export default function Relatorios() {
   const dados = useDados();
@@ -56,7 +57,7 @@ export default function Relatorios() {
         {aba === 'frequencia' && (
           <>
             <div className="card-head">
-              <span className="muted">{linhas.length} funcionário(s) · dias futuros não entram como falta</span>
+              <span className="muted">{plural(linhas.length, 'funcionário', 'funcionários')} · dias futuros não entram como falta</span>
               <div className="row">
                 <button className="btn ghost sm" disabled={!freq.length} onClick={() => gerarFrequenciaPdf().catch(e => toast.erro((e as Error).message))}><FileDown size={16} />PDF</button>
                 <button className="btn ghost sm" disabled={!freq.length} onClick={() => exportar().then(m => m.frequenciaXlsx(freq, cab))}><FileSpreadsheet size={16} />Excel</button>

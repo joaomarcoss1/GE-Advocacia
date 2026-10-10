@@ -4,7 +4,7 @@ import XLSX from 'xlsx-js-style';
 import { fmtData, isoParaBR } from './datetime';
 import { CINZA, NAVY, GOLD, R, cabecalhoPdf, dadosPagamento, rodapePdf, type CabecalhoExport, type LinhaExport } from './exportBase';
 import type { FolhaCalculada } from './folha';
-import { minParaHoras } from './format';
+import { minParaHoras, plural } from './format';
 import { SITUACAO_DIA } from './rotulos';
 import { AJUSTE_LABEL, OCORRENCIA_LABEL, type Funcionario, type RegistroPonto, type TipoOcorrencia } from './types';
 
@@ -27,9 +27,9 @@ export async function holeritePdf(l: LinhaExport, cab: CabecalhoExport) {
   });
   let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
 
-  const proventos: [string, string][] = [[`Salário do período (${c.dias_previstos} dia(s) previstos × ${R(c.valor_diaria)})`, R(c.valor_bruto)]];
+  const proventos: [string, string][] = [[`Salário do período (${plural(c.dias_previstos, 'dia', 'dias')} previstos × ${R(c.valor_diaria)})`, R(c.valor_bruto)]];
   const descontos: [string, string][] = [];
-  if (c.faltas) descontos.push([`Faltas: ${c.faltas} dia(s) × ${R(c.valor_diaria)}`, R(c.desconto_faltas)]);
+  if (c.faltas) descontos.push([`Faltas: ${plural(c.faltas, 'dia', 'dias')} × ${R(c.valor_diaria)}`, R(c.desconto_faltas)]);
   if (c.desconto_atrasos) descontos.push([`Atrasos e saídas antecipadas (${minParaHoras(c.detalhe.reduce((t, d) => t + (d.descontado_min ?? 0), 0))} descontados, sem descontar a diária inteira)`, R(c.desconto_atrasos)]);
   for (const a of l.ajustes ?? []) {
     const pos = a.tipo === 'adicional' || a.tipo === 'hora_extra';

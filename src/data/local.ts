@@ -10,7 +10,7 @@ import { CONFIG_PADRAO, mesclarConfig } from '@/lib/config';
 import { addDays, agoraBR, brParaIso, definirFuso, hhmmParaMin, hojeMais, isoParaBR } from '@/lib/datetime';
 import { gerarCodigoDocumento } from '@/lib/codigo';
 import { ErroNegocio, erro } from '@/lib/erros';
-import { semAcento } from '@/lib/format';
+import { semAcento, plural } from '@/lib/format';
 import { classificar, distanciaMetros, exigeJustificativa, previstoDoTipo, turnoDaData } from '@/lib/ponto';
 import { RETENCAO_TENTATIVAS_DIAS, SCHEMA_ESPERADO, periodoFechado, temHistorico, validarMudancaFolha } from '@/lib/regras';
 import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
@@ -548,7 +548,7 @@ export function criarDbLocal(): Db {
         novas++;
       });
       if (gravar.length) gravarTab(a.slug, 'intimacoes', [...existentes, ...gravar]);
-      const mensagem = !procs.length ? 'Cadastre processos para ver intimações de exemplo.' : novas ? `${novas} intimação(ões) de exemplo (demonstração).` : 'Nenhuma intimação nova (demonstração).';
+      const mensagem = !procs.length ? 'Cadastre processos para ver intimações de exemplo.' : novas ? `${plural(novas, 'intimação', 'intimações')} de exemplo (demonstração).` : 'Nenhuma intimação nova (demonstração).';
       const sync: IntimacoesSync = { executada_em: agoraIso(), oabs: oabs.slice(0, 5), novas, erros: 0, mensagem };
       gravarJson(kt(a.slug, 'intimacoes_sync'), sync);
       return { oabs: oabs.length, novas, tarefas: 0, erros: 0, mensagem };

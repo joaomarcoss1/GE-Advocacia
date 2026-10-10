@@ -5,6 +5,7 @@ import type { ResumoExpurgo } from '@/data/db';
 import { useDados } from '@/context/Dados';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import type { AcessoSensivel, Config } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 const num = (v: string) => (v === '' ? 0 : Math.max(0, Math.round(Number(v.replace(',', '.')) || 0)));
 
@@ -33,10 +34,10 @@ export default function AbaPrivacidade({ c, setC }: { c: Config; setC(c: Config)
     if (!previa) return;
     const total = previa.anexos + previa.geolocalizacao + previa.tentativas_pin;
     if (!total) return toast.ok('Não há nada a expurgar com os prazos atuais.');
-    if (!(await confirmar(`Apagar definitivamente: ${previa.anexos} anexo(s) vencido(s), a geolocalização de ${previa.geolocalizacao} marcação(ões) e ${previa.tentativas_pin} tentativa(s) de PIN? Não há como desfazer. A ação fica registrada na auditoria.`, { rotulo: 'Executar expurgo', perigo: true }))) return;
+    if (!(await confirmar(`Apagar definitivamente: ${plural(previa.anexos, 'anexo vencido', 'anexos vencidos')}, a geolocalização de ${plural(previa.geolocalizacao, 'marcação', 'marcações')} e ${plural(previa.tentativas_pin, 'tentativa', 'tentativas')} de PIN? Não há como desfazer. A ação fica registrada na auditoria.`, { rotulo: 'Executar expurgo', perigo: true }))) return;
     try {
       const r = await db.retencao.executar();
-      toast.ok(`Expurgo concluído: ${r.anexos} anexo(s), ${r.geolocalizacao} coordenada(s), ${r.tentativas_pin} tentativa(s).`);
+      toast.ok(`Expurgo concluído: ${plural(r.anexos, 'anexo', 'anexos')}, ${plural(r.geolocalizacao, 'coordenada', 'coordenadas')}, ${plural(r.tentativas_pin, 'tentativa', 'tentativas')}.`);
       setPrevia(null); await recarregar();
     } catch (e) { toast.erro((e as Error).message); }
   }

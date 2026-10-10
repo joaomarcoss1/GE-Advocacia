@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calculator, FileDown, FileSpreadsheet, Lock, Plus, ReceiptText, Wallet } from 'lucide-react';
 import { Badge, Field, Kpi, PageHeader, Vazio } from '@/components/ui';
 import { fmtData } from '@/lib/datetime';
-import { brl } from '@/lib/format';
+import { brl, plural } from '@/lib/format';
 import { type StatusFolha } from '@/lib/types';
 import DetalheFolha from './folha/DetalheFolha';
 import ModalAjuste, { type FormAjuste } from './folha/ModalAjuste';
@@ -55,10 +55,10 @@ export default function Folha() {
       </div>
 
       <div className="grid c4" style={{ marginBottom: 16 }}>
-        <Kpi label="Líquido total" valor={brl(totalLiquido)} dica={`${linhas.length} funcionário(s)`} />
-        <Kpi label="Descontos por faltas" valor={brl(totalFaltas)} dica={`${nFaltas} falta(s) no período`} alerta={nFaltas > 0} />
+        <Kpi label="Líquido total" valor={brl(totalLiquido)} dica={`${plural(linhas.length, 'funcionário', 'funcionários')}`} />
+        <Kpi label="Descontos por faltas" valor={brl(totalFaltas)} dica={`${plural(nFaltas, 'falta', 'faltas')} no período`} alerta={nFaltas > 0} />
         <Kpi label="Ajustes (adic. − desc.)" valor={brl(linhas.reduce((s, l) => s + l.efetivo.adicionais - l.efetivo.descontos, 0))} />
-        <Kpi label="Situação" valor={linhas.length && linhas.every(l => l.salva?.status === 'paga') ? 'Paga' : fechadas.length && !abertas.length ? 'Fechada' : linhas.some(l => l.salva) ? 'Aberta' : 'Prévia'} dica={`${fechadas.length} fechada(s) · ${linhas.filter(l => l.salva?.status === 'paga').length} paga(s)`} />
+        <Kpi label="Situação" valor={linhas.length && linhas.every(l => l.salva?.status === 'paga') ? 'Paga' : fechadas.length && !abertas.length ? 'Fechada' : linhas.some(l => l.salva) ? 'Aberta' : 'Prévia'} dica={`${plural(fechadas.length, 'fechada', 'fechadas')} · ${plural(linhas.filter(l => l.salva?.status === 'paga').length, 'paga', 'pagas')}`} />
       </div>
 
       <div className="card">

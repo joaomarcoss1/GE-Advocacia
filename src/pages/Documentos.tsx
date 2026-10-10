@@ -6,7 +6,7 @@ import Dossie, { progressoDe } from '@/components/Dossie';
 import EnvioLote from '@/components/EnvioLote';
 import { useDados } from '@/context/Dados';
 import { fmtData, isoParaBR } from '@/lib/datetime';
-import { semAcento } from '@/lib/format';
+import { semAcento, plural } from '@/lib/format';
 import type { ChecklistItem, DocumentoArquivo, DriveStatus, ResumoDocumentos } from '@/lib/types';
 
 interface Linha { chave: string; cliente_id: string; processo_id: string | null; titulo: string; sub: string; itens: ChecklistItem[]; docs: number }
@@ -55,7 +55,7 @@ export default function Documentos() {
 
   async function sincronizar() {
     setSincronizando(true);
-    try { const r = await db.arquivos.drive.sincronizar(); toast.ok(r.erros ? `${r.enviados} enviado(s); ${r.erros} com erro.` : r.enviados ? `${r.enviados} documento(s) enviado(s) ao Drive.` : 'Nada pendente.'); await carregar(); }
+    try { const r = await db.arquivos.drive.sincronizar(); toast.ok(r.erros ? `${plural(r.enviados, 'enviado', 'enviados')}; ${r.erros} com erro.` : r.enviados ? `${plural(r.enviados, 'documento enviado', 'documentos enviados')} ao Drive.` : 'Nada pendente.'); await carregar(); }
     catch (e) { toast.erro((e as Error).message); } finally { setSincronizando(false); }
   }
   const quem = (d: DocumentoArquivo) => { const p = d.processo_id ? processos.find(x => x.id === d.processo_id) : null; return `${clientes.find(c => c.id === d.cliente_id)?.nome ?? '—'}${p ? ` · ${p.titulo || p.numero}` : ''}`; };

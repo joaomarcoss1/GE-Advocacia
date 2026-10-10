@@ -5,7 +5,7 @@ import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { filaDeAnalise } from '@/lib/analises';
 import { addDays, fmtData } from '@/lib/datetime';
-import { minParaHoras } from '@/lib/format';
+import { minParaHoras, plural } from '@/lib/format';
 import { OCORRENCIA_LABEL, type AnexoMeta, type Ocorrencia, type RegistroPonto } from '@/lib/types';
 import FilaAnalise from './ocorrencias/FilaAnalise';
 import { ModalOcorrencia, type FormOcorrencia } from './ocorrencias/ModalOcorrencia';
@@ -41,7 +41,7 @@ export default function Ocorrencias() {
     try {
       await db.ocorrencias.update(o.id, { status_analise: status, motivo_decisao: mot?.trim() || null });
       await auditar(status === 'aceita' ? 'Atestado aceito' : 'Atestado recusado', `${nome(o.funcionario_id)} · ${OCORRENCIA_LABEL[o.tipo]} · ${fmtData(o.data_inicio)}${mot ? ` · ${mot}` : ''}`);
-      toast.ok(status === 'aceita' ? 'Aceito: o(s) dia(s) serão pagos normalmente.' : 'Recusado: o(s) dia(s) serão descontados da folha.');
+      toast.ok(status === 'aceita' ? 'Aceito: os dias serão pagos normalmente.' : 'Recusado: os dias serão descontados da folha.');
       await recarregar();
     } catch (e) { toast.erro((e as Error).message); }
   }
@@ -78,7 +78,7 @@ export default function Ocorrencias() {
           <select className="select" style={{ maxWidth: 320 }} value={filtro} onChange={e => setFiltro(e.target.value)} aria-label="Filtrar por funcionário">
             <option value="">Todos os funcionários</option>{funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
           </select>
-          <span className="muted">{lista.length} registro(s)</span>
+          <span className="muted">{plural(lista.length, 'registro', 'registros')}</span>
         </div>
         <TabelaOcorrencias lista={lista} admin={admin} nome={nome} metasDe={metasDe} travado={o => travado(o.funcionario_id, o.data_inicio, o.data_fim)}
           onEditar={setEd} onExcluir={excluir} onAceitar={o => decidirOc(o, 'aceita')} onRecusar={o => pedirRecusa({ tipo: 'oc', item: o })} />
@@ -93,7 +93,7 @@ export default function Ocorrencias() {
           <div className="stack">
             <p>
               {recusa.tipo === 'oc'
-                ? <>Ao recusar, o(s) dia(s) de <strong>{nome(recusa.item.funcionario_id)}</strong> serão descontados da folha (falta).</>
+                ? <>Ao recusar, os dias de <strong>{nome(recusa.item.funcionario_id)}</strong> serão descontados da folha (falta).</>
                 : <>Ao recusar, será descontado da folha de <strong>{nome(recusa.item.funcionario_id)}</strong> apenas o tempo de {recusa.item.status === 'saida_antecipada' ? 'saída antecipada' : 'atraso'} ({minParaHoras(Math.abs(recusa.item.diferenca_minutos ?? 0))}), não a diária inteira.</>}
             </p>
             <Field label="Motivo da recusa (opcional, fica registrado)"><textarea className="textarea" value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Ex.: atestado sem data, documento ilegível…" autoFocus /></Field>

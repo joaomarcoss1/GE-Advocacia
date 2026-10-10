@@ -2,7 +2,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import Anexos from '@/components/Anexos';
 import { Badge, Vazio } from '@/components/ui';
 import { fmtData, isoParaBR } from '@/lib/datetime';
-import { minParaHoras } from '@/lib/format';
+import { minParaHoras, plural } from '@/lib/format';
 import { DICA_PERIODO_FECHADO } from '@/lib/regras';
 import { ANALISE_LABEL, OCORRENCIA_LABEL, type AnexoMeta, type Ocorrencia, type RegistroPonto, type StatusAnalise } from '@/lib/types';
 
@@ -55,7 +55,7 @@ export function TabelaAtrasos({ atrasos, admin, nome, metasDe, travado, onAceita
   if (!atrasos.length) return null;
   return (
     <div className="card" style={{ marginTop: 18 }}>
-      <div className="card-head"><span className="section-title">Atrasos e saídas antecipadas (últimos 90 dias)</span><span className="muted">{atrasos.length} registro(s)</span></div>
+      <div className="card-head"><span className="section-title">Atrasos e saídas antecipadas (últimos 90 dias)</span><span className="muted">{plural(atrasos.length, 'registro', 'registros')}</span></div>
       <div className="table-wrap">
         <table className="tbl">
           <thead><tr><th>Funcionário</th><th>Data</th><th>Marcação</th><th className="num">Tempo</th><th>Justificativa</th><th>Situação</th><th><span className="sr-only">Ações</span></th></tr></thead>

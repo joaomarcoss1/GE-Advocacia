@@ -11,6 +11,7 @@ import { addDays, agoraBR, fmtData, isoParaBR } from '@/lib/datetime';
 import { CATEGORIA_ROTULO, TIPO_MARCO_ROTULO, calcularPrazo, diasPadraoPorJustica, tribunalPorAlias, type Categoria, type RegimePrazo, type TipoMarco } from '@/lib/processos';
 import { AREA_ROTULO, STATUS_ROTULO } from '@/lib/tarefas';
 import type { Movimento, Processo } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 const TOM: Record<string, Tom> = { sentenca: 'bad', decisao: 'warn', intimacao: 'warn', citacao: 'bad', audiencia: 'warn', despacho: 'gold', transito: 'gold', arquivamento: 'mute' };
 const CATEGORIAS_MANUAIS: Categoria[] = ['intimacao', 'citacao', 'sentenca', 'decisao', 'despacho', 'audiencia', 'juntada', 'peticao', 'recurso', 'transito', 'arquivamento', 'outros'];
@@ -88,7 +89,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
     setOcupado(true);
     try {
       const r = await db.processos.consultar(processoId);
-      toast.ok(r.novos ? `${r.novos} andamento(s) novo(s)${r.tarefas ? ` · ${r.tarefas} tarefa(s) criada(s)` : ''}.` : 'Nenhum andamento novo.');
+      toast.ok(r.novos ? `${plural(r.novos, 'andamento novo', 'andamentos novos')}${r.tarefas ? ` · ${plural(r.tarefas, 'tarefa criada', 'tarefas criadas')}` : ''}.` : 'Nenhum andamento novo.');
       await atualizarTudo();
     } catch (e) { toast.erro((e as Error).message); } finally { setOcupado(false); }
   }
@@ -118,7 +119,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
             {processo.situacao !== 'ativo' && <Badge tom="mute">{processo.situacao}</Badge>}
             {processo.area && <Badge tom="mute">{AREA_ROTULO[processo.area]}</Badge>}
             {!processo.monitorar && <Badge tom="mute">Sem acompanhamento</Badge>}
-            {naoLidos > 0 && <Badge tom="warn">{naoLidos} novo(s)</Badge>}
+            {naoLidos > 0 && <Badge tom="warn">{plural(naoLidos, 'novo', 'novos')}</Badge>}
           </div>
           <dl className="ficha">
             {cliente && <div><dt>Cliente</dt><dd>{cliente.nome}</dd></div>}

@@ -1,6 +1,6 @@
 import { ArrowRight, Check, Coffee, FilePlus2, History, LogIn, LogOut, RotateCcw, Undo2 } from 'lucide-react';
 import { fmtData, isoParaBR } from '@/lib/datetime';
-import { minParaHoras, iniciais } from '@/lib/format';
+import { minParaHoras, iniciais, plural } from '@/lib/format';
 import { previstoDoTipo } from '@/lib/ponto';
 import { ANALISE_LABEL, OCORRENCIA_LABEL, TIPO_MARCACAO_LABEL, type TipoMarcacao } from '@/lib/types';
 import { ConfirmarMarcacao, FormAusencia, FormRetro, STATUS_TXT } from './FormulariosPonto';
@@ -102,7 +102,7 @@ export default function PainelPonto({ p }: { p: Ponto }) {
               <div className="tl-item" key={j.id}>
                 <span className={`dot ${j.status_analise === 'recusada' ? 'off' : ''}`} />
                 <span className="mono muted">{fmtData(j.data_inicio).slice(0, 5)}{j.data_fim !== j.data_inicio ? `–${fmtData(j.data_fim).slice(0, 5)}` : ''}</span>
-                <span className="grow">{OCORRENCIA_LABEL[j.tipo]}{j.anexos ? ` · ${j.anexos} arquivo(s)` : ''}</span>
+                <span className="grow">{OCORRENCIA_LABEL[j.tipo]}{j.anexos ? ` · ${plural(j.anexos, 'arquivo', 'arquivos')}` : ''}</span>
                 <span className={`badge ${j.status_analise === 'aceita' ? 'ok' : j.status_analise === 'pendente' ? 'warn' : 'bad'}`} title={j.motivo_decisao ?? ''}>{ANALISE_LABEL[j.status_analise]}</span>
               </div>
             ))}

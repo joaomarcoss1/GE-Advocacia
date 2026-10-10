@@ -144,7 +144,7 @@ describe('custas e utilitários', () => {
     const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
     const c = C({ modalidade: 'parcelado', entrada_pct: 30, parcelas: 4 });
     const r = calcular(P(), c);
-    expect(formaDePagamento(r, c, fmt)).toMatch(/^entrada de R\$ .* e 4 parcela\(s\) mensal\(is\) de R\$/);
+    expect(formaDePagamento(r, c, fmt)).toMatch(/^entrada de R\$ .* e 4 parcelas mensais de R\$/);
     const c2 = C({ modalidade: 'exito', proveito_estimado: 50000 });
     expect(formaDePagamento(calcular(P(), c2), c2, fmt)).toMatch(/êxito de/);
   });

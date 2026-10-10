@@ -43,7 +43,7 @@ export function ModalOcorrencia({ inicial, onClose }: { inicial: FormOcorrencia;
           <Field label="De"><input className="input" type="date" value={f.data_inicio ?? ''} onChange={e => setF({ ...f, data_inicio: e.target.value, data_fim: f.data_fim && f.data_fim >= e.target.value ? f.data_fim : e.target.value })} /></Field>
           <Field label="Até"><input className="input" type="date" min={f.data_inicio} value={f.data_fim ?? ''} onChange={e => setF({ ...f, data_fim: e.target.value })} /></Field>
         </div>
-        <label className="check"><input type="checkbox" checked={f.remunerado ?? true} onChange={e => setF({ ...f, remunerado: e.target.checked })} />Dia(s) remunerado(s) — não desconta da folha</label>
+        <label className="check"><input type="checkbox" checked={f.remunerado ?? true} onChange={e => setF({ ...f, remunerado: e.target.checked })} />Dias remunerados: não desconta da folha</label>
         {f.remunerado === false && <p className="hint">Sem remuneração: cada dia útil do período será descontado como falta (1 diária).</p>}
         <Field label="Observação"><textarea className="textarea" value={f.observacao ?? ''} onChange={e => setF({ ...f, observacao: e.target.value })} placeholder="Ex.: CID informado ao RH, número do processo da audiência…" /></Field>
       </div>

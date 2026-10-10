@@ -51,7 +51,7 @@ test.describe('processos, documentos e backup', () => {
     await page.getByRole('button', { name: 'Teste x Exemplo' }).click();
     await expect(det).toBeVisible();
     await det.getByRole('button', { name: 'Atualizar andamentos' }).click();
-    await expect(page.getByText(/andamento\(s\) novo\(s\)/).first()).toBeVisible();
+    await expect(page.getByText(/andamentos? novos?/).first()).toBeVisible();
     await det.getByRole('button', { name: 'Registrar andamento' }).click();
     await det.getByLabel('O que aconteceu').fill('Intimação para réplica');
     await det.getByRole('button', { name: 'Registrar', exact: true }).click();

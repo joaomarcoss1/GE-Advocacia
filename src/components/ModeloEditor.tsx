@@ -74,7 +74,7 @@ export function ModeloEditor({ modelo, onClose, aoSalvar }: { modelo: ModeloDocu
           Use <code>{'{{cliente.nome}}'}</code> para dados do sistema (ou <code>{'{{cliente.rg|padrão}}'}</code> com texto padrão), <code>[entre colchetes]</code> para o que se preenche à mão, <code># Título</code>, <code>## Seção</code>,
           <code> &gt;&gt; </code> centralizado, <code>{' << '}</code> à direita, <code>**negrito**</code> e <code>- item</code>.
         </small>
-        {desconhecidas.length > 0 && <Badge tom="warn">Campo(s) inexistente(s): {desconhecidas.join(', ')}</Badge>}
+        {desconhecidas.length > 0 && <Badge tom="warn">Campos inexistentes: {desconhecidas.join(', ')}</Badge>}
       </div>
     </Modal>
   );

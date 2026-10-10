@@ -7,7 +7,7 @@ import { useDados } from '@/context/Dados';
 import { fmtData, primeiroDoMes, ultimoDoMes } from '@/lib/datetime';
 import { calcularPeriodo, situacaoHoje } from '@/lib/folhaLote';
 import { filaDeAnalise } from '@/lib/analises';
-import { brl } from '@/lib/format';
+import { brl, plural } from '@/lib/format';
 
 export default function Dashboard() {
   const dados = useDados();
@@ -38,15 +38,15 @@ export default function Dashboard() {
       </PageHeader>
       <div className="grid c4" style={{ marginBottom: 22 }}>
         <Kpi label="Equipe ativa" valor={ativos.length} dica={`${trabalhando} trabalhando agora`} />
-        <Kpi label="Aprovações pendentes" valor={pendentes + analises} dica={analises ? <Link to="/painel/ocorrencias">{analises} atestado(s)/atraso(s) para analisar</Link> : pendentes ? <Link to="/painel/ponto">Analisar ajustes de ponto</Link> : 'Tudo em dia'} alerta={pendentes + analises > 0} />
-        <Kpi label="Faltas no mês" valor={faltas} dica={`${atrasos} atraso(s)/saída(s) antecipada(s)`} alerta={faltas > 0} />
+        <Kpi label="Aprovações pendentes" valor={pendentes + analises} dica={analises ? <Link to="/painel/ocorrencias">{analises} {analises === 1 ? 'ocorrência' : 'ocorrências'} (atestados e atrasos) para analisar</Link> : pendentes ? <Link to="/painel/ponto">Analisar ajustes de ponto</Link> : 'Tudo em dia'} alerta={pendentes + analises > 0} />
+        <Kpi label="Faltas no mês" valor={faltas} dica={`${plural(atrasos, 'atraso', 'atrasos')} ou saídas antecipadas`} alerta={faltas > 0} />
         <Kpi label="Folha do mês (prévia)" valor={brl(folha)} dica={<Link to="/painel/folha">Abrir folha</Link>} />
       </div>
 
       {alertas.length > 0 && (
         <div className="card card-pad" style={{ marginBottom: 18, borderColor: 'var(--gold-line)', background: 'var(--gold-tint)' }}>
           <div className="row" style={{ color: 'var(--gold-deep)', marginBottom: 6 }}><AlertTriangle size={18} /><strong>Pendências de cadastro</strong></div>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>{alertas.slice(0, 6).map(a => <li key={a.texto}>{a.texto} <Link to={`/painel/funcionarios?${a.para}`}>Resolver</Link></li>)}</ul>{alertas.length > 6 && <p className="hint" style={{ margin: '6px 0 0' }}>e mais {alertas.length - 6} pendência(s).</p>}
+          <ul style={{ margin: 0, paddingLeft: 20 }}>{alertas.slice(0, 6).map(a => <li key={a.texto}>{a.texto} <Link to={`/painel/funcionarios?${a.para}`}>Resolver</Link></li>)}</ul>{alertas.length > 6 && <p className="hint" style={{ margin: '6px 0 0' }}>e mais {plural(alertas.length - 6, 'pendência', 'pendências')}.</p>}
           <Link to="/painel/funcionarios" className="hint">Ir para funcionários →</Link>
         </div>
       )}
@@ -60,8 +60,8 @@ export default function Dashboard() {
               const n = l.calc.faltas + l.calc.atrasos + l.calc.saidas_antecipadas;
               return (
                 <div key={l.func.id} style={{ marginBottom: 10 }}>
-                  <div className="row between" style={{ fontSize: '.9rem' }}><span>{l.func.nome.split(' ').slice(0, 2).join(' ')}</span><span className="mono muted">{l.calc.faltas} falta(s) · {l.calc.atrasos + l.calc.saidas_antecipadas} atraso(s)</span></div>
-                  <div style={{ height: 8, background: 'var(--navy-tint)', borderRadius: 99, overflow: 'hidden', display: 'flex' }} title={`${n} ocorrência(s)`}>
+                  <div className="row between" style={{ fontSize: '.9rem' }}><span>{l.func.nome.split(' ').slice(0, 2).join(' ')}</span><span className="mono muted">{plural(l.calc.faltas, 'falta', 'faltas')} · {plural(l.calc.atrasos + l.calc.saidas_antecipadas, 'atraso', 'atrasos')}</span></div>
+                  <div style={{ height: 8, background: 'var(--navy-tint)', borderRadius: 99, overflow: 'hidden', display: 'flex' }} title={`${plural(n, 'ocorrência', 'ocorrências')}`}>
                     <div style={{ width: `${(l.calc.faltas / maxOcorr) * 100}%`, background: 'var(--bad)' }} />
                     <div style={{ width: `${((l.calc.atrasos + l.calc.saidas_antecipadas) / maxOcorr) * 100}%`, background: 'var(--brass)' }} />
                   </div>

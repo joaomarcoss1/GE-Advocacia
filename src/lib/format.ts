@@ -15,6 +15,6 @@ export function mascaraTelefone(v: string): string {
   if (d.length <= 10) return d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
   return d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
 }
-/** Plural em português: plural(1, 'aprovação', 'aprovações') → "1 aprovação"; plural(3, …) → "3 aprovações" (0 também no singular, como se fala). */
-export const plural = (n: number, singular: string, plural_: string) => `${n} ${n === 1 || n === 0 ? singular : plural_}`;
+/** Plural em português: plural(1, 'aprovação', 'aprovações') → "1 aprovação"; plural(3, …) → "3 aprovações" (0 fica no plural: "0 aprovações"). */
+export const plural = (n: number, singular: string, plural_: string) => `${n} ${n === 1 ? singular : plural_}`;
 export const semAcento = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();

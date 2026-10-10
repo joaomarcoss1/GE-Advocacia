@@ -6,7 +6,7 @@ import { useDados } from '@/context/Dados';
 import { brParaIso, fmtData } from '@/lib/datetime';
 import { calcularPrazo, type RegimePrazo } from '@/lib/processos';
 import { parseOab } from '@/lib/intimacoes';
-import { semAcento } from '@/lib/format';
+import { semAcento, plural } from '@/lib/format';
 import type { Intimacao, IntimacoesSync, StatusIntimacao } from '@/lib/types';
 
 const STATUS: Record<StatusIntimacao, { rotulo: string; tom: Tom }> = { nova: { rotulo: 'Nova', tom: 'warn' }, lida: { rotulo: 'Lida', tom: 'mute' }, tratada: { rotulo: 'Tratada', tom: 'ok' }, descartada: { rotulo: 'Descartada', tom: 'mute' } };
@@ -55,7 +55,7 @@ export default function Intimacoes() {
     setBuscando(true);
     try {
       const r = await db.intimacoes.buscar(15);
-      if (r.erros) toast.erro(r.mensagem || 'A busca teve erros.'); else toast.ok(r.novas ? `${r.novas} intimação(ões) nova(s)${r.tarefas ? `, ${r.tarefas} tarefa(s) criada(s)` : ''}.` : r.mensagem || 'Nenhuma intimação nova.');
+      if (r.erros) toast.erro(r.mensagem || 'A busca teve erros.'); else toast.ok(r.novas ? `${plural(r.novas, 'intimação nova', 'intimações novas')}${r.tarefas ? `, ${plural(r.tarefas, 'tarefa criada', 'tarefas criadas')}` : ''}.` : r.mensagem || 'Nenhuma intimação nova.');
       await carregar();
     } catch (e) { toast.erro((e as Error).message); } finally { setBuscando(false); }
   }
@@ -67,7 +67,7 @@ export default function Intimacoes() {
         <button className="btn gold" onClick={buscarAgora} disabled={buscando}><RefreshCw size={17} className={buscando ? 'gira' : ''} />{buscando ? 'Buscando…' : 'Buscar no DJEN'}</button>
       </PageHeader>
       <div className="grid c4" style={{ marginBottom: 18 }}>
-        <Kpi label="Novas" valor={novas} alerta={novas > 0} icone={<Inbox />} />
+        <Kpi label="Novas" valor={novas} icone={<Inbox />} />
         <Kpi label="Prazo em até 5 dias" valor={urgentes} alerta={urgentes > 0} />
         <Kpi label="Sem processo cadastrado" valor={semProcesso} />
         <Kpi label="Advogados monitorados" valor={oabsCadastradas} dica={sync ? `Última busca: ${fmtData(sync.executada_em.slice(0, 10))}` : 'Ainda não buscou'} />

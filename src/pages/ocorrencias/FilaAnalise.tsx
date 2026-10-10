@@ -3,7 +3,7 @@ import Anexos from '@/components/Anexos';
 import { Badge } from '@/components/ui';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { impactoAtraso, impactoOcorrencia } from '@/lib/folha';
-import { brl, minParaHoras } from '@/lib/format';
+import { brl, minParaHoras, plural } from '@/lib/format';
 import { OCORRENCIA_LABEL, type AnexoMeta, type Escala, type Feriado, type Funcionario, type Ocorrencia, type RegistroPonto } from '@/lib/types';
 import type { filaDeAnalise } from '@/lib/analises';
 
@@ -50,7 +50,7 @@ export default function FilaAnalise({ fila, admin, nome, func, escalaDe, feriado
                 <span className="avatar">{iniciaisDe(nome(o.funcionario_id))}</span>
                 <div className="grow">
                   <strong>{nome(o.funcionario_id)}</strong>
-                  <div className="muted" style={{ fontSize: '.88rem' }}>{OCORRENCIA_LABEL[o.tipo]} · {fmtData(o.data_inicio)}{o.data_fim !== o.data_inicio && ` → ${fmtData(o.data_fim)}`}{imp && ` · ${imp.dias} dia(s) útil(eis)`}</div>
+                  <div className="muted" style={{ fontSize: '.88rem' }}>{OCORRENCIA_LABEL[o.tipo]} · {fmtData(o.data_inicio)}{o.data_fim !== o.data_inicio && ` → ${fmtData(o.data_fim)}`}{imp && ` · ${plural(imp.dias, 'dia', 'dias')} útil(eis)`}</div>
                 </div>
                 <Badge tom="warn">Falta com justificativa</Badge>
               </div>
@@ -58,7 +58,7 @@ export default function FilaAnalise({ fila, admin, nome, func, escalaDe, feriado
               <div className="analise-anexos"><Paperclip size={14} /> {admin ? <Anexos metas={metasDe('ocorrencia_id', o.id)} /> : <span className="muted">Anexos visíveis ao administrador</span>}</div>
               <div className="analise-efeito">
                 <span><strong>Aceitar:</strong> a diária é paga normalmente.</span>
-                <span><strong>Recusar:</strong> desconta {imp ? `${imp.dias} diária(s)${admin ? ` (${brl(imp.valor)})` : ''}` : 'a(s) diária(s)'} da folha.</span>
+                <span><strong>Recusar:</strong> desconta {imp ? `${plural(imp.dias, 'diária', 'diárias')}${admin ? ` (${brl(imp.valor)})` : ''}` : 'as diárias'} da folha.</span>
               </div>
               <Botoes admin={admin} onAceitar={() => decidirOc(o, 'aceita')} onRecusar={() => recusarOc(o)} />
             </article>

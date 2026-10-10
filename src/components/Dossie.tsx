@@ -11,6 +11,7 @@ import { ListaEditor } from '@/components/ModeloEditor';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { abrirNovaAba, prepararDocumento } from '@/lib/documentos';
 import type { ChecklistItem, ChecklistModelo, DocumentoArquivo, DriveStatus, LinkEnvio } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 const ICONE = { pendente: CircleDashed, recebido: Check, conferido: Check, dispensado: MinusCircle } as const;
 const ROTULO = { pendente: 'Pendente', recebido: 'Recebido', conferido: 'Conferido', dispensado: 'Dispensado' } as const;
@@ -232,7 +233,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
             {links.map(l => (
               <li key={l.id} className="doc">
                 <span className="doc-nome"><Link2 size={15} /><span>{l.rotulo || 'Link de envio'}</span></span>
-                <small className="muted">expira em {fmtData(isoParaBR(l.expira_em).data)} · {l.usos} arquivo(s) recebido(s)</small>
+                <small className="muted">expira em {fmtData(isoParaBR(l.expira_em).data)} · {plural(l.usos, 'arquivo recebido', 'arquivos recebidos')}</small>
                 <span className="doc-acoes"><button className="btn ghost sm" onClick={() => revogar(l)}>Cancelar link</button></span>
               </li>
             ))}

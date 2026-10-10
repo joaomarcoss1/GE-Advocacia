@@ -7,6 +7,7 @@ import { DIA_LABEL } from '@/lib/types';
 import { diaSemana, fmtData } from '@/lib/datetime';
 import { AVISO_FERIADOS_LOCAIS, feriadosPadrao } from '@/lib/feriados';
 import { FERIADO_LABEL, type Feriado, type TipoFeriado } from '@/lib/types';
+import { plural } from '@/lib/format';
 
 export default function Feriados() {
   const { sessao } = useAuth();
@@ -22,7 +23,7 @@ export default function Feriados() {
 
   async function importar() {
     for (const p of faltamPadrao) await db.feriados.insert(p);
-    await auditar('Feriados importados', String(ano)); toast.ok(`${faltamPadrao.length} feriado(s) adicionados.`); await recarregar();
+    await auditar('Feriados importados', String(ano)); toast.ok(`${plural(faltamPadrao.length, 'feriado', 'feriados')} adicionados.`); await recarregar();
   }
   async function salvar() {
     if (!ed?.data || !ed.nome?.trim()) return toast.erro('Informe a data e o nome.');
@@ -49,7 +50,7 @@ export default function Feriados() {
 
       {admin && faltamPadrao.length > 0 && (
         <div className="card card-pad row between" style={{ marginBottom: 14, background: 'var(--gold-tint)' }}>
-          <div><strong>{faltamPadrao.length} feriado(s) de {ano} ainda não cadastrados</strong><div className="muted">Nacionais e pontos facultativos (Carnaval, Corpus Christi).</div></div>
+          <div><strong>{plural(faltamPadrao.length, 'feriado', 'feriados')} de {ano} ainda não cadastrados</strong><div className="muted">Nacionais e pontos facultativos (Carnaval, Corpus Christi).</div></div>
           <button className="btn" onClick={importar}><CalendarPlus size={18} />Importar feriados de {ano}</button>
         </div>
       )}

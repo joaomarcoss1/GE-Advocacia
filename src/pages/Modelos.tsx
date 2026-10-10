@@ -100,7 +100,7 @@ export default function Modelos() {
                     <td>{rotuloCategoriaModelo(m.categoria)}</td>
                     <td>{rotuloArea(m.area)}</td>
                     <td className="right" style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn sm gold" onClick={() => setUsando(m)}><FileText size={15} />Usar</button>
+                      <button className="btn sm ghost" onClick={() => setUsando(m)} aria-label={`Usar modelo ${m.titulo}`}><FileText size={15} />Usar modelo</button>
                       {gestao && <><button className="icon-btn" aria-label={`Editar ${m.titulo}`} onClick={() => setEditando(m)}><Pencil size={16} /></button><button className="icon-btn" aria-label={`Excluir ${m.titulo}`} onClick={() => excluirPeca(m)}><Trash2 size={16} /></button></>}
                     </td>
                   </tr>

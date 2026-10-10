@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui';
 import ProcessoDetalhe, { dataHora } from '@/components/ProcessoDetalhe';
 import ProcessoModal from '@/components/ProcessoModal';
 import { useDados } from '@/context/Dados';
-import { semAcento } from '@/lib/format';
+import { semAcento, plural } from '@/lib/format';
 import { CATEGORIA_ROTULO } from '@/lib/processos';
 import { AREAS, AREA_ROTULO } from '@/lib/tarefas';
 import type { Cliente, Processo, SituacaoProcesso } from '@/lib/types';
@@ -56,7 +56,7 @@ export default function Processos() {
     setAtualizando(true);
     try {
       const r = await db.processos.consultarTodos();
-      toast.ok(r.erros ? `${r.erros} processo(s) não puderam ser consultados.` : r.novos ? `${r.novos} andamento(s) novo(s)${r.tarefas ? ` · ${r.tarefas} tarefa(s) criada(s)` : ''}.` : 'Nenhum andamento novo.');
+      toast.ok(r.erros ? `${plural(r.erros, 'processo', 'processos')} não puderam ser consultados.` : r.novos ? `${plural(r.novos, 'andamento novo', 'andamentos novos')}${r.tarefas ? ` · ${plural(r.tarefas, 'tarefa criada', 'tarefas criadas')}` : ''}.` : 'Nenhum andamento novo.');
       await recarregar();
     } catch (e) { toast.erro((e as Error).message); } finally { setAtualizando(false); }
   }
@@ -128,7 +128,7 @@ export default function Processos() {
                       <td>{cli(p.cliente_id)?.nome ?? '—'}</td>
                       <td>{nomeResp(p.responsavel_id) ?? '—'}</td>
                       <td>{p.ultima_movimentacao_em ? dataHora(p.ultima_movimentacao_em) : <span className="muted">—</span>}{!p.monitorar && <> <Badge tom="mute">sem acompanhamento</Badge></>}</td>
-                      <td className="right">{novosPor.get(p.id) ? <Badge tom="warn">{novosPor.get(p.id)} novo(s)</Badge> : p.situacao !== 'ativo' ? <Badge tom="mute">{p.situacao}</Badge> : null}</td>
+                      <td className="right">{novosPor.get(p.id) ? <Badge tom="warn">{plural(novosPor.get(p.id) ?? 0, 'novo', 'novos')}</Badge> : p.situacao !== 'ativo' ? <Badge tom="mute">{p.situacao}</Badge> : null}</td>
                     </tr>
                   ))}
                 </tbody>

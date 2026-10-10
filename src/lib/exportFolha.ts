@@ -6,7 +6,7 @@ import {
   CINZA, CINZA_HEX, GOLD, GOLD_HEX, NAVY, NAVY_HEX, R, cabecalhoPdf, dadosPagamento, emissao, rodapePdf,
   type CabecalhoExport, type LinhaExport,
 } from './exportBase';
-import { minParaHoras } from './format';
+import { minParaHoras, plural } from './format';
 import { AJUSTE_LABEL, ANALISE_LABEL, OCORRENCIA_LABEL, type StatusAnalise, type TipoOcorrencia } from './types';
 
 // ---------------------------------------------------------------------------------------------
@@ -93,9 +93,9 @@ export async function folhaPdf(linhas: LinhaExport[], cab: CabecalhoExport) {
   const gap = 4, cw = (W - 20 - gap * 4) / 5, ch = 22;
   cartao(doc, 10, y, cw, ch, 'Funcionários', String(t.n), { sub: `Salários base ${R(t.salarios)}` });
   cartao(doc, 10 + (cw + gap), y, cw, ch, 'Bruto do período', R(t.bruto), { sub: 'Antes dos descontos' });
-  cartao(doc, 10 + (cw + gap) * 2, y, cw, ch, 'Descontos', `- ${R(t.descFaltas + t.descAtrasos + t.outros)}`, { sub: `${t.faltas} falta(s) ${R(t.descFaltas)} · atrasos ${R(t.descAtrasos)}` });
+  cartao(doc, 10 + (cw + gap) * 2, y, cw, ch, 'Descontos', `- ${R(t.descFaltas + t.descAtrasos + t.outros)}`, { sub: `${plural(t.faltas, 'falta', 'faltas')} ${R(t.descFaltas)} · atrasos ${R(t.descAtrasos)}` });
   cartao(doc, 10 + (cw + gap) * 3, y, cw, ch, 'Adicionais', `+ ${R(t.adicionais)}`, { sub: 'Horas extras e adicionais' });
-  cartao(doc, 10 + (cw + gap) * 4, y, cw, ch, 'Total líquido a pagar', R(t.liquido), { destaque: true, sub: `${t.n} pagamento(s)` });
+  cartao(doc, 10 + (cw + gap) * 4, y, cw, ch, 'Total líquido a pagar', R(t.liquido), { destaque: true, sub: `${plural(t.n, 'pagamento', 'pagamentos')}` });
   y += ch + 6;
 
   titulo(doc, 'Folha por funcionário', y); y += 3;
@@ -116,7 +116,7 @@ export async function folhaPdf(linhas: LinhaExport[], cab: CabecalhoExport) {
         c.adicionais ? `+ ${R(c.adicionais)}` : '—', c.descontos ? `- ${R(c.descontos)}` : '—', R(c.valor_final), pagamento(l),
       ];
     }),
-    foot: [['', `${t.n} funcionário(s)`, R(t.salarios), '', '', String(t.faltas), `- ${R(t.descFaltas)}`, `${minParaHoras(t.minAtraso)}\n- ${R(t.descAtrasos)}`, `+ ${R(t.adicionais)}`, `- ${R(t.outros)}`, R(t.liquido), 'TOTAL A PAGAR']],
+    foot: [['', `${plural(t.n, 'funcionário', 'funcionários')}`, R(t.salarios), '', '', String(t.faltas), `- ${R(t.descFaltas)}`, `${minParaHoras(t.minAtraso)}\n- ${R(t.descAtrasos)}`, `+ ${R(t.adicionais)}`, `- ${R(t.outros)}`, R(t.liquido), 'TOTAL A PAGAR']],
     styles: { fontSize: 7.4, cellPadding: 1.4, textColor: [13, 26, 56], valign: 'middle', lineColor: [226, 230, 240], lineWidth: 0.1 },
     headStyles: { fillColor: NAVY, textColor: 255, halign: 'center', fontSize: 7, fontStyle: 'bold', lineWidth: 0 },
     footStyles: { fillColor: NAVY, textColor: 255, fontStyle: 'bold', halign: 'right', fontSize: 7.6 },

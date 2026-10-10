@@ -11,7 +11,7 @@ test.describe('caixa de intimações (DJEN)', () => {
     await expect(page.getByText('Nenhuma intimação ainda')).toBeVisible();
 
     await page.getByRole('button', { name: 'Buscar no DJEN' }).click();
-    await expect(page.getByText(/intimação\(ões\) nova\(s\)/).first()).toBeVisible();
+    await expect(page.getByText(/intimações? novas?/).first()).toBeVisible();
     const linhas = page.locator('tbody tr');
     await expect(linhas.first()).toBeVisible();
     const total = await linhas.count();

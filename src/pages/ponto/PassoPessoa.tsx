@@ -1,5 +1,5 @@
 import { ArrowRight, Search, X } from 'lucide-react';
-import { iniciais } from '@/lib/format';
+import { iniciais, plural } from '@/lib/format';
 import StatusLocal from './StatusLocal';
 import type { Ponto } from './usePonto';
 
@@ -25,7 +25,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
 
       {p.termo.length >= 3 ? (
         <div className="results" aria-live="polite">
-          <div className="section-title" style={{ marginBottom: 10 }}>{p.buscando ? 'Buscando…' : p.filtradas.length ? `${p.filtradas.length} resultado(s)` : 'Nenhum resultado'}</div>
+          <div className="section-title" style={{ marginBottom: 10 }}>{p.buscando ? 'Buscando…' : p.filtradas.length ? `${plural(p.filtradas.length, 'resultado', 'resultados')}` : 'Nenhum resultado'}</div>
           {p.filtradas.map(x => (
             <div key={x.id} className="result">
               <span className="avatar">{iniciais(x.nome)}</span>

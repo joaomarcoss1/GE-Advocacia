@@ -1,4 +1,5 @@
 import type { AreaJuridica, Funcionario } from './types';
+import { plural } from './format';
 
 /**
  * Motor de precificação de honorários: parte do que o escritório REALMENTE custa (aluguel, energia, folha, impostos…), do esforço do caso
@@ -319,7 +320,7 @@ export function formaDePagamento(r: Resultado, c: CasoEntrada, fmt: (v: number) 
   if (c.modalidade === 'hora') return `${r.valorHora != null ? fmt(r.valorHora) : ''} por hora técnica, faturadas mensalmente`;
   const par = r.parcelas.filter(p => p.mes > 0);
   const ent = r.parcelas.find(p => p.mes === 0);
-  let t = !par.length ? 'à vista' : `${ent && ent.valor > 0 ? `entrada de ${fmt(ent.valor)} e ` : ''}${par.length} parcela(s) mensal(is) de ${fmt(par[0].valor)}`;
+  let t = !par.length ? 'à vista' : `${ent && ent.valor > 0 ? `entrada de ${fmt(ent.valor)} e ` : ''}${plural(par.length, 'parcela mensal', 'parcelas mensais')} de ${fmt(par[0].valor)}`;
   if (c.modalidade === 'misto' && r.exitoPct > 0) t += `, mais êxito de ${String(r.exitoPct).replace('.', ',')}% sobre o proveito econômico obtido`;
   return t;
 }

@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Download, Info, Save, Trash2, XCircle } from 'lucide-react';
 import { Abas, Field, Modal, PageHeader, Vazio, useConfirm, useToast } from '@/components/ui';
 import CampoNumero from '@/components/CampoNumero';
+import { plural } from '@/lib/format';
 import HonorariosParametros from '@/components/HonorariosParametros';
 import { useDados } from '@/context/Dados';
 import { baixarDocx } from '@/lib/docx';
 import { brl, dataPorExtenso } from '@/lib/modelos';
 import {
-  BASE_LEGAL, CASO_PADRAO, COMPLEXIDADES, MODALIDADES, PARAMETROS_PADRAO, SERVICOS, STATUS_PROPOSTA, calcular, formaDePagamento, servicoPorId, textoProposta,
+  BASE_LEGAL, CASO_PADRAO, COMPLEXIDADES, MODALIDADES, PARAMETROS_PADRAO, SERVICOS, STATUS_PROPOSTA, calcular, formaDePagamento, servicoPorId, textoProposta, totalCustosFixos,
   type Alerta, type CasoEntrada, type Modalidade, type ParametrosHonorarios, type PropostaHonorarios, type StatusProposta,
 } from '@/lib/precificacao';
 
@@ -41,6 +42,7 @@ export default function Honorarios() {
   const sujo = JSON.stringify(params) !== JSON.stringify(salvos);
   const setC = <K extends keyof CasoEntrada>(k: K, v: CasoEntrada[K]) => setCaso(c => ({ ...c, [k]: v }));
   const forma = formaDePagamento(r, caso, brl);
+  const semCustos = totalCustosFixos(params) <= 0;
 
   function escolherServico(id: string) {
     const s = servicoPorId(id);
@@ -76,7 +78,7 @@ export default function Honorarios() {
             </Field>
             <div className="grid c2">
               <Field label="Complexidade"><select className="select" value={caso.complexidade} onChange={e => setC('complexidade', e.target.value as CasoEntrada['complexidade'])}>{COMPLEXIDADES.map(c => <option key={c.id} value={c.id}>{c.rotulo}</option>)}</select></Field>
-              <Field label="Duração prevista (meses)" dica={sv ? `Em média ${sv.meses} mês(es) para este serviço.` : undefined}><CampoNumero rotulo="Duração em meses" valor={caso.duracao_meses} casas={0} min={1} max={120} onChange={v => setC('duracao_meses', v || 1)} /></Field>
+              <Field label="Duração prevista (meses)" dica={sv ? `Em média ${plural(sv.meses, "mês", "meses")} para este serviço.` : undefined}><CampoNumero rotulo="Duração em meses" valor={caso.duracao_meses} casas={0} min={1} max={120} onChange={v => setC('duracao_meses', v || 1)} /></Field>
             </div>
             <div className="grid c3">
               <Field label="Audiências"><CampoNumero rotulo="Audiências" valor={caso.audiencias} casas={0} max={30} onChange={v => setC('audiencias', v)} /></Field>
@@ -108,6 +110,18 @@ export default function Honorarios() {
           </div>
 
           <div className="stack" style={{ gap: 14 }}>
+            {semCustos ? (
+              <div className="card card-pad preco-card">
+                <small className="muted">Antes de calcular</small>
+                <div className="preco-grande">—</div>
+                <ol className="passos-prazo" style={{ margin: '4px 0 12px' }}>
+                  <li>Cadastre os custos fixos do escritório e a folha.</li>
+                  <li>Informe a tributação, a margem e a tabela de mínimos da OAB-MA.</li>
+                  <li>Volte aqui e simule o caso.</li>
+                </ol>
+                <button className="btn gold" onClick={() => setAba('parametros')}>Cadastrar os custos</button>
+              </div>
+            ) : (
             <div className="card card-pad preco-card" aria-live="polite">
               <small className="muted">{caso.modalidade === 'exito' ? 'Percentual de êxito necessário' : caso.modalidade === 'hora' ? 'Valor da hora técnica' : 'Valor recomendado'}</small>
               <div className="preco-grande">{caso.modalidade === 'exito' ? `${String(r.exitoPct).replace('.', ',')}%` : caso.modalidade === 'hora' ? brl(r.valorHora ?? 0) : brl(r.recomendado)}</div>
@@ -121,6 +135,7 @@ export default function Honorarios() {
               {caso.modalidade === 'misto' && <p style={{ margin: '10px 0 0' }}>Entrada de <strong>{brl(r.fixo)}</strong> + êxito de <strong>{String(r.exitoPct).replace('.', ',')}%</strong>.</p>}
               <p className="muted" style={{ margin: '10px 0 0' }}>{forma}</p>
             </div>
+            )}
 
             <div className="card card-pad">
               <ul className="alertas-preco">
