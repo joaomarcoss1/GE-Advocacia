@@ -45,6 +45,26 @@ jobs:
           psql "$DB" -X -At -c "select 'versao='||max(versao) from public.schema_versao"
           psql "$DB" -X -At -c "select 'tabelas public='||count(*) from information_schema.tables where table_schema='public'"
           psql "$DB" -X -At -c "select 'tabelas sem RLS: '||coalesce(string_agg(tablename, ', '), 'nenhuma') from pg_tables where schemaname='public' and not rowsecurity"
+      - name: Verificação completa do banco (relatório baixável; falha se algo faltar)
+        run: |
+          {
+            echo "== servidor"; psql "$DB" -X -At -c "select current_database()||' / postgres '||current_setting('server_version')"
+            echo "== versões aplicadas"; psql "$DB" -X -At -c "select versao||' '||nome from public.schema_versao order by versao"
+            echo "== contagens"; psql "$DB" -X -At -c "select 'tabelas public='||count(*) from information_schema.tables where table_schema='public' and table_type='BASE TABLE'"
+            psql "$DB" -X -At -c "select 'funcoes public='||count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'"
+            psql "$DB" -X -At -c "select 'escritorios='||count(*) from public.escritorios"
+            psql "$DB" -X -At -c "select 'usuarios auth='||count(*) from auth.users"
+            echo "== tabelas sem RLS"; psql "$DB" -X -At -c "select coalesce(string_agg(tablename, ', '), 'nenhuma') from pg_tables where schemaname='public' and not rowsecurity"
+            echo "== objetos esperados que FALTAM"
+            psql "$DB" -X -At -c "select coalesce(string_agg(n, ', '), 'nenhum') from unnest(array['papeis_permissoes','liberacoes_acesso','acessos_log','limite_taxa','modelos_documentos','honorarios_parametros','intimacoes']) n where to_regclass('public.'||n) is null"
+            psql "$DB" -X -At -c "select coalesce(string_agg(n, ', '), 'nenhum') from unnest(array['tem_permissao','estado_acesso','ponto_acesso','processo_visivel','papel_atual']) n where not exists (select 1 from pg_proc p join pg_namespace s on s.oid=p.pronamespace where s.nspname='public' and p.proname=n)"
+          } | tee verificacao.txt
+          v=$(psql "$DB" -X -At -c "select coalesce(max(versao),0) from public.schema_versao")
+          if [ "$v" -lt 14 ]; then echo "::error::versão do esquema $v (esperado 14)"; exit 1; fi
+      - name: Guarda o relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: verificacao-banco, path: verificacao.txt, if-no-files-found: ignore }
       - name: Promove o administrador da plataforma
         if: ${{ inputs.admin_email != '' }}
         env:
