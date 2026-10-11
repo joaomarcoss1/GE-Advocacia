@@ -24,10 +24,11 @@ export const progressoDe = (itens: ChecklistItem[]) => {
 /** Dossiê de documentos de um cliente ou processo: checklist, arquivos recebidos (com conferência e Drive) e o link para o cliente enviar sozinho. */
 export default function Dossie({ clienteId, processoId = null, aoMudar }: { clienteId: string; processoId?: string | null; aoMudar?(): void }) {
   const { db, clientes, processos } = useDados();
-  const { sessao } = useAuth();
+  const { pode } = useAuth();
   const toast = useToast();
   const confirmar = useConfirm();
-  const gestao = sessao?.papel === 'admin' || sessao?.papel === 'gerente';
+  const gestao = pode('ponto.gerir');
+  const podeExcluirDoc = gestao && pode('documentos.excluir');
   const [itens, setItens] = useState<ChecklistItem[]>([]);
   const [docs, setDocs] = useState<DocumentoArquivo[]>([]);
   const [modelos, setModelos] = useState<ChecklistModelo[]>([]);
@@ -149,7 +150,7 @@ export default function Dossie({ clienteId, processoId = null, aoMudar }: { clie
         {d.drive_status === 'pendente' && <Badge tom="warn">Drive pendente</Badge>}
         {d.drive_status === 'erro' && <span title={d.drive_erro ?? ''}><Badge tom="bad">Drive com erro</Badge></span>}
         <button className={`btn sm ${d.conferido ? '' : 'ghost'}`} aria-pressed={d.conferido} onClick={() => conferir(d)}>{d.conferido ? 'Conferido' : 'Conferir'}</button>
-        {gestao && <button className="icon-btn" aria-label={`Excluir ${d.nome}`} onClick={() => remover(d)}><Trash2 size={16} /></button>}
+        {podeExcluirDoc && <button className="icon-btn" aria-label={`Excluir ${d.nome}`} onClick={() => remover(d)}><Trash2 size={16} /></button>}
       </span>
     </li>
   );

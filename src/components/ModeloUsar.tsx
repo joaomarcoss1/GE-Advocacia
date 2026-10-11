@@ -26,7 +26,7 @@ export function Previa({ texto }: { texto: string }) {
 /** Usar um modelo: escolhe cliente, processo e advogado, o sistema preenche com os dados reais; o usuário revisa e baixa em Word. */
 export default function ModeloUsar({ modelo, onClose }: { modelo: ModeloDocumento; onClose(): void }) {
   const { db, clientes, processos, funcionarios, config, agora, auditar } = useDados();
-  const { sessao } = useAuth();
+  const { pode } = useAuth();
   const toast = useToast();
   const advogados = useMemo(() => funcionarios.filter(f => !f.data_desligamento).sort((a, b) => Number(!!b.oab) - Number(!!a.oab) || a.nome.localeCompare(b.nome, 'pt-BR')), [funcionarios]);
   const [clienteId, setClienteId] = useState('');
@@ -40,9 +40,9 @@ export default function ModeloUsar({ modelo, onClose }: { modelo: ModeloDocument
   const [editando, setEditando] = useState(false);
 
   useEffect(() => {
-    if (sessao?.papel !== 'admin') return;
+    if (!pode('honorarios.ver')) return;
     db.honorarios.propostas.list().then(l => setPropostas(l.filter(x => x.status !== 'recusada'))).catch(() => undefined);
-  }, [db, sessao?.papel]);
+  }, [db, pode]);
   const propostasDoCliente = propostas.filter(x => x.cliente_id === clienteId);
   function usarProposta(id: string) {
     const x = propostas.find(q => q.id === id);

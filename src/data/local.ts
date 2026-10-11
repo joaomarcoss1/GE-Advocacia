@@ -23,10 +23,11 @@ import { exigeProvidencia, prazoNoTexto } from '@/lib/intimacoes';
 import { ehCategoria, sugerirCategoria, type CategoriaDoc } from '@/lib/organizacao';
 import { calcularPrazo, chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
 import { STATUS_ROTULO } from '@/lib/tarefas';
+import { PAPEIS, PADRAO, ORDEM_PAPEIS, RESERVADAS, ehPapel, ehPermissao, estadoAcesso, permissoesEfetivas, podeAtribuirPapel, podeConceder, podeGerirAlvo, type EstadoAcesso } from '@/lib/permissoes';
 import type {
-  AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
+  AcessoLinha, AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
   ChecklistItem, ChecklistModelo, Cliente, DadosConsultaProcesso, DocumentoArquivo, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta,
-  Funcionario, Intimacao, IntimacoesSync, Ocorrencia, Papel, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
+  EventoAcesso, Funcionario, Intimacao, IntimacoesSync, MeuPontoHoje, Ocorrencia, Papel, PoliticaAcesso, RegistroAcesso, RegistroPonto, StatusTarefa, Tarefa, TarefaFunc, Usuario,
 } from '@/lib/types';
 import type {
   AnexarArgs, AnexoAberto, ArquivosRepo, BaterArgs, Crud, Db, DocumentoVerificado, FolhasRepo, ProcessosRepo, JustificarAusenciaArgs, JustificativaFunc, MarcacaoHistorico,
@@ -55,10 +56,15 @@ const uuid = () => (typeof crypto.randomUUID === 'function' ? crypto.randomUUID(
 const agoraIso = () => new Date().toISOString();
 const emailValido = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
 
-interface Ator { slug: string; papel: Papel; sessao: Sessao }
+interface Ator { slug: string; papel: Papel; sessao: Sessao; perms: ReadonlySet<string>; acesso: EstadoAcesso; funcId: string | null }
+type LinhaLiberacao = { id: string; perfil_id: string; ate: string; motivo: string; por: string; created_at: string };
 
+/** Quem pode: uma lista de níveis (legado), uma permissão ou uma regra que também enxerga a linha. */
+type Acesso<T> = Papel[] | string | ((a: Ator, linha: T | null) => boolean);
 interface Regras<T> {
-  le: Papel[]; ins?: Papel[]; upd?: Papel[]; del?: Papel[];
+  le: Acesso<T>; ins?: Acesso<T>; upd?: Acesso<T>; del?: Acesso<T>;
+  /** Linhas que o usuário enxerga (escopo de processos, tarefas…). */
+  filtra?(linhas: T[], a: Ator): T[];
   /** "Gatilhos" do banco: validam e podem ajustar a linha antes de gravar. */
   antes?(op: 'ins' | 'upd' | 'del', velho: T | null, novo: T | null, a: Ator): void;
   depois?(op: 'ins' | 'upd' | 'del', velho: T | null, novo: T | null, a: Ator): void;
@@ -79,14 +85,53 @@ export function criarDbLocal(): Db {
     const e = s.escritorio ? escPorSlug(s.escritorio.slug) : undefined;
     if (!e || !e.ativo) return null;
     const u = lerTab<UsuarioLocal>(e.slug, 'usuarios').find(x => x.id === s.id && x.ativo);
-    return u ? { ...s, nome: u.nome, papel: u.papel, escritorio: infoDe(e) } : null;
+    if (!u) return null;
+    definirFuso(e.fuso);
+    const perms = permissoesDe(e.slug, u);
+    const lib = liberacaoAte(e.slug, u.id);
+    return {
+      ...s, nome: u.nome, papel: u.papel, escritorio: infoDe(e), nivel: PAPEIS[u.papel].nivel, permissoes: [...perms].sort(), acesso: estadoDe(e.slug, u),
+      funcionario_id: u.funcionario_id ?? null, trocar_senha: !!u.trocar_senha, liberado_ate: lib,
+    };
   }
   function tentaAtor(): Ator | null {
     const s = sessaoValida();
     if (!s || s.papel === 'plataforma' || !s.escritorio) return null;
     definirFuso(s.escritorio.fuso);
-    return { slug: s.escritorio.slug, papel: s.papel, sessao: s };
+    return { slug: s.escritorio.slug, papel: s.papel, sessao: s, perms: new Set(s.permissoes ?? []), acesso: s.acesso ?? 'liberado', funcId: s.funcionario_id ?? null };
   }
+  /** Permissões e porta do ponto (espelho de `permissoes_efetivas()` e `_estado_de()` da migração 0013). */
+  function permissoesDe(slug: string, u: UsuarioLocal): Set<string> {
+    const ajustes = lerJson<Record<string, string[]>>(kt(slug, 'papeis_permissoes'), {});
+    return permissoesEfetivas({ papel: u.papel, base: ajustes[u.papel] ?? null, conceder: u.conceder ?? [], negar: u.negar ?? [] });
+  }
+  function liberacaoAte(slug: string, perfilId: string): string | null {
+    const agora = agoraIso();
+    return lerTab<LinhaLiberacao>(slug, 'liberacoes').filter(l => l.perfil_id === perfilId && l.ate > agora).map(l => l.ate).sort().pop() ?? null;
+  }
+  function estadoDe(slug: string, u: UsuarioLocal): EstadoAcesso {
+    if (u.papel === 'admin') return 'liberado';        // o administrador nunca fica trancado para fora
+    const politicaAtiva = lerJson<{ exigir_ponto?: boolean }>(kt(slug, 'acesso_config'), {}).exigir_ponto ?? true;
+    const exigePonto = u.exige_ponto ?? PAPEIS[u.papel].exigePonto;
+    const hoje = agoraBR().data;
+    const marcacoes = !u.funcionario_id ? [] : lerTab<RegistroPonto>(slug, 'registros')
+      .filter(r => r.funcionario_id === u.funcionario_id && r.data === hoje && r.status_aprovacao !== 'rejeitado').map(r => r.tipo);
+    return estadoAcesso({ politicaAtiva, exigePonto, marcacoes, liberadoAte: liberacaoAte(slug, u.id), agora: agoraIso() });
+  }
+  function registrarAcesso(slug: string, perfilId: string | null, nome: string, evento: EventoAcesso, detalhe = '') {
+    gravarTab(slug, 'acessos_log', [...lerTab<RegistroAcesso>(slug, 'acessos_log'), { id: uuid(), perfil_id: perfilId, nome, evento, detalhe: detalhe.slice(0, 500), created_at: agoraIso() }]);
+  }
+  /** Só se concede o que se tem (e nunca uma reservada); negar vale para qualquer permissão do catálogo. */
+  function conferirPermissoesDadas(a: Ator, lista: string[] | undefined, dar: boolean) {
+    for (const x of lista ?? []) {
+      if (!ehPermissao(x)) throw erro('PERMISSAO_INVALIDA');
+      if (dar && (a.papel === 'admin' ? RESERVADAS.includes(x) : !podeConceder(a.perms, x))) throw erro('PERMISSAO_ACIMA_DA_SUA');
+    }
+  }
+  const podeP = (a: Ator, perm: string) => a.acesso === 'liberado' && a.perms.has(perm);
+  const ehDelegante = (a: Ator) => podeP(a, 'casos.acessar');
+  const ehGestao = (a: Ator) => podeP(a, 'ponto.gerir');
+  const GEST = (a: Ator) => ehGestao(a);
   function ator(): Ator { const a = tentaAtor(); if (!a) throw erro('SEM_PERMISSAO'); return a; }
   const exigeAdmin = (): Ator => { const a = ator(); if (a.papel !== 'admin') throw erro('SEM_PERMISSAO'); return a; };
   function exigePlataforma(): Sessao {
@@ -103,13 +148,23 @@ export function criarDbLocal(): Db {
   }
 
   function crud<T extends { id: string }>(tabela: string, r: Regras<T>): Crud<T> {
-    const pode = (lista: Papel[] | undefined, a: Ator) => !!lista?.includes(a.papel);
+    const pode = (regra: Acesso<T> | undefined, a: Ator, linha: T | null = null): boolean => {
+      if (!regra) return false;
+      if (typeof regra === 'string') return podeP(a, regra);
+      if (typeof regra === 'function') return a.acesso === 'liberado' && regra(a, linha);
+      return a.acesso === 'liberado' && regra.includes(a.papel);
+    };
     return {
-      async list() { const a = tentaAtor(); return a && pode(r.le, a) ? lerTab<T>(a.slug, tabela) : []; },
+      async list() {
+        const a = tentaAtor();
+        if (!a || !pode(r.le, a)) return [];
+        const linhas = lerTab<T>(a.slug, tabela);
+        return r.filtra ? r.filtra(linhas, a) : linhas;
+      },
       async insert(row) {
         const a = ator();
-        if (!pode(r.ins, a)) throw erro('SEM_PERMISSAO');
         const novo = { created_at: agoraIso(), ...row, id: uuid() } as unknown as T;
+        if (!pode(r.ins, a, novo)) throw erro('SEM_PERMISSAO');
         r.antes?.('ins', null, novo, a);
         gravarTab(a.slug, tabela, [...lerTab<T>(a.slug, tabela), novo]);
         r.depois?.('ins', null, novo, a);
@@ -117,11 +172,11 @@ export function criarDbLocal(): Db {
       },
       async update(id, patch) {
         const a = ator();
-        if (!pode(r.upd, a)) throw erro('SEM_PERMISSAO');
         const rows = lerTab<T>(a.slug, tabela);
         const i = rows.findIndex(x => x.id === id);
-        if (i < 0) throw erro('NAO_ENCONTRADO');
+        if (i < 0 || (r.filtra && !r.filtra([rows[i]], a).length)) { if (!pode(r.upd, a)) throw erro('SEM_PERMISSAO'); throw erro('NAO_ENCONTRADO'); }
         const velho = rows[i];
+        if (!pode(r.upd, a, velho)) throw erro('SEM_PERMISSAO');
         const novo = { ...velho, ...patch } as T;
         r.antes?.('upd', velho, novo, a);
         rows[i] = novo;
@@ -131,10 +186,10 @@ export function criarDbLocal(): Db {
       },
       async remove(id) {
         const a = ator();
-        if (!pode(r.del, a)) throw erro('SEM_PERMISSAO');
         const rows = lerTab<T>(a.slug, tabela);
         const velho = rows.find(x => x.id === id);
-        if (!velho) return;
+        if (!velho || (r.filtra && !r.filtra([velho], a).length)) { if (!pode(r.del, a)) throw erro('SEM_PERMISSAO'); return; }
+        if (!pode(r.del, a, velho)) throw erro('SEM_PERMISSAO');
         r.antes?.('del', velho, null, a);
         gravarTab(a.slug, tabela, rows.filter(x => x.id !== id));
         r.depois?.('del', velho, null, a);
@@ -162,7 +217,7 @@ export function criarDbLocal(): Db {
     },
   });
   const registros = crud<RegistroPonto>('registros', {
-    le: ['admin', 'gerente'], ins: ['admin', 'gerente'], upd: ['admin', 'gerente'], del: ['admin'],
+    le: GEST, ins: GEST, upd: GEST, del: ['admin'],
     antes(op, velho, novo, a) {
       for (const r of [velho, novo]) if (r) travaPeriodo(a.slug, r.funcionario_id, r.data);
       if (op === 'upd' && velho && novo && (novo.analise ?? null) !== (velho.analise ?? null)) {
@@ -180,7 +235,7 @@ export function criarDbLocal(): Db {
     },
   });
   const ocorrencias = crud<Ocorrencia>('ocorrencias', {
-    le: ['admin', 'gerente'], ins: ['admin', 'gerente'], upd: ['admin', 'gerente'], del: ['admin', 'gerente'],
+    le: GEST, ins: GEST, upd: GEST, del: GEST,
     antes(op, velho, novo, a) {
       for (const o of [velho, novo]) if (o) travaPeriodo(a.slug, o.funcionario_id, o.data_inicio, o.data_fim);
       if (op === 'upd' && velho && novo && (novo.status_analise ?? 'aceita') !== (velho.status_analise ?? 'aceita')) {
@@ -197,11 +252,11 @@ export function criarDbLocal(): Db {
     antes(_op, velho, novo, a) { for (const x of [velho, novo]) if (x) travaPeriodo(a.slug, x.funcionario_id, x.data); },
   });
   const ajustesDia = crud<AjusteDia>('ajustes_dia', {
-    le: ['admin', 'gerente'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    le: GEST, ins: ['admin'], upd: ['admin'], del: ['admin'],
     antes(_op, velho, novo, a) { for (const x of [velho, novo]) if (x) travaPeriodo(a.slug, x.funcionario_id, x.data); },
   });
   const cargos = crud<Cargo>('cargos', {
-    le: ['admin', 'gerente'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    le: GEST, ins: ['admin'], upd: ['admin'], del: ['admin'],
     antes(op, _v, novo, a) {
       if (op !== 'del' && novo && lerTab<Cargo>(a.slug, 'cargos').some(c => c.id !== novo.id && c.nome.trim().toLowerCase() === novo.nome.trim().toLowerCase())) throw erro('NOME_EXISTE', 'Já existe um cargo com esse nome.');
     },
@@ -210,13 +265,13 @@ export function criarDbLocal(): Db {
     },
   });
   const escalas = crud<Escala>('escalas', {
-    le: ['admin', 'gerente'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    le: GEST, ins: ['admin'], upd: ['admin'], del: ['admin'],
     depois(op, velho, _n, a) {
       if (op === 'del' && velho) gravarTab(a.slug, 'funcionarios', lerTab<Funcionario>(a.slug, 'funcionarios').map(f => (f.escala_id === velho.id ? { ...f, escala_id: null } : f)));
     },
   });
   const feriados = crud<Feriado>('feriados', {
-    le: ['admin', 'gerente'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    le: GEST, ins: ['admin'], upd: ['admin'], del: ['admin'],
     antes(op, _v, novo, a) {
       if (op !== 'del' && novo && lerTab<Feriado>(a.slug, 'feriados').some(f => f.id !== novo.id && f.data === novo.data)) throw erro('DATA_EXISTE', 'Já existe um feriado nessa data.');
     },
@@ -224,17 +279,22 @@ export function criarDbLocal(): Db {
 
 
   // ---------------------------------------------------------------- delegação (espelha a migração 0006)
-  const DELEGA: Papel[] = ['admin', 'gerente', 'coordenador'];
   const andamentosDe = (slug: string) => lerTab<Andamento>(slug, 'andamentos');
   function novoAndamento(slug: string, tarefaId: string, tipo: Andamento['tipo'], texto: string, autor: string) {
     gravarTab(slug, 'andamentos', [...andamentosDe(slug), { id: uuid(), tarefa_id: tarefaId, tipo, texto, autor_nome: autor, created_at: agoraIso() }]);
   }
+  /** A tarefa é "minha" se sou responsável, revisor ou participante (ou a criei). */
+  const tarefaMinha = (t: Tarefa, a: Ator) => t.criado_por === a.sessao.id || (!!a.funcId && (t.responsavel_id === a.funcId || t.revisor_id === a.funcId || (t.participantes ?? []).includes(a.funcId)));
   const tarefas = crud<Tarefa>('tarefas', {
-    le: DELEGA, ins: DELEGA, upd: DELEGA, del: DELEGA,
+    le: a => a.acesso === 'liberado',
+    filtra: (linhas, a) => (a.perms.has('tarefas.ver') ? linhas : linhas.filter(t => tarefaMinha(t, a))),
+    ins: 'tarefas.criar',
+    upd: (a, t) => a.perms.has('tarefas.editar_todas') || (a.perms.has('tarefas.criar') && (!t || t.criado_por === a.sessao.id)),
+    del: (a, t) => a.perms.has('tarefas.editar_todas') || (a.perms.has('tarefas.criar') && (!t || t.criado_por === a.sessao.id)),
     antes(op, velho, novo, a) {
-      // coordenador altera e exclui somente o que ele mesmo criou
-      if ((op === 'upd' || op === 'del') && a.papel === 'coordenador' && velho?.criado_por !== a.sessao.id) throw erro('SEM_PERMISSAO');
       if (op === 'del' || !novo) return;
+      // delegar (responsável, revisor ou participantes que não sejam a própria pessoa) exige a permissão de delegar
+      if (!a.perms.has('tarefas.delegar') && ((novo.responsavel_id && novo.responsavel_id !== a.funcId) || novo.revisor_id || (novo.participantes ?? []).length)) throw erro('SEM_PERMISSAO');
       novo.titulo = (novo.titulo ?? '').trim();
       novo.processo_id = novo.processo_id ?? null; novo.origem_movimento_id = novo.origem_movimento_id ?? null;
       if (novo.processo_id) {                                        // tarefa de processo cadastrado: número, cliente e área vêm do cadastro
@@ -294,7 +354,6 @@ export function criarDbLocal(): Db {
   });
 
   // ---------------------------------------------------------------- clientes, processos, documentos (espelha a migração 0007)
-  const GESTAO: Papel[] = ['admin', 'gerente'];
   type MovimentoLocal = Movimento & { chave: string };
   type ArquivoLocal = DocumentoArquivo & { enviado_por: string | null };
   type LinkLocal = LinkEnvio & { token_hash: string };
@@ -308,7 +367,7 @@ export function criarDbLocal(): Db {
   const semDados = <T extends object>(l: T): Omit<T, 'token_hash'> => { const { token_hash: _t, ...r } = l as T & { token_hash?: string }; return r as Omit<T, 'token_hash'>; };
 
   const clientes = crud<Cliente>('clientes', {
-    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    le: 'clientes.ver', ins: 'clientes.editar', upd: 'clientes.editar', del: GEST,
     antes(op, velho, novo, a) {
       if (op === 'del') {
         if (processosDe(a.slug).some(p => p.cliente_id === velho?.id) || arquivosDe(a.slug).some(d => d.cliente_id === velho?.id)) throw erro('CLIENTE_COM_VINCULOS');
@@ -330,8 +389,18 @@ export function criarDbLocal(): Db {
     },
   });
 
+  /** Espelho de `_processo_visivel`: os que respondo, os que me foram delegados em tarefa e, com permissão, todos (sigilosos só com a permissão própria). */
+  function processoVisivel(a: Ator, p: Processo, tarefasDoEscritorio: Tarefa[]): boolean {
+    if (!podeP(a, 'processos.ver')) return false;
+    const meu = !!a.funcId && p.responsavel_id === a.funcId;
+    const delegado = !!a.funcId && tarefasDoEscritorio.some(t => t.processo_id === p.id && t.status !== 'cancelada' && (t.responsavel_id === a.funcId || t.revisor_id === a.funcId || (t.participantes ?? []).includes(a.funcId!)));
+    const criei = (p as Processo & { criado_por?: string }).criado_por === a.sessao.id;
+    if (!(a.perms.has('processos.ver_todos') || meu || criei || delegado)) return false;
+    return !p.sigiloso || a.perms.has('processos.sigilosos') || meu;
+  }
+  const processosVisiveis = (a: Ator, linhas: Processo[]): Processo[] => { const ts = lerTab<Tarefa>(a.slug, 'tarefas'); return linhas.filter(p => processoVisivel(a, p, ts)); };
   const processosBase = crud<Processo>('processos', {
-    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    le: 'processos.ver', filtra: (linhas, a) => processosVisiveis(a, linhas), ins: 'processos.editar', upd: 'processos.editar', del: (a: Ator) => ehGestao(a) && a.perms.has('processos.excluir'),
     antes(op, velho, novo, a) {
       if (op === 'del') {
         if (lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.processo_id === velho?.id) || arquivosDe(a.slug).some(d => d.processo_id === velho?.id)) throw erro('PROCESSO_COM_VINCULOS');
@@ -419,16 +488,18 @@ export function criarDbLocal(): Db {
     ...processosBase,
     async movimentos(id) {
       const a = tentaAtor();
-      return a && DELEGA.includes(a.papel) ? maisNovosPrimeiro(movimentosDe(a.slug).filter(m => m.processo_id === id)).map(({ chave: _c, ...m }) => m) : [];
+      return a && processosVisiveis(a, processosDe(a.slug)).some(p => p.id === id) ? maisNovosPrimeiro(movimentosDe(a.slug).filter(m => m.processo_id === id)).map(({ chave: _c, ...m }) => m) : [];
     },
     async naoLidos() {
       const a = tentaAtor();
-      return a && DELEGA.includes(a.papel) ? maisNovosPrimeiro(movimentosDe(a.slug).filter(m => !m.lido)).map(({ chave: _c, ...m }) => m) : [];
+      if (!a) return [];
+      const vis = new Set(processosVisiveis(a, processosDe(a.slug)).map(p => p.id));
+      return maisNovosPrimeiro(movimentosDe(a.slug).filter(m => !m.lido && vis.has(m.processo_id))).map(({ chave: _c, ...m }) => m);
     },
     async registrarMovimento(id, m) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
-      if (!processosDe(a.slug).some(p => p.id === id)) throw erro('NAO_ENCONTRADO');
+      if (!podeP(a, 'processos.editar')) throw erro('SEM_PERMISSAO');
+      if (!processosVisiveis(a, processosDe(a.slug)).some(p => p.id === id)) throw erro('NAO_ENCONTRADO');
       const nome = m.nome.trim();
       if (!nome || nome.length > 300 || !m.data_hora) throw erro('NOME_OBRIGATORIO');
       const c = porCategoria(m.categoria);
@@ -444,12 +515,12 @@ export function criarDbLocal(): Db {
     },
     async marcarLidos(id) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'processos.ver') || !processosVisiveis(a, processosDe(a.slug)).some(p => p.id === id)) throw erro('SEM_PERMISSAO');
       gravarTab(a.slug, 'movimentos', movimentosDe(a.slug).map(m => (m.processo_id === id ? { ...m, lido: true } : m)));
     },
     async buscar(numero): Promise<DadosConsultaProcesso | null> {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!ehDelegante(a)) throw erro('SEM_PERMISSAO');
       const n = normalizarCnj(numero);
       if (!n) throw erro('PROCESSO_INVALIDO');
       const t = tribunalDeCnj(n);
@@ -458,17 +529,17 @@ export function criarDbLocal(): Db {
     },
     async consultar(id) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
-      const p = processosDe(a.slug).find(x => x.id === id);
+      if (!podeP(a, 'processos.ver')) throw erro('SEM_PERMISSAO');
+      const p = processosVisiveis(a, processosDe(a.slug)).find(x => x.id === id);
       if (!p) throw erro('NAO_ENCONTRADO');
       const r = consultarSimulado(a, p);
       return { processos: 1, novos: r.novos, tarefas: r.tarefas, erros: 0, mensagem: 'Consulta simulada (demonstração).' };
     },
     async consultarTodos() {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'processos.ver')) throw erro('SEM_PERMISSAO');
       let novos = 0, tarefas = 0;
-      const alvo = processosDe(a.slug).filter(p => p.monitorar && p.situacao === 'ativo');
+      const alvo = processosVisiveis(a, processosDe(a.slug)).filter(p => p.monitorar && p.situacao === 'ativo');
       for (const p of alvo) { const r = consultarSimulado(a, p); novos += r.novos; tarefas += r.tarefas; }
       return { processos: alvo.length, novos, tarefas, erros: 0, mensagem: 'Consulta simulada (demonstração).' } satisfies ResultadoConsulta;
     },
@@ -477,7 +548,7 @@ export function criarDbLocal(): Db {
 
   // ---- checklist
   const modelos = crud<ChecklistModelo>('checklist_modelos', {
-    le: DELEGA, ins: GESTAO, upd: GESTAO, del: GESTAO,
+    le: 'casos.acessar', ins: GEST, upd: GEST, del: GEST,
     antes(op, _v, novo, a) {
       if (op === 'del' || !novo) return;
       novo.nome = (novo.nome ?? '').trim();
@@ -488,7 +559,7 @@ export function criarDbLocal(): Db {
     },
   });
   const modelosDocumentos = crud<ModeloDocumento>('modelos_documentos', {
-    le: DELEGA, ins: GESTAO, upd: GESTAO, del: GESTAO,
+    le: 'modelos.usar', ins: (a: Ator) => ehGestao(a) && a.perms.has('modelos.editar'), upd: (a: Ator) => ehGestao(a) && a.perms.has('modelos.editar'), del: (a: Ator) => ehGestao(a) && a.perms.has('modelos.editar'),
     antes(op, velho, novo, a) {
       if (op === 'del' || !novo) return;
       novo.titulo = (novo.titulo ?? '').trim();
@@ -503,7 +574,7 @@ export function criarDbLocal(): Db {
   // ---- intimações do DJEN: no modo demonstração a "busca" gera comunicações de exemplo para os processos cadastrados
   const IMUTAVEIS_INTIMACAO = ['djen_id', 'tribunal', 'texto', 'tipo_comunicacao', 'numero_processo', 'data_disponibilizacao', 'orgao', 'classe', 'link', 'destinatarios', 'advogados', 'hash', 'created_at'] as const;
   const intimacoesBase = crud<Intimacao>('intimacoes', {
-    le: DELEGA, ins: [], upd: DELEGA, del: GESTAO,
+    le: 'intimacoes.ver', ins: [], upd: 'intimacoes.tratar', del: GEST,
     antes(op, velho, novo, a) {
       if (op === 'del' || !novo || !velho) return;
       for (const k of IMUTAVEIS_INTIMACAO) if (JSON.stringify(novo[k]) !== JSON.stringify(velho[k])) throw erro('CAMPO_IMUTAVEL', 'O conteúdo da intimação vem do tribunal e não pode ser alterado.');
@@ -520,11 +591,11 @@ export function criarDbLocal(): Db {
   ];
   const intimacoes: Db['intimacoes'] = {
     list: intimacoesBase.list, update: intimacoesBase.update, remove: intimacoesBase.remove,
-    async novas() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? lerTab<Intimacao>(a.slug, 'intimacoes').filter(i => i.status === 'nova').length : 0; },
-    async sync() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? lerJson<IntimacoesSync | null>(kt(a.slug, 'intimacoes_sync'), null) : null; },
+    async novas() { const a = tentaAtor(); return a && ehDelegante(a) ? lerTab<Intimacao>(a.slug, 'intimacoes').filter(i => i.status === 'nova').length : 0; },
+    async sync() { const a = tentaAtor(); return a && ehDelegante(a) ? lerJson<IntimacoesSync | null>(kt(a.slug, 'intimacoes_sync'), null) : null; },
     async buscar() {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!ehDelegante(a)) throw erro('SEM_PERMISSAO');
       const procs = processosDe(a.slug).filter(p => p.situacao === 'ativo').slice(0, 3);
       const oabs = lerTab<Funcionario>(a.slug, 'funcionarios').filter(f => f.oab).map(f => f.oab as string);
       const existentes = lerTab<Intimacao>(a.slug, 'intimacoes');
@@ -555,7 +626,7 @@ export function criarDbLocal(): Db {
     },
   };
   const propostas = crud<PropostaHonorarios>('honorarios_propostas', {
-    le: ['admin'], ins: ['admin'], upd: ['admin'], del: ['admin'],
+    le: 'honorarios.ver', ins: 'honorarios.editar', upd: 'honorarios.editar', del: 'honorarios.editar',
     antes(op, velho, novo) {
       if (op === 'del' || !novo) return;
       novo.titulo = (novo.titulo ?? '').trim();
@@ -567,7 +638,9 @@ export function criarDbLocal(): Db {
     },
   });
   const itens = crud<ChecklistItem>('checklist_itens', {
-    le: DELEGA, ins: DELEGA, upd: DELEGA, del: GESTAO,
+    le: 'documentos.ver',
+    filtra: (linhas, a) => { const vis = new Set(processosVisiveis(a, lerTab<Processo>(a.slug, 'processos')).map(p => p.id)); return linhas.filter(i => !i.processo_id || vis.has(i.processo_id)); },
+    ins: 'documentos.enviar', upd: 'documentos.enviar', del: GEST,
     antes(op, velho, novo, a) {
       if (op === 'del' || !novo) return;
       novo.nome = (novo.nome ?? '').trim();
@@ -584,7 +657,7 @@ export function criarDbLocal(): Db {
   });
   const aplicarChecklist: Db['checklist']['aplicar'] = async (modeloId, alvo) => {
     const a = ator();
-    if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+    if (!ehDelegante(a)) throw erro('SEM_PERMISSAO');
     const m = lerTab<ChecklistModelo>(a.slug, 'checklist_modelos').find(x => x.id === modeloId);
     if (!m) throw erro('NAO_ENCONTRADO');
     let clienteId = alvo.cliente_id ?? null;
@@ -632,12 +705,14 @@ export function criarDbLocal(): Db {
   const arquivos: ArquivosRepo = {
     async list(f) {
       const a = tentaAtor();
-      if (!a || !DELEGA.includes(a.papel)) return [];
-      return arquivosDe(a.slug).filter(d => (!f?.cliente_id || d.cliente_id === f.cliente_id) && (!f?.processo_id || d.processo_id === f.processo_id)).sort((x, y) => y.created_at.localeCompare(x.created_at)).map(({ enviado_por: _e, ...d }) => ({ ...d, categoria: d.categoria ?? 'outros' })); // dados de demonstração antigos não têm categoria
+      if (!a || !podeP(a, 'documentos.ver')) return [];
+      const vis = new Set(processosVisiveis(a, processosDe(a.slug)).map(p => p.id));
+      return arquivosDe(a.slug).filter(d => (!d.processo_id || vis.has(d.processo_id)) && (!f?.cliente_id || d.cliente_id === f.cliente_id) && (!f?.processo_id || d.processo_id === f.processo_id)).sort((x, y) => y.created_at.localeCompare(x.created_at)).map(({ enviado_por: _e, ...d }) => ({ ...d, categoria: d.categoria ?? 'outros' })); // dados de demonstração antigos não têm categoria
     },
     async enviar(x) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'documentos.enviar')) throw erro('SEM_PERMISSAO');
+      if (x.processo_id && !processosVisiveis(a, processosDe(a.slug)).some(p => p.id === x.processo_id)) throw erro('NAO_ENCONTRADO');
       const guardado = guardarArquivo(a.slug, { id: a.sessao.id, nome: a.sessao.nome }, 'painel', x) as ArquivoLocal;
       // impressão digital do conteúdo (igual à do servidor): permite avisar de arquivo repetido também na demonstração
       try {
@@ -652,28 +727,29 @@ export function criarDbLocal(): Db {
     },
     async reclassificar(id, categoria) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'documentos.enviar')) throw erro('SEM_PERMISSAO');
       if (!ehCategoria(categoria)) throw erro('ARQUIVO_INVALIDO', 'Categoria inválida.');
       if (!arquivosDe(a.slug).some(d => d.id === id)) throw erro('NAO_ENCONTRADO');
       gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).map(d => (d.id === id ? { ...d, categoria } : d)));
     },
     async abrir(id) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'documentos.ver')) throw erro('SEM_PERMISSAO');
       const d = arquivosDe(a.slug).find(x => x.id === id), c = conteudoDe(a.slug, id);
       if (!d || !c) throw erro('NAO_ENCONTRADO');
+      if (d.processo_id && !processosVisiveis(a, processosDe(a.slug)).some(p => p.id === d.processo_id)) throw erro('NAO_ENCONTRADO');
       gravarTab(a.slug, 'arquivos_acessos', [...lerTab<AcessoDoc>(a.slug, 'arquivos_acessos'), { id: uuid(), documento_id: id, usuario: `${a.sessao.nome} <${a.sessao.email}>`, created_at: agoraIso() }]);
       const url = URL.createObjectURL(base64ParaBlob(c, d.mime));
       return { nome: d.nome, mime: d.mime, url, revogar: () => URL.revokeObjectURL(url) };
     },
     async conferir(id, conferido) {
       const a = ator();
-      if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!podeP(a, 'documentos.enviar')) throw erro('SEM_PERMISSAO');
       gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).map(d => (d.id === id ? { ...d, conferido, conferido_em: conferido ? agoraIso() : null } : d)));
     },
     async remover(id) {
       const a = ator();
-      if (!GESTAO.includes(a.papel)) throw erro('SEM_PERMISSAO');
+      if (!ehGestao(a) || !podeP(a, 'documentos.excluir')) throw erro('SEM_PERMISSAO');
       const d = arquivosDe(a.slug).find(x => x.id === id);
       if (!d) return;
       gravarTab(a.slug, 'arquivos', arquivosDe(a.slug).filter(x => x.id !== id));
@@ -683,14 +759,14 @@ export function criarDbLocal(): Db {
     },
     async resumo() {
       const a = tentaAtor();
-      const ds = a && DELEGA.includes(a.papel) ? arquivosDe(a.slug) : [];
+      const ds = a && podeP(a, 'documentos.ver') ? arquivosDe(a.slug) : [];
       return { total: ds.length, sem_conferir: ds.filter(d => !d.conferido).length, drive_pendente: ds.filter(d => d.drive_status === 'pendente' || d.drive_status === 'erro').length };
     },
     links: {
-      async list() { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? linksDe(a.slug).map(semDados) : []; },
+      async list() { const a = tentaAtor(); return a && podeP(a, 'documentos.enviar') ? linksDe(a.slug).map(semDados) : []; },
       async criar(x) {
         const a = ator();
-        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+        if (!podeP(a, 'documentos.enviar')) throw erro('SEM_PERMISSAO');
         if (!clientesDe(a.slug).some(c => c.id === x.cliente_id)) throw erro('NAO_ENCONTRADO');
         if (x.processo_id && !processosDe(a.slug).some(p => p.id === x.processo_id && p.cliente_id === x.cliente_id)) throw erro('NAO_ENCONTRADO');
         const bytes = new Uint8Array(24); crypto.getRandomValues(bytes);
@@ -704,7 +780,7 @@ export function criarDbLocal(): Db {
       },
       async revogar(id) {
         const a = ator();
-        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
+        if (!podeP(a, 'documentos.enviar')) throw erro('SEM_PERMISSAO');
         if (!linksDe(a.slug).some(l => l.id === id)) throw erro('NAO_ENCONTRADO');
         gravarTab(a.slug, 'links', linksDe(a.slug).map(l => (l.id === id ? { ...l, ativo: false } : l)));
       },
@@ -1007,7 +1083,7 @@ export function criarDbLocal(): Db {
 
   // ---------------------------------------------------------------- inicialização (dados de demonstração)
   const init = async () => {
-    if (ls().getItem(K.seeded) === 'v4') return;
+    if (ls().getItem(K.seeded) === 'v5') return;
     const esc: EscritorioLocal[] = [];
     for (const def of DEMO_ESCRITORIOS) {
       const e: EscritorioLocal = { id: `esc-${def.slug}`, nome: def.nome, slug: def.slug, ativo: true, fuso: def.fuso, created_at: agoraIso() };
@@ -1025,7 +1101,7 @@ export function criarDbLocal(): Db {
     gravarJson(K.esc, esc);
     gravarJson(K.plat, [{ id: 'plat-1', email: DEMO_PLATAFORMA.email, nome: DEMO_PLATAFORMA.nome, papel: 'admin', ativo: true, senha_hash: await hashSecreto(DEMO_PLATAFORMA.email, DEMO_PLATAFORMA.senha) }]);
     definirFuso('America/Fortaleza');
-    ls().setItem(K.seeded, 'v4');
+    ls().setItem(K.seeded, 'v5');
   };
 
   // ---------------------------------------------------------------- Db
@@ -1044,51 +1120,195 @@ export function criarDbLocal(): Db {
     usuarios: {
       async list() {
         const a = tentaAtor();
-        return a && a.papel === 'admin' ? usuariosDoEscritorio(a.slug).map(({ senha_hash: _s, ...u }) => u) : [];
+        return a && (a.papel === 'admin' || podeP(a, 'acessos.gerenciar')) ? usuariosDoEscritorio(a.slug).map(({ senha_hash: _s, ...u }) => u) : [];
       },
     },
     acessos: {
+      async lista() {
+        const a = ator();
+        const gere = podeP(a, 'acessos.gerenciar'), libera = podeP(a, 'ponto.gerir');
+        // quem gerencia acessos e quem gerencia o ponto (a gerência libera acessos fora do horário) enxergam a lista
+        if (!gere && !libera) throw erro('SEM_PERMISSAO');
+        const funcs = lerTab<Funcionario>(a.slug, 'funcionarios');
+        return usuariosDoEscritorio(a.slug)
+          .map((u): AcessoLinha => ({
+            id: u.id, nome: u.nome, email: u.email, papel: u.papel, ativo: u.ativo, funcionario_id: u.funcionario_id ?? null,
+            funcionario_nome: funcs.find(f => f.id === u.funcionario_id)?.nome ?? null, conceder: u.conceder ?? [], negar: u.negar ?? [],
+            exige_ponto: u.exige_ponto ?? null, exige_ponto_efetivo: u.exige_ponto ?? PAPEIS[u.papel].exigePonto, estado: estadoDe(a.slug, u),
+            ultimo_acesso: u.ultimo_acesso ?? null, trocar_senha: !!u.trocar_senha,
+            pode_gerir: gere && (u.id === a.sessao.id ? a.papel === 'admin' : podeGerirAlvo(a.papel, u.papel)),
+            pode_liberar: libera && u.id !== a.sessao.id && podeGerirAlvo(a.papel, u.papel),
+          }))
+          .sort((x, y) => PAPEIS[y.papel].nivel - PAPEIS[x.papel].nivel || x.nome.localeCompare(y.nome, 'pt-BR'));
+      },
       async criar(x) {
-        const a = exigeAdmin();
+        const a = ator();
+        if (!podeP(a, 'acessos.gerenciar')) throw erro('SEM_PERMISSAO');
+        if (!ehPapel(x.papel)) throw erro('PAPEL_INVALIDO');
+        if (!podeAtribuirPapel(a.papel, x.papel)) throw erro('NIVEL_ACIMA_DO_SEU');
+        conferirPermissoesDadas(a, x.conceder, true); conferirPermissoesDadas(a, x.negar, false);
+        const funcs = lerTab<Funcionario>(a.slug, 'funcionarios');
+        const us = usuariosDoEscritorio(a.slug);
+        if (x.funcionario_id) {
+          if (!funcs.some(f => f.id === x.funcionario_id && f.ativo)) throw erro('FUNCIONARIO_INVALIDO');
+          if (us.some(u => u.funcionario_id === x.funcionario_id)) throw erro('FUNCIONARIO_JA_TEM_ACESSO');
+        }
+        const politica = lerJson<{ exigir_ponto?: boolean }>(kt(a.slug, 'acesso_config'), {}).exigir_ponto ?? true;
+        if (politica && (x.exige_ponto ?? PAPEIS[x.papel].exigePonto) && !x.funcionario_id) throw erro('FUNCIONARIO_OBRIGATORIO');
         const email = x.email.trim().toLowerCase();
         if (!emailValido(email)) throw erro('EMAIL_INVALIDO');
         { const e = validarSenha(x.senha); if (e) throw new ErroNegocio(x.senha.length < 10 ? 'SENHA_CURTA' : 'SENHA_FRACA', e); }
         if (x.nome.trim().length < 2) throw erro('NOME_OBRIGATORIO');
         if (emailEmUso(email)) throw erro('EMAIL_EXISTE');
-        const us = usuariosDoEscritorio(a.slug);
-        us.push({ id: uuid(), nome: x.nome.trim(), email, papel: x.papel, ativo: true, senha_hash: await hashSecreto(email, x.senha) });
-        gravarTab(a.slug, 'usuarios', us);
+        const novo: UsuarioLocal = {
+          id: uuid(), nome: x.nome.trim(), email, papel: x.papel, ativo: true, senha_hash: await hashSecreto(email, x.senha),
+          funcionario_id: x.funcionario_id ?? null, conceder: x.conceder ?? [], negar: x.negar ?? [], exige_ponto: x.exige_ponto ?? null, trocar_senha: true, ultimo_acesso: null,
+        };
+        gravarTab(a.slug, 'usuarios', [...us, novo]);
         auditarLocal(a, 'Acesso criado', `${email} (${x.papel})`);
+        registrarAcesso(a.slug, novo.id, novo.nome, 'acesso_criado', `${email} · ${x.papel}`);
       },
       async atualizar(id, x) {
-        const a = exigeAdmin();
+        const a = ator();
+        if (!podeP(a, 'acessos.gerenciar')) throw erro('SEM_PERMISSAO');
         const us = usuariosDoEscritorio(a.slug);
         const i = us.findIndex(u => u.id === id);
         if (i < 0) throw erro('NAO_ENCONTRADO');
-        const depois = us.map((u, k) => (k === i ? { ...u, nome: x.nome.trim() || u.nome, papel: x.papel, ativo: x.ativo } : u));
+        const t = us[i];
+        if (t.id === a.sessao.id) { if (a.papel !== 'admin') throw erro('NAO_ALTERAR_A_SI'); }
+        else if (!podeGerirAlvo(a.papel, t.papel)) throw erro('NIVEL_ACIMA_DO_SEU');
+        const papel = x.papel ?? t.papel;
+        if (!ehPapel(papel)) throw erro('PAPEL_INVALIDO');
+        if (!podeAtribuirPapel(a.papel, papel)) throw erro('NIVEL_ACIMA_DO_SEU');
+        if (x.conceder) conferirPermissoesDadas(a, x.conceder, true);
+        if (x.negar) conferirPermissoesDadas(a, x.negar, false);
+        if (x.funcionario_id) {
+          if (!lerTab<Funcionario>(a.slug, 'funcionarios').some(f => f.id === x.funcionario_id && f.ativo)) throw erro('FUNCIONARIO_INVALIDO');
+          if (us.some(u => u.id !== id && u.funcionario_id === x.funcionario_id)) throw erro('FUNCIONARIO_JA_TEM_ACESSO');
+        }
+        const depois = us.map((u, k) => (k !== i ? u : {
+          ...u, nome: x.nome?.trim() || u.nome, papel, ativo: x.ativo ?? u.ativo,
+          funcionario_id: 'funcionario_id' in x ? (x.funcionario_id ?? null) : u.funcionario_id,
+          conceder: x.conceder ?? u.conceder, negar: x.negar ?? u.negar, exige_ponto: 'exige_ponto' in x ? (x.exige_ponto ?? null) : u.exige_ponto,
+        }));
         if (depois.filter(u => u.papel === 'admin' && u.ativo).length < 1) throw erro('ULTIMO_ADMIN');
         gravarTab(a.slug, 'usuarios', depois);
-        auditarLocal(a, 'Acesso alterado', `${us[i].email} → ${x.papel}${x.ativo ? '' : ' (inativo)'}`);
+        const ativo = x.ativo ?? t.ativo;
+        auditarLocal(a, 'Acesso alterado', `${t.email} → ${papel}${ativo ? '' : ' (inativo)'}`);
+        registrarAcesso(a.slug, id, t.nome, 'acesso_alterado', `${t.email} · ${papel}${ativo ? '' : ' (inativo)'}`);
       },
       async redefinirSenha(id, senha) {
-        const a = exigeAdmin();
+        const a = ator();
+        if (!podeP(a, 'acessos.gerenciar')) throw erro('SEM_PERMISSAO');
         { const e = validarSenha(senha); if (e) throw new ErroNegocio(senha.length < 10 ? 'SENHA_CURTA' : 'SENHA_FRACA', e); }
         const us = usuariosDoEscritorio(a.slug);
         const i = us.findIndex(u => u.id === id);
         if (i < 0) throw erro('NAO_ENCONTRADO');
-        us[i] = { ...us[i], senha_hash: await hashSecreto(us[i].email, senha) };
+        if (id === a.sessao.id) { if (a.papel !== 'admin') throw erro('NAO_ALTERAR_A_SI'); }
+        else if (!podeGerirAlvo(a.papel, us[i].papel)) throw erro('NIVEL_ACIMA_DO_SEU');
+        us[i] = { ...us[i], senha_hash: await hashSecreto(us[i].email, senha), trocar_senha: id !== a.sessao.id };
         gravarTab(a.slug, 'usuarios', us);
         auditarLocal(a, 'Senha redefinida', us[i].email);
+        registrarAcesso(a.slug, id, us[i].nome, 'senha_redefinida', us[i].email);
       },
       async remover(id) {
-        const a = exigeAdmin();
+        const a = ator();
+        if (!podeP(a, 'acessos.gerenciar')) throw erro('SEM_PERMISSAO');
         if (a.sessao.id === id) throw erro('NAO_REMOVER_A_SI');
         const us = usuariosDoEscritorio(a.slug);
         const alvo = us.find(u => u.id === id);
         if (!alvo) throw erro('NAO_ENCONTRADO');
+        if (!podeGerirAlvo(a.papel, alvo.papel)) throw erro('NIVEL_ACIMA_DO_SEU');
         if (us.filter(u => u.id !== id && u.papel === 'admin' && u.ativo).length < 1) throw erro('ULTIMO_ADMIN');
         gravarTab(a.slug, 'usuarios', us.filter(u => u.id !== id));
         auditarLocal(a, 'Acesso removido', alvo.email);
+        registrarAcesso(a.slug, null, alvo.nome, 'acesso_removido', alvo.email);
+      },
+      async politica(): Promise<PoliticaAcesso> {
+        const a = ator();
+        if (!podeP(a, 'acessos.gerenciar') && !podeP(a, 'ponto.gerir')) throw erro('SEM_PERMISSAO');
+        const ajustes = lerJson<Record<string, string[]>>(kt(a.slug, 'papeis_permissoes'), {});
+        const papeis: PoliticaAcesso['papeis'] = {};
+        for (const p of ORDEM_PAPEIS.filter(x => x !== 'admin')) papeis[p] = { permissoes: ajustes[p] ?? [...PADRAO[p]], personalizado: p in ajustes };
+        return { exigir_ponto: lerJson<{ exigir_ponto?: boolean }>(kt(a.slug, 'acesso_config'), {}).exigir_ponto ?? true, papeis };
+      },
+      async definirExigirPonto(valor) {
+        const a = exigeAdmin();
+        gravarJson(kt(a.slug, 'acesso_config'), { exigir_ponto: !!valor });
+        registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'politica_ponto', valor ? 'acesso só depois do ponto' : 'acesso sem exigir ponto');
+      },
+      async definirPermissoesPapel(papel, permissoes) {
+        const a = exigeAdmin();
+        if (!ehPapel(papel) || papel === 'admin') throw erro('PAPEL_INVALIDO');
+        for (const x of permissoes) { if (!ehPermissao(x)) throw erro('PERMISSAO_INVALIDA'); if (RESERVADAS.includes(x)) throw erro('PERMISSAO_RESERVADA'); }
+        const ajustes = lerJson<Record<string, string[]>>(kt(a.slug, 'papeis_permissoes'), {});
+        ajustes[papel] = [...new Set(permissoes)];
+        gravarJson(kt(a.slug, 'papeis_permissoes'), ajustes);
+        registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'permissoes_nivel', `${papel}: ${ajustes[papel].length} permissões`);
+      },
+      async restaurarPermissoesPapel(papel) {
+        const a = exigeAdmin();
+        const ajustes = lerJson<Record<string, string[]>>(kt(a.slug, 'papeis_permissoes'), {});
+        delete ajustes[papel];
+        gravarJson(kt(a.slug, 'papeis_permissoes'), ajustes);
+        registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'permissoes_nivel', `${papel}: padrão restaurado`);
+      },
+      async liberar(perfilId, minutos, motivo) {
+        const a = ator();
+        if (!podeP(a, 'ponto.gerir')) throw erro('SEM_PERMISSAO');
+        const t = usuariosDoEscritorio(a.slug).find(u => u.id === perfilId);
+        if (!t) throw erro('NAO_ENCONTRADO');
+        if (t.id === a.sessao.id) throw erro('NAO_ALTERAR_A_SI');
+        if (!podeGerirAlvo(a.papel, t.papel)) throw erro('NIVEL_ACIMA_DO_SEU');
+        if (!Number.isFinite(minutos) || minutos < 5 || minutos > 720) throw erro('TEMPO_INVALIDO');
+        if (motivo.trim().length < 3) throw erro('MOTIVO_OBRIGATORIO');
+        const ate = new Date(Date.now() + minutos * 60_000).toISOString();
+        gravarTab(a.slug, 'liberacoes', [...lerTab<LinhaLiberacao>(a.slug, 'liberacoes'), { id: uuid(), perfil_id: perfilId, ate, motivo: motivo.trim(), por: a.sessao.nome, created_at: agoraIso() }]);
+        registrarAcesso(a.slug, perfilId, t.nome, 'liberacao', `${minutos} min · ${motivo.trim()} · por ${a.sessao.nome}`);
+      },
+      async encerrarLiberacao(perfilId) {
+        const a = ator();
+        if (!podeP(a, 'ponto.gerir')) throw erro('SEM_PERMISSAO');
+        const agora = agoraIso();
+        gravarTab(a.slug, 'liberacoes', lerTab<LinhaLiberacao>(a.slug, 'liberacoes').map(l => (l.perfil_id === perfilId && l.ate > agora ? { ...l, ate: agora } : l)));
+      },
+      async registro() {
+        const a = tentaAtor();
+        return a && a.papel === 'admin' ? lerTab<RegistroAcesso>(a.slug, 'acessos_log').slice().sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 300) : [];
+      },
+    },
+    minhaArea: {
+      async pontoHoje(): Promise<MeuPontoHoje> {
+        const s = sessaoValida();
+        if (!s || s.papel === 'plataforma' || !s.escritorio) throw erro('SEM_PERMISSAO');
+        const hoje = agoraBR().data;
+        const marcacoes = !s.funcionario_id ? [] : lerTab<RegistroPonto>(s.escritorio.slug, 'registros')
+          .filter(r => r.funcionario_id === s.funcionario_id && r.data === hoje && r.status_aprovacao !== 'rejeitado')
+          .sort((x, y) => x.horario_real.localeCompare(y.horario_real)).map(r => ({ tipo: r.tipo, horario: r.horario_real, status_aprovacao: r.status_aprovacao }));
+        return { funcionario_id: s.funcionario_id ?? null, estado: s.acesso ?? 'liberado', marcacoes };
+      },
+      async tarefas() {
+        const a = ator();
+        if (a.acesso !== 'liberado') throw erro('SEM_PERMISSAO');
+        if (!a.funcId) return [];
+        const limite = Date.now() - 14 * 86_400_000;
+        return lerTab<Tarefa>(a.slug, 'tarefas')
+          .filter(t => t.status !== 'cancelada' && (t.responsavel_id === a.funcId || t.revisor_id === a.funcId || (t.participantes ?? []).includes(a.funcId!))
+            && (t.status !== 'concluida' || !t.concluida_em || new Date(t.concluida_em).getTime() > limite))
+          .sort((x, y) => Number(x.status === 'concluida') - Number(y.status === 'concluida') || (x.inicio ?? x.created_at).localeCompare(y.inicio ?? y.created_at))
+          .map(t => paraFuncionario(t, a.funcId!, a.slug));
+      },
+      async atualizarTarefa(id, status, nota) {
+        const a = ator();
+        if (a.acesso !== 'liberado') throw erro('SEM_PERMISSAO');
+        if (!['a_fazer', 'em_andamento', 'em_revisao', 'concluida'].includes(status)) throw erro('STATUS_INVALIDO');
+        const rows = lerTab<Tarefa>(a.slug, 'tarefas');
+        const i = rows.findIndex(t => t.id === id && !!a.funcId && t.responsavel_id === a.funcId && t.status !== 'cancelada');
+        if (i < 0) throw erro('NAO_ENCONTRADO');
+        const velho = rows[i];
+        rows[i] = { ...velho, status, concluida_em: status === 'concluida' ? (velho.concluida_em ?? agoraIso()) : null, updated_at: agoraIso() };
+        gravarTab(a.slug, 'tarefas', rows);
+        novoAndamento(a.slug, id, 'status', `Status: ${STATUS_ROTULO[velho.status].toLowerCase()} → ${STATUS_ROTULO[status].toLowerCase()}${nota?.trim() ? ` · ${nota.trim().slice(0, 1500)}` : ''}`, a.sessao.nome);
       },
     },
     tarefas,
@@ -1100,17 +1320,17 @@ export function criarDbLocal(): Db {
     intimacoes,
     honorarios: {
       parametros: {
-        async get() { const a = tentaAtor(); return normalizarParametros(a?.papel === 'admin' ? lerJson(kt(a.slug, 'honorarios_parametros'), {}) : {}); },
-        async save(p) { const a = exigeAdmin(); gravarJson(kt(a.slug, 'honorarios_parametros'), normalizarParametros(p)); auditarLocal(a, 'Alterado · honorarios_parametros', 'Parâmetros de honorários', 'honorarios_parametros', a.slug); },
+        async get() { const a = tentaAtor(); return normalizarParametros(a && podeP(a, 'honorarios.ver') ? lerJson(kt(a.slug, 'honorarios_parametros'), {}) : {}); },
+        async save(p) { const a = ator(); if (!podeP(a, 'honorarios.parametros')) throw erro('SEM_PERMISSAO'); gravarJson(kt(a.slug, 'honorarios_parametros'), normalizarParametros(p)); auditarLocal(a, 'Alterado · honorarios_parametros', 'Parâmetros de honorários', 'honorarios_parametros', a.slug); },
       },
       propostas,
     },
     andamentos: {
-      async list(tarefaId) { const a = tentaAtor(); return a && DELEGA.includes(a.papel) ? andamentosDe(a.slug).filter(x => x.tarefa_id === tarefaId).sort((x, y) => x.created_at.localeCompare(y.created_at)) : []; },
+      async list(tarefaId) { const a = tentaAtor(); return a && a.acesso === 'liberado' && (a.perms.has('tarefas.ver') || lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.id === tarefaId && tarefaMinha(t, a))) ? andamentosDe(a.slug).filter(x => x.tarefa_id === tarefaId).sort((x, y) => x.created_at.localeCompare(y.created_at)) : []; },
       async add(tarefaId, texto) {
         const a = ator();
-        if (!DELEGA.includes(a.papel)) throw erro('SEM_PERMISSAO');
-        if (!lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.id === tarefaId)) throw erro('NAO_ENCONTRADO');
+        if (a.acesso !== 'liberado') throw erro('SEM_PERMISSAO');
+        if (!lerTab<Tarefa>(a.slug, 'tarefas').some(t => t.id === tarefaId && (a.perms.has('tarefas.ver') || tarefaMinha(t, a)))) throw erro('NAO_ENCONTRADO');
         const t = texto.trim();
         if (t.length < 1 || t.length > 2000) throw erro('MOTIVO_OBRIGATORIO', 'Escreva o andamento (até 2000 caracteres).');
         novoAndamento(a.slug, tarefaId, 'comentario', t, a.sessao.nome);
@@ -1197,14 +1417,32 @@ export function criarDbLocal(): Db {
           if (u.senha_hash !== hash) throw falha();
           if (!u.ativo) throw erro('ACESSO_INATIVO');
           if (!esc.ativo) throw erro('ESCRITORIO_SUSPENSO');
-          const s: Sessao = { id: u.id, email: u.email, nome: u.nome, papel: u.papel, escritorio: infoDe(esc) };
-          gravarJson(K.sessao, s);
+          gravarJson(K.sessao, { id: u.id, email: u.email, nome: u.nome, papel: u.papel, escritorio: infoDe(esc) } satisfies Sessao);
           definirFuso(esc.fuso);
-          return s;
+          return sessaoValida()!;
         }
         throw falha();
       },
       async sair() { ls().removeItem(K.sessao); },
+      async registrarEvento(evento) {
+        const a = tentaAtor();
+        if (!a) return;
+        if (evento === 'login') gravarTab(a.slug, 'usuarios', usuariosDoEscritorio(a.slug).map(u => (u.id === a.sessao.id ? { ...u, ultimo_acesso: agoraIso() } : u)));
+        const recentes = lerTab<RegistroAcesso>(a.slug, 'acessos_log').some(l => l.perfil_id === a.sessao.id && l.evento === evento && Date.now() - new Date(l.created_at).getTime() < 600_000);
+        if (!recentes) registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, evento, '');
+      },
+      async trocarSenha(nova) {
+        const a = ator();
+        { const e = validarSenha(nova); if (e) throw new ErroNegocio(nova.length < 10 ? 'SENHA_CURTA' : 'SENHA_FRACA', e); }
+        const us = usuariosDoEscritorio(a.slug);
+        const i = us.findIndex(u => u.id === a.sessao.id);
+        if (i < 0) throw erro('NAO_ENCONTRADO');
+        const hash = await hashSecreto(us[i].email, nova);
+        if (hash === us[i].senha_hash) throw new Error('Escolha uma senha diferente da atual.');
+        us[i] = { ...us[i], senha_hash: hash, trocar_senha: false };
+        gravarTab(a.slug, 'usuarios', us);
+        registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'senha_trocada', '');
+      },
     },
     async equipe() {
       const a = ator();

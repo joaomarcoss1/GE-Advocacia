@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { ArrowRight, Check, Coffee, FilePlus2, History, LogIn, LogOut, RotateCcw, Undo2 } from 'lucide-react';
 import { fmtData, isoParaBR } from '@/lib/datetime';
 import { minParaHoras, iniciais, plural } from '@/lib/format';
@@ -33,6 +34,10 @@ export default function PainelPonto({ p }: { p: Ponto }) {
             <div>{STATUS_TXT[sucesso.status]}{sucesso.dif !== 0 && sucesso.status !== 'extra' ? ` (${sucesso.dif > 0 ? '+' : '−'}${minParaHoras(sucesso.dif)})` : ''}</div>
             {sucesso.analise === 'pendente' && <div className="mt-6 fs-md">Enviado para análise do administrador (aba Ocorrências).</div>}
             {sucesso.aviso && <div className="mt-6 fs-md c-bad">{sucesso.aviso}</div>}
+            {(sucesso.tipo === 'entrada' || sucesso.tipo === 'retorno_intervalo') && (
+              <div className="mt-6 fs-md">Seu acesso ao sistema está liberado. <Link to="/entrar" className="auth-link" data-testid="entrar-no-sistema">Entrar no sistema<ArrowRight size={14} aria-hidden="true" /></Link></div>
+            )}
+            {sucesso.tipo === 'saida' && <div className="mt-6 fs-md">Jornada encerrada: o seu acesso ao sistema também foi encerrado por hoje.</div>}
             {p.volta !== null && (
               <span className="volta">Voltando à tela inicial em {p.volta}s · <button type="button" className="link-btn" onClick={() => p.setVolta(null)}>continuar aqui</button></span>
             )}

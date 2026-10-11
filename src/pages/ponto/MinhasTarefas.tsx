@@ -18,36 +18,15 @@ const PROXIMO: Partial<Record<StatusTarefa, { status: Exclude<StatusTarefa, 'can
   em_revisao: [{ status: 'em_andamento', rotulo: 'Reabrir' }, { status: 'concluida', rotulo: 'Concluir' }],
 };
 
-/** Tarefas, prazos e reuniões delegados à pessoa que acabou de se identificar com o PIN. */
-export default function MinhasTarefas({ p }: { p: Ponto }) {
-  const [lista, setLista] = useState<TarefaFunc[] | null>(null);
-  const [erro, setErro] = useState('');
-  const [ocupado, setOcupado] = useState('');
-  const { api, pessoa, pin } = p;
-
-  const carregar = useCallback(async () => {
-    if (!api || !pessoa) return;
-    try {
-      const r = await api.tarefas(pessoa.id, pin);
-      if (r.ok) { setLista(r.tarefas); setErro(''); } else setErro(PONTO_ERRO_MSG[r.erro]);
-    } catch (e) { setErro((e as Error).message); setLista([]); }
-  }, [api, pessoa, pin]);
-  useEffect(() => { void carregar(); }, [carregar]);
-
-  async function mover(t: TarefaFunc, status: Exclude<StatusTarefa, 'cancelada'>) {
-    if (!api || !pessoa) return;
-    setOcupado(t.id);
-    const nota = status === 'concluida' || status === 'em_revisao' ? (window.prompt('Observação para a equipe (opcional):') ?? '') : '';
-    const r = await api.atualizarTarefa({ funcionario_id: pessoa.id, pin, id: t.id, status, nota });
-    setOcupado('');
-    if (!r.ok) setErro(PONTO_ERRO_MSG[r.erro]); else await carregar();
-  }
-
+/** Cartões das tarefas delegadas à pessoa (usado pelo ponto, com PIN, e por "Meu espaço", com login). */
+export function CartoesTarefas({ lista, erro, ocupado, mover, titulo = 'Minhas tarefas' }: {
+  lista: TarefaFunc[] | null; erro: string; ocupado: string; mover(t: TarefaFunc, status: Exclude<StatusTarefa, 'cancelada'>): void; titulo?: string;
+}) {
   if (lista === null && !erro) return null;
   if (!erro && lista && lista.length === 0) return null;
   return (
     <div>
-      <div className="section-title"><ListChecks size={14} style={{ verticalAlign: 'middle' }} /> Minhas tarefas</div>
+      <div className="section-title"><ListChecks size={14} style={{ verticalAlign: 'middle' }} /> {titulo}</div>
       {erro && <div className="notice bad mt-8" role="alert" >{erro}</div>}
       <div className="minhas-tarefas">
         {(lista ?? []).map(t => {
@@ -76,4 +55,31 @@ export default function MinhasTarefas({ p }: { p: Ponto }) {
       </div>
     </div>
   );
+}
+
+/** Tarefas, prazos e reuniões delegados à pessoa que acabou de se identificar com o PIN. */
+export default function MinhasTarefas({ p }: { p: Ponto }) {
+  const [lista, setLista] = useState<TarefaFunc[] | null>(null);
+  const [erro, setErro] = useState('');
+  const [ocupado, setOcupado] = useState('');
+  const { api, pessoa, pin } = p;
+
+  const carregar = useCallback(async () => {
+    if (!api || !pessoa) return;
+    try {
+      const r = await api.tarefas(pessoa.id, pin);
+      if (r.ok) { setLista(r.tarefas); setErro(''); } else setErro(PONTO_ERRO_MSG[r.erro]);
+    } catch (e) { setErro((e as Error).message); setLista([]); }
+  }, [api, pessoa, pin]);
+  useEffect(() => { void carregar(); }, [carregar]);
+
+  async function mover(t: TarefaFunc, status: Exclude<StatusTarefa, 'cancelada'>) {
+    if (!api || !pessoa) return;
+    setOcupado(t.id);
+    const nota = status === 'concluida' || status === 'em_revisao' ? (window.prompt('Observação para a equipe (opcional):') ?? '') : '';
+    const r = await api.atualizarTarefa({ funcionario_id: pessoa.id, pin, id: t.id, status, nota });
+    setOcupado('');
+    if (!r.ok) setErro(PONTO_ERRO_MSG[r.erro]); else await carregar();
+  }
+  return <CartoesTarefas lista={lista} erro={erro} ocupado={ocupado} mover={mover} />;
 }

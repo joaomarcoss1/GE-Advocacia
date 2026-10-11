@@ -10,8 +10,8 @@ import { base64ParaBlob } from '@/lib/anexos';
 import { mesclarConfig } from '@/lib/config';
 import { ErroNegocio, PONTO_ERRO_MSG, traduzirErroBanco, type PontoErro } from '@/lib/erros';
 import type {
-  AcessoSensivel, Andamento, AnexoMeta, ChecklistItem, ChecklistModelo, Cliente, Config, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, Escala, EscritorioPlataforma, Folha,
-  FuncionarioBasico, GoogleStatus, Intimacao, IntimacoesSync, LinkEnvio, ResultadoIntimacoes, Movimento, Processo, ResultadoConsulta, SyncGoogle, Tarefa, Usuario,
+  AcessoLinha, AcessoSensivel, Andamento, AnexoMeta, ChecklistItem, ChecklistModelo, Cliente, Config, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, Escala, EscritorioPlataforma, Folha,
+  FuncionarioBasico, GoogleStatus, Intimacao, IntimacoesSync, LinkEnvio, MeuPontoHoje, PoliticaAcesso, RegistroAcesso, ResultadoIntimacoes, Movimento, Processo, ResultadoConsulta, SyncGoogle, Tarefa, TarefaFunc, Usuario,
 } from '@/lib/types';
 import type { ModeloDocumento } from '@/lib/modelos';
 import { normalizarParametros, type PropostaHonorarios } from '@/lib/precificacao';
@@ -85,7 +85,10 @@ export function criarDbSupabase(url: string, key: string): Db {
     return data as T;
   }
 
-  interface RespSessao { ok: boolean; erro?: string; tipo?: 'escritorio' | 'plataforma'; id?: string; nome?: string; email?: string; papel?: Sessao['papel']; escritorio?: Sessao['escritorio'] }
+  interface RespSessao {
+    ok: boolean; erro?: string; tipo?: 'escritorio' | 'plataforma'; id?: string; nome?: string; email?: string; papel?: Sessao['papel']; escritorio?: Sessao['escritorio'];
+    nivel?: number; permissoes?: string[]; acesso?: Sessao['acesso']; funcionario_id?: string | null; trocar_senha?: boolean; liberado_ate?: string | null;
+  }
   async function lerSessao(): Promise<{ sessao: Sessao | null; erro?: string }> {
     const { data } = await sb.auth.getSession();
     if (!data.session?.user) return { sessao: null };
@@ -93,7 +96,10 @@ export function criarDbSupabase(url: string, key: string): Db {
     if (error) return { sessao: null, erro: error.message };
     const s = r as RespSessao;
     if (!s?.ok) return { sessao: null, erro: s?.erro };
-    return { sessao: { id: s.id!, email: s.email!, nome: s.nome!, papel: s.papel!, escritorio: s.escritorio ?? null } };
+    return { sessao: {
+      id: s.id!, email: s.email!, nome: s.nome!, papel: s.papel!, escritorio: s.escritorio ?? null,
+      nivel: s.nivel, permissoes: s.permissoes, acesso: s.acesso, funcionario_id: s.funcionario_id ?? null, trocar_senha: !!s.trocar_senha, liberado_ate: s.liberado_ate ?? null,
+    } };
   }
 
   /**
@@ -476,15 +482,47 @@ export function criarDbSupabase(url: string, key: string): Db {
         return sessao;
       },
       async sair() { sessaoCache = null; await sb.auth.signOut(); },
+      async registrarEvento(evento) { try { await sb.rpc('registrar_evento_acesso', { p_evento: evento }); } catch { /* o registro nunca bloqueia o uso */ } },
+      async trocarSenha(nova) {
+        const { error } = await sb.auth.updateUser({ password: nova });
+        if (error) throw new Error(/same password|different from the old/i.test(error.message) ? 'Escolha uma senha diferente da atual.' : error.message);
+        await rpc('senha_trocada');
+        if (sessaoCache) sessaoCache = { ...sessaoCache, trocar_senha: false };
+      },
     },
     equipe: () => rpc<FuncionarioBasico[]>('equipe'),
     async definirPin(fid, pin) { await rpc('definir_pin', { p_func_id: fid, p_pin: pin }); },
     async aprovarPonto(id, acao, motivo) { await rpc('aprovar_ponto', { p_id: id, p_acao: acao, p_motivo: motivo ?? null }); },
     acessos: {
-      async criar(a) { await rpc('criar_usuario', { p_email: a.email, p_senha: a.senha, p_nome: a.nome, p_papel: a.papel }); },
-      async atualizar(id, a) { await rpc('atualizar_usuario', { p_id: id, p_nome: a.nome, p_papel: a.papel, p_ativo: a.ativo }); },
+      lista: () => rpc<AcessoLinha[]>('acessos_lista'),
+      async criar(a) {
+        await rpc('criar_acesso', {
+          p_email: a.email, p_senha: a.senha, p_nome: a.nome, p_papel: a.papel, p_funcionario: a.funcionario_id ?? null,
+          p_conceder: a.conceder ?? [], p_negar: a.negar ?? [], p_exige_ponto: a.exige_ponto ?? null,
+        });
+      },
+      async atualizar(id, a) { await rpc('atualizar_acesso', { p_id: id, p_dados: a }); },
       async redefinirSenha(id, senha) { await rpc('redefinir_senha_usuario', { p_id: id, p_senha: senha }); },
       async remover(id) { await rpc('remover_usuario', { p_id: id }); },
+      politica: () => rpc<PoliticaAcesso>('acesso_politica'),
+      async definirExigirPonto(valor) { await rpc('definir_exigir_ponto', { p_valor: valor }); },
+      async definirPermissoesPapel(papel, permissoes) { await rpc('definir_permissoes_papel', { p_papel: papel, p_permissoes: permissoes }); },
+      async restaurarPermissoesPapel(papel) { await rpc('restaurar_permissoes_papel', { p_papel: papel }); },
+      async liberar(perfilId, minutos, motivo) { await rpc('liberar_acesso', { p_perfil: perfilId, p_minutos: minutos, p_motivo: motivo }); },
+      async encerrarLiberacao(perfilId) { await rpc('encerrar_liberacao', { p_perfil: perfilId }); },
+      async registro() {
+        const { data, error } = await sb.from('acessos_log').select('id,perfil_id,nome,evento,detalhe,created_at').order('created_at', { ascending: false }).limit(300);
+        if (error) falha(error);
+        return (data ?? []) as RegistroAcesso[];
+      },
+    },
+    minhaArea: {
+      async pontoHoje() { return rpc<MeuPontoHoje & { ok: boolean }>('meu_ponto_hoje'); },
+      async tarefas() { return (await rpc<{ tarefas: TarefaFunc[] }>('minhas_tarefas')).tarefas ?? []; },
+      async atualizarTarefa(id, status, nota) {
+        const r = await rpc<{ ok: boolean; erro?: PontoErro }>('minha_tarefa_atualizar', { p_id: id, p_status: status, p_nota: nota ?? null });
+        if (!r.ok) throw new ErroNegocio(r.erro ?? 'NAO_ENCONTRADO');
+      },
     },
     plataforma: {
       listar: () => rpc<EscritorioPlataforma[]>('plataforma_listar_escritorios'),

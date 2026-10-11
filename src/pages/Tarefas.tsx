@@ -16,7 +16,7 @@ const ordenar = (a: Tarefa, b: Tarefa) => (a.inicio ?? '9999').localeCompare(b.i
 
 export default function Tarefas() {
   const { tarefas, funcionarios, recarregar, db } = useDados();
-  const { sessao } = useAuth();
+  const { sessao, pode } = useAuth();
   const google = useGoogle();
   const toast = useToast();
   const [vista, setVista] = useState<'quadro' | 'lista'>('quadro');
@@ -69,7 +69,7 @@ export default function Tarefas() {
   return (
     <>
       <PageHeader titulo="Tarefas">
-        <button className="btn gold" onClick={() => setEdicao('nova')}><Plus size={18} />Delegar</button>
+        {pode('tarefas.criar') && <button className="btn gold" onClick={() => setEdicao('nova')}><Plus size={18} />{pode('tarefas.delegar') ? 'Delegar' : 'Nova tarefa'}</button>}
       </PageHeader>
 
       <div className="grid c4 mb-18" >

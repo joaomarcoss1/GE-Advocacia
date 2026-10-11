@@ -4,6 +4,7 @@ import { ArrowLeft, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import Stage from '@/components/Stage';
 import { useAuth } from '@/context/Auth';
 import { DEMO_ESCRITORIOS, DEMO_PLATAFORMA } from '@/data/seed';
+import { PAPEIS } from '@/lib/permissoes';
 import Credito from '@/components/Nexutec';
 import { InstalarApp } from '@/components/Aplicativo';
 
@@ -62,6 +63,9 @@ export default function Login() {
                     <button type="button" className="btn ghost sm grow" onClick={() => { setEmail(e.admin.email); setSenha(e.admin.senha); }}>{e.nome} · administrador</button>
                     <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.gerente.email); setSenha(e.gerente.senha); }}>gerência</button>
                     <button type="button" className="btn ghost sm" onClick={() => { setEmail(e.coordenador.email); setSenha(e.coordenador.senha); }}>coordenação</button>
+                    {e.acessos.map(a => (
+                      <button key={a.email} type="button" className="btn ghost sm" onClick={() => { setEmail(a.email); setSenha(a.senha); }}>{PAPEIS[a.papel].rotulo.split(' ')[0].replace('(a)', '')} · {e.equipe[a.func].nome.split(' ')[0]}</button>
+                    ))}
                   </div>
                 ))}
               </div>

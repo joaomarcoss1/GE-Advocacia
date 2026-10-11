@@ -6,6 +6,7 @@ import { CartaoIntegracao, PassosAtivacao } from '@/components/Integracao';
 import { ErroNegocio } from '@/lib/erros';
 import TarefaDetalhe, { quando } from '@/components/TarefaDetalhe';
 import TarefaModal from '@/components/TarefaModal';
+import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { useGoogle } from '@/context/useGoogle';
 import { baixarIcs } from '@/lib/agenda';
@@ -19,6 +20,7 @@ const ocorreEm = (t: Tarefa, dia: string) => { const i = diaDe(t); if (!i) retur
 
 export default function Agenda() {
   const { tarefas, funcionarios, escritorio, db, recarregar } = useDados();
+  const { pode } = useAuth();
   const google = useGoogle();
   const toast = useToast();
   const nav = useNavigate();
@@ -68,7 +70,7 @@ export default function Agenda() {
     <>
       <PageHeader titulo="Agenda">
         <button className="btn ghost" onClick={baixar} disabled={!agenda.length}><Download size={17} />Baixar .ics</button>
-        <button className="btn gold" onClick={() => setNova(hoje)}><Plus size={18} />Novo compromisso</button>
+        {pode('tarefas.criar') && <button className="btn gold" onClick={() => setNova(hoje)}><Plus size={18} />Novo compromisso</button>}
       </PageHeader>
 
       <CartaoIntegracao
@@ -114,7 +116,7 @@ export default function Agenda() {
                   </button>
                 ))}
                 {!itens.length && <p className="kvazio">—</p>}
-                <button className="add-dia" aria-label={`Novo compromisso em ${fmtDataCurta(d)}`} onClick={() => setNova(d)}><Plus size={14} /></button>
+                {pode('tarefas.criar') && <button className="add-dia" aria-label={`Novo compromisso em ${fmtDataCurta(d)}`} onClick={() => setNova(d)}><Plus size={14} /></button>}
               </div>
             </section>
           );

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { Abas, PageHeader, useToast } from '@/components/ui';
 import { useDados } from '@/context/Dados';
 import { mesclarConfig } from '@/lib/config';
 import type { Config } from '@/lib/types';
-import AbaAcessos from './configuracoes/AbaAcessos';
 import AbaAuditoria from './configuracoes/AbaAuditoria';
 import AbaDados from './configuracoes/AbaDados';
 import AbaEscritorio from './configuracoes/AbaEscritorio';
@@ -14,8 +13,8 @@ import AbaIntegracoes from './configuracoes/AbaIntegracoes';
 import AbaPonto from './configuracoes/AbaPonto';
 import AbaPrivacidade from './configuracoes/AbaPrivacidade';
 
-type Aba = 'escritorio' | 'ponto' | 'folha' | 'acessos' | 'integracoes' | 'backup' | 'privacidade' | 'auditoria' | 'dados';
-const ABAS: Aba[] = ['escritorio', 'ponto', 'folha', 'acessos', 'integracoes', 'backup', 'privacidade', 'auditoria', 'dados'];
+type Aba = 'escritorio' | 'ponto' | 'folha' | 'integracoes' | 'backup' | 'privacidade' | 'auditoria' | 'dados';
+const ABAS: Aba[] = ['escritorio', 'ponto', 'folha', 'integracoes', 'backup', 'privacidade', 'auditoria', 'dados'];
 /** Abas cujo conteúdo é um formulário de configuração (mostram o botão Salvar). */
 const COM_SALVAR = new Set<Aba>(['escritorio', 'ponto', 'folha', 'privacidade', 'integracoes']);
 
@@ -36,13 +35,15 @@ export default function Configuracoes() {
     catch (e) { toast.erro((e as Error).message); }
   }
 
+  if (params.get('aba') === 'acessos') return <Navigate to="/painel/acessos" replace />;   // os acessos ganharam tela própria
+
   return (
     <>
       <PageHeader titulo="Configurações" />
       <div className="card">
         <div style={{ padding: '0 12px' }}>
           <Abas valor={aba} onChange={setAba} itens={[
-            { id: 'escritorio', rotulo: 'Escritório' }, { id: 'ponto', rotulo: 'Ponto' }, { id: 'folha', rotulo: 'Folha' }, { id: 'acessos', rotulo: 'Acessos' },
+            { id: 'escritorio', rotulo: 'Escritório' }, { id: 'ponto', rotulo: 'Ponto' }, { id: 'folha', rotulo: 'Folha' },
             { id: 'integracoes', rotulo: 'Integrações' }, { id: 'backup', rotulo: 'Backup' }, { id: 'privacidade', rotulo: 'Privacidade' }, { id: 'auditoria', rotulo: 'Auditoria' }, { id: 'dados', rotulo: 'Dados' },
           ]} />
         </div>
@@ -50,7 +51,6 @@ export default function Configuracoes() {
           {aba === 'escritorio' && <AbaEscritorio c={c} setC={setC} />}
           {aba === 'ponto' && <AbaPonto c={c} setC={setC} />}
           {aba === 'folha' && <AbaFolha c={c} setC={setC} />}
-          {aba === 'acessos' && <AbaAcessos />}
           {aba === 'integracoes' && <AbaIntegracoes c={c} setC={setC} />}
           {aba === 'backup' && <AbaBackup />}
           {aba === 'privacidade' && <AbaPrivacidade c={c} setC={setC} />}

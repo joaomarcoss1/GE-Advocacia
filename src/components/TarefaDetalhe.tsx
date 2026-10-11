@@ -22,14 +22,14 @@ export default function TarefaDetalhe({ tarefa, google, sync, onClose, onEditar,
   tarefa: Tarefa; google: GoogleStatus; sync?: SyncGoogle; onClose(): void; onEditar(): void; onMudou(): Promise<void>;
 }) {
   const { db, funcionarios, escritorio } = useDados();
-  const { sessao } = useAuth();
+  const { sessao, pode } = useAuth();
   const toast = useToast();
   const confirmar = useConfirm();
   const [andamentos, setAndamentos] = useState<Andamento[]>([]);
   const [texto, setTexto] = useState('');
   const [ocupado, setOcupado] = useState(false);
   const nome = (id: string | null) => funcionarios.find(f => f.id === id)?.nome ?? null;
-  const podeEditar = sessao?.papel !== 'coordenador' || tarefa.criado_por === sessao.id;
+  const podeEditar = pode('tarefas.editar_todas') || (pode('tarefas.criar') && tarefa.criado_por === sessao?.id);
   const link = linkGoogleAgenda(tarefa);
 
   const carregar = useCallback(async () => { try { setAndamentos(await db.andamentos.list(tarefa.id)); } catch { /* sem histórico */ } }, [db, tarefa.id]);

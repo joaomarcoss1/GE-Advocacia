@@ -13,7 +13,7 @@ import { classificarMovimento, tarefaDoMovimento } from '@/lib/processos';
 import { validarMudancaFolha } from '@/lib/regras';
 import { sugerirCategoria } from '@/lib/organizacao';
 import type {
-  AjusteFolha, Andamento, Cargo, ChecklistItem, ChecklistModelo, Cliente, Config, DocumentoArquivo, Escala, Feriado, Folha, Funcionario, Movimento, Ocorrencia, Processo, RegistroPonto, Tarefa, Usuario,
+  AjusteFolha, Andamento, Cargo, ChecklistItem, ChecklistModelo, Cliente, Config, DocumentoArquivo, Escala, Feriado, Folha, Funcionario, Movimento, Ocorrencia, Papel, Processo, RegistroPonto, Tarefa, Usuario,
 } from '@/lib/types';
 
 export const DEMO_PLATAFORMA = { email: 'plataforma@geadvocacia.com.br', senha: 'GEplataforma2026', nome: 'Equipe GE Advocacia' };
@@ -25,6 +25,8 @@ export interface DemoEscritorio {
   gerente: { nome: string; email: string; senha: string };
   coordenador: { nome: string; email: string; senha: string };
   equipe: DefFunc[];
+  /** Acessos de demonstração dos demais níveis; `func` é a posição na equipe (o login é ligado ao cadastro do funcionário). */
+  acessos: { func: number; papel: Papel; email: string; senha: string }[];
 }
 
 export const DEMO_ESCRITORIOS: DemoEscritorio[] = [
@@ -43,6 +45,11 @@ export const DEMO_ESCRITORIOS: DemoEscritorio[] = [
       { nome: 'Lucas Oliveira Rocha', cargo: 'Auxiliar Administrativo', escala: 0, vinculo: 'clt', sal: 1800, pin: '215839', pix: 'lucas@exemplo.com' },
       { nome: 'Francisca Pereira', cargo: 'Serviços Gerais', escala: 2, vinculo: 'clt', sal: 1621, pin: '846302', pix: '(98) 90000-0008' },
     ],
+    acessos: [
+      { func: 3, papel: 'advogado', email: 'juliana@silvaribeiro.adv.br', senha: 'silva2026juliana' },
+      { func: 4, papel: 'estagiario', email: 'pedro@silvaribeiro.adv.br', senha: 'silva2026pedro' },
+      { func: 5, papel: 'secretaria', email: 'ana@silvaribeiro.adv.br', senha: 'silva2026ana' },
+    ],
   },
   {
     // Outro escritório, em outro fuso: prova que dados, horários e acessos são independentes.
@@ -56,6 +63,10 @@ export const DEMO_ESCRITORIOS: DemoEscritorio[] = [
       { nome: 'Sabrina Teles Amaral', cargo: 'Advogado', escala: 0, vinculo: 'clt', sal: 6100, pin: '370851', oab: 'OAB/AM 8.092', pix: 'sabrina@exemplo.com' },
       { nome: 'Gustavo Reis Duarte', cargo: 'Estagiário', escala: 1, vinculo: 'estagio', sal: 1300, pin: '829463', pix: '(92) 90000-0014' },
       { nome: 'Marta Cavalcante', cargo: 'Secretário', escala: 0, vinculo: 'clt', sal: 2100, pin: '514927', pix: '(92) 90000-0015' },
+    ],
+    acessos: [
+      { func: 1, papel: 'advogado', email: 'otavio@monteirocosta.adv.br', senha: 'monteiro2026otavio' },
+      { func: 3, papel: 'estagiario', email: 'gustavo@monteirocosta.adv.br', senha: 'monteiro2026gustavo' },
     ],
   },
 ];
@@ -203,11 +214,16 @@ export async function gerarSeedEscritorio(def: DemoEscritorio, escritorioId: str
     }
   }
 
+  const funcDe = (nome: string) => funcionarios.find(f => f.nome === nome)?.id ?? null;
   const usuarios: Usuario[] = [
-    { id: `${escritorioId}-admin`, email: def.admin.email, nome: def.admin.nome, papel: 'admin', senha_hash: await hashSecreto(def.admin.email, def.admin.senha), ativo: true },
-    { id: `${escritorioId}-gerente`, email: def.gerente.email, nome: def.gerente.nome, papel: 'gerente', senha_hash: await hashSecreto(def.gerente.email, def.gerente.senha), ativo: true },
+    { id: `${escritorioId}-admin`, email: def.admin.email, nome: def.admin.nome, papel: 'admin', senha_hash: await hashSecreto(def.admin.email, def.admin.senha), ativo: true, funcionario_id: funcDe(def.admin.nome) },
+    { id: `${escritorioId}-gerente`, email: def.gerente.email, nome: def.gerente.nome, papel: 'gerente', senha_hash: await hashSecreto(def.gerente.email, def.gerente.senha), ativo: true, funcionario_id: funcDe(def.gerente.nome) },
     { id: `${escritorioId}-coord`, email: def.coordenador.email, nome: def.coordenador.nome, papel: 'coordenador', senha_hash: await hashSecreto(def.coordenador.email, def.coordenador.senha), ativo: true },
   ];
+  for (const [i, ac] of def.acessos.entries()) {
+    const f = funcionarios[ac.func];
+    if (f) usuarios.push({ id: `${escritorioId}-acesso${i + 1}`, email: ac.email, nome: f.nome, papel: ac.papel, senha_hash: await hashSecreto(ac.email, ac.senha), ativo: true, funcionario_id: f.id });
+  }
   const { tarefas, andamentos } = gerarTarefas(def, escritorioId, hoje, funcionarios);
   const proc = gerarProcessos(def, hoje, funcionarios, tarefas);
   return { cargos, escalas, funcionarios, registros, ocorrencias, feriados, ajustes, folhas, config, usuarios, tarefas, andamentos, ...proc };

@@ -61,13 +61,14 @@ function PrazoModal({ processo, movimento, onClose, onCriar }: { processo: Proce
 /** Ficha do processo: andamentos (com prazos sugeridos), tarefas e prazos, documentos e dados. */
 export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamentos', onClose, aoMudar }: { processoId: string; aba?: 'andamentos' | 'tarefas' | 'documentos' | 'dados'; onClose(): void; aoMudar?(): void }) {
   const { db, processos, clientes, funcionarios, tarefas, recarregar } = useDados();
-  const { sessao } = useAuth();
+  const { pode } = useAuth();
   const google = useGoogle();
   const toast = useToast();
   const confirmar = useConfirm();
   const processo = processos.find(p => p.id === processoId);
   const cliente = processo?.cliente_id ? clientes.find(c => c.id === processo.cliente_id) : null;
-  const gestao = sessao?.papel === 'admin' || sessao?.papel === 'gerente';
+  const gestao = pode('processos.excluir') && pode('ponto.gerir');
+  const edita = pode('processos.editar');
   const [aba, setAba] = useState(abaInicial);
   const [movs, setMovs] = useState<Movimento[]>([]);
   const [ocupado, setOcupado] = useState(false);
@@ -111,7 +112,7 @@ export default function ProcessoDetalhe({ processoId, aba: abaInicial = 'andamen
   return (
     <>
       <Modal titulo={processo.titulo || processo.numero} onClose={onClose} largo
-        rodape={gestao ? <><button className="btn ghost" onClick={excluir}><Trash2 size={16} />Excluir</button><button className="btn" onClick={() => setEditar(true)}><Pencil size={16} />Editar</button></> : <button className="btn" onClick={() => setEditar(true)}><Pencil size={16} />Editar</button>}>
+        rodape={<>{gestao && <button className="btn ghost" onClick={excluir}><Trash2 size={16} />Excluir</button>}{edita && <button className="btn" onClick={() => setEditar(true)}><Pencil size={16} />Editar</button>}</>}>
         <div className="stack">
           <div className="row g-8" >
             <span className="mono">{processo.numero}</span>

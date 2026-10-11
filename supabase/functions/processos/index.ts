@@ -225,13 +225,15 @@ async function sincronizarIntimacoes(sb: SupabaseClient, escId: string, dias: nu
 }
 
 // ---------------------------------------------------------------- identificação do chamador
-async function chamador(req: Request) {
+async function chamador(req: Request, exigir = 'processos.ver') {
   const auth = req.headers.get('Authorization');
   if (!auth) throw new Error('SEM_PERMISSAO');
   const sbUser = createClient(URL_BASE, ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
   const { data: u } = await sbUser.auth.getUser();
   if (!u.user) throw new Error('SEM_PERMISSAO');
-  const { data: ok } = await sbUser.rpc('eh_delegante');
+  // Permissão específica (migração 0013); num banco ainda sem ela, vale o gate antigo de quem delega.
+  const perm = await sbUser.rpc('tem_permissao', { p: exigir });
+  const ok = perm.error ? (await sbUser.rpc('eh_delegante')).data : perm.data;
   const { data: esc } = await sbUser.rpc('meu_escritorio');
   if (!ok || !esc) throw new Error('SEM_PERMISSAO');
   return { sbUser, escId: esc as string };
@@ -295,7 +297,7 @@ Deno.serve(async (req: Request) => {
       return json({ ok: true, ...(await lote(sb, ((data ?? []) as ProcessoLinha[]).filter(p => vivos.has(p.escritorio_id)))) });
     }
 
-    const { sbUser, escId } = await chamador(req);
+    const { sbUser, escId } = await chamador(req, acao === 'intimacoes_buscar' ? 'intimacoes.tratar' : 'processos.ver');
     if (acao === 'fonte') return json({ disponivel: !!CHAVE });
     if (acao === 'intimacoes_buscar') return json(await sincronizarIntimacoes(sb, escId, Number(corpo.dias) || 15));
     if (acao === 'buscar') {

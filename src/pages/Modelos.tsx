@@ -14,10 +14,10 @@ import type { ChecklistModelo } from '@/lib/types';
 /** Biblioteca do escritório: peças e documentos-modelo (a gestão mantém; toda a equipe usa) e listas de documentos por tipo de processo. */
 export default function Modelos() {
   const { db } = useDados();
-  const { sessao } = useAuth();
+  const { pode } = useAuth();
   const toast = useToast();
   const confirmar = useConfirm();
-  const gestao = sessao?.papel === 'admin' || sessao?.papel === 'gerente';
+  const gestao = pode('ponto.gerir') && pode('modelos.editar');
   const [aba, setAba] = useState<'pecas' | 'listas'>('pecas');
   const [pecas, setPecas] = useState<ModeloDocumento[]>([]);
   const [listas, setListas] = useState<ChecklistModelo[]>([]);

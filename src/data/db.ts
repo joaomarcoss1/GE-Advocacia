@@ -2,9 +2,11 @@ import type {
   AcessoSensivel, AjusteDia, AjusteFolha, AnexoMeta, Auditoria, Cargo, Config, ConfigPonto, EscritorioInfo, EscritorioPlataforma, Escala, Feriado,
   Folha, Funcionario, FuncionarioBasico, Ocorrencia, Papel, PapelSessao, RegistroPonto, StatusAnalise, TipoMarcacao, TipoOcorrencia, Usuario,
   Andamento, GoogleStatus, StatusTarefa, SyncGoogle, Tarefa, TarefaFunc,
+  AcessoLinha, EventoAcesso, MeuPontoHoje, PoliticaAcesso, RegistroAcesso,
   ChecklistItem, ChecklistModelo, Cliente, Intimacao, IntimacoesSync, ResultadoIntimacoes, DadosConsultaProcesso, DocumentoArquivo, DriveStatus, EnvioPublicoInfo, LinkEnvio, Movimento, Processo, ResultadoConsulta, ResumoDocumentos,
 } from '@/lib/types';
 import type { PontoErro } from '@/lib/erros';
+import type { EstadoAcesso } from '@/lib/permissoes';
 import type { CategoriaDoc } from '@/lib/organizacao';
 import type { ModeloDocumento } from '@/lib/modelos';
 import type { ParametrosHonorarios, PropostaHonorarios } from '@/lib/precificacao';
@@ -25,7 +27,25 @@ export interface FolhasRepo extends Crud<Folha> {
 }
 
 /** Quem está logado: administrador/gerência de UM escritório, ou a plataforma (sem escritório). */
-export interface Sessao { id: string; email: string; nome: string; papel: PapelSessao; escritorio: EscritorioInfo | null }
+export interface Sessao {
+  id: string; email: string; nome: string; papel: PapelSessao; escritorio: EscritorioInfo | null;
+  /** Hierarquia (maior = mais alto) e permissões efetivas do nível + ajustes da pessoa. Ausentes na plataforma. */
+  nivel?: number; permissoes?: string[];
+  /** Porta do ponto: `aguardando_ponto` e `encerrado` bloqueiam os dados até a próxima entrada (ou liberação da gerência). */
+  acesso?: EstadoAcesso;
+  funcionario_id?: string | null;
+  /** Senha provisória: a primeira entrada exige trocá-la. */
+  trocar_senha?: boolean;
+  liberado_ate?: string | null;
+}
+export interface NovoAcesso {
+  nome: string; email: string; papel: Papel; senha: string;
+  funcionario_id?: string | null; conceder?: string[]; negar?: string[]; exige_ponto?: boolean | null;
+}
+export interface AtualizarAcesso {
+  nome?: string; papel?: Papel; ativo?: boolean; funcionario_id?: string | null;
+  conceder?: string[]; negar?: string[]; exige_ponto?: boolean | null;
+}
 
 export type PeriodoFechado = Pick<Folha, 'funcionario_id' | 'periodo_inicio' | 'periodo_fim' | 'status'>;
 export type TipoDocumento = 'folha' | 'holerite' | 'frequencia' | 'espelho';
@@ -155,12 +175,29 @@ export interface Db {
   /** Data do último backup externo bem-sucedido (registrado pelo workflow de backup). null = desconhecido. */
   ultimoBackup(): Promise<string | null>;
   usuarios: { list(): Promise<Usuario[]> };
-  /** Gestão de acessos ao painel do PRÓPRIO escritório (só administrador). */
+  /** Gestão de acessos ao painel do PRÓPRIO escritório: o administrador gerencia todos; quem tem a permissão, só os níveis abaixo do seu. */
   acessos: {
-    criar(a: { nome: string; email: string; papel: Papel; senha: string }): Promise<void>;
-    atualizar(id: string, a: { nome: string; papel: Papel; ativo: boolean }): Promise<void>;
+    lista(): Promise<AcessoLinha[]>;
+    criar(a: NovoAcesso): Promise<void>;
+    atualizar(id: string, a: AtualizarAcesso): Promise<void>;
     redefinirSenha(id: string, senha: string): Promise<void>;
     remover(id: string): Promise<void>;
+    politica(): Promise<PoliticaAcesso>;
+    /** Só o administrador. */
+    definirExigirPonto(valor: boolean): Promise<void>;
+    definirPermissoesPapel(papel: Papel, permissoes: string[]): Promise<void>;
+    restaurarPermissoesPapel(papel: Papel): Promise<void>;
+    /** Gerência: libera o acesso de alguém por um tempo (audiência externa, plantão, hora extra). */
+    liberar(perfilId: string, minutos: number, motivo: string): Promise<void>;
+    encerrarLiberacao(perfilId: string): Promise<void>;
+    /** Registro de entradas, bloqueios, trocas de senha e liberações (só o administrador). */
+    registro(): Promise<RegistroAcesso[]>;
+  };
+  /** Área de quem está logado e tem cadastro de funcionário: o dia de ponto e as tarefas sem PIN. */
+  minhaArea: {
+    pontoHoje(): Promise<MeuPontoHoje>;
+    tarefas(): Promise<TarefaFunc[]>;
+    atualizarTarefa(id: string, status: StatusTarefa, nota?: string): Promise<void>;
   };
   auditoria: Crud<Auditoria>;
   /** Delegação: tarefas, prazos, audiências e reuniões do escritório (administrador, gerência e coordenação). */
@@ -213,6 +250,10 @@ export interface Db {
     sessao(): Promise<Sessao | null>;
     entrar(email: string, senha: string): Promise<Sessao>;
     sair(): Promise<void>;
+    /** Eventos de acesso para o registro (entrada, bloqueio por ponto, acesso encerrado). Nunca lança. */
+    registrarEvento(evento: Extract<EventoAcesso, 'login' | 'logout' | 'bloqueado_ponto' | 'acesso_encerrado'>): Promise<void>;
+    /** Troca a senha de quem está logado (obrigatória com senha provisória) e tira a marca de "trocar senha". */
+    trocarSenha(nova: string): Promise<void>;
   };
   /** Equipe sem dados sensíveis (usada pela gerência). */
   equipe(): Promise<FuncionarioBasico[]>;

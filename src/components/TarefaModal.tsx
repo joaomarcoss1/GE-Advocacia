@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Field, Modal, useToast } from '@/components/ui';
+import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { normalizarCnj, mascararCnj } from '@/lib/cnj';
 import { brParaIso, hhmmParaMin, isoParaBR, minParaHhmm, hojeMais } from '@/lib/datetime';
@@ -28,8 +29,11 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
   tarefa: Tarefa | null; padrao?: Partial<Form>; googleConectado: boolean; onClose(): void; onSalvo(t: Tarefa, sincronizar: boolean): void;
 }) {
   const { db, funcionarios, processos, clientes } = useDados();
+  const { pode, sessao } = useAuth();
+  /** Sem a permissão de delegar, a tarefa é da própria pessoa: nada de responsável, revisor ou participantes de outros. */
+  const delegar = pode('tarefas.delegar');
   const toast = useToast();
-  const [f, setF] = useState<Form>(() => inicial(tarefa, padrao));
+  const [f, setF] = useState<Form>(() => { const x = inicial(tarefa, padrao); return !delegar && !tarefa ? { ...x, responsavel: sessao?.funcionario_id ?? '' } : x; });
   const [salvando, setSalvando] = useState(false);
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF(x => ({ ...x, [k]: v }));
   const equipe = useMemo(() => funcionarios.filter(x => x.ativo).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')), [funcionarios]);
@@ -139,7 +143,7 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
           </div>
         </fieldset>
 
-        <div className="grid c2">
+        {delegar && <div className="grid c2">
           <Field label="Responsável">
             <select className="select" value={f.responsavel} onChange={e => set('responsavel', e.target.value)}>
               <option value="">Sem responsável</option>
@@ -152,15 +156,15 @@ export default function TarefaModal({ tarefa, padrao, googleConectado, onClose, 
               {equipe.filter(p => p.id !== f.responsavel).map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </Field>
-        </div>
-        <fieldset className="grupo-campos">
+        </div>}
+        {delegar && <fieldset className="grupo-campos">
           <legend>Participantes</legend>
           <div className="participantes">
             {equipe.filter(p => p.id !== f.responsavel && p.id !== f.revisor).map(p => (
               <label key={p.id} className="check"><input type="checkbox" checked={f.participantes.includes(p.id)} onChange={() => alternar(p.id)} />{p.nome}</label>
             ))}
           </div>
-        </fieldset>
+        </fieldset>}
         {comAgenda && googleConectado && (
           <label className="check"><input type="checkbox" checked={f.sincronizar} onChange={e => set('sincronizar', e.target.checked)} />Marcar no meu Google Agenda e convidar os envolvidos</label>
         )}

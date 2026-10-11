@@ -1,3 +1,4 @@
+import type { EstadoAcesso, PapelId } from './permissoes';
 import type { CategoriaDoc } from './organizacao';
 /** Dias da semana como no JS Date: 0 = domingo … 6 = sábado. A escala cobre de segunda (1) a sábado (6). */
 export const DIAS_ESCALA = [1, 2, 3, 4, 5, 6] as const;
@@ -311,8 +312,9 @@ export interface AcessoSensivel {
   id: string; usuario: string; anexo_id: string; funcionario_id: string | null; acao: string; origem: string | null; created_at: string;
 }
 
-export type Papel = 'admin' | 'gerente' | 'coordenador';
-/** Perfil de quem entra no sistema: administrador, gerência ou coordenação de um escritório, ou a plataforma (dono do GE Advocacia). */
+/** Nível de acesso de quem entra no painel (hierarquia em `lib/permissoes`). */
+export type Papel = PapelId;
+/** Perfil de quem entra no sistema: um dos níveis do escritório, ou a plataforma (dono do GE Advocacia). */
 export type PapelSessao = Papel | 'plataforma';
 export interface Usuario {
   id: string;
@@ -322,6 +324,43 @@ export interface Usuario {
   /** Somente no modo local. */
   senha_hash?: string;
   ativo: boolean;
+  /** Cadastro de funcionário a que este login pertence (a porta do ponto usa as marcações dele). */
+  funcionario_id?: string | null;
+  /** Permissões a mais / a menos que o padrão do nível. */
+  conceder?: string[];
+  negar?: string[];
+  /** null = segue o padrão do nível. */
+  exige_ponto?: boolean | null;
+  /** Senha provisória: precisa ser trocada no primeiro acesso. */
+  trocar_senha?: boolean;
+  ultimo_acesso?: string | null;
+}
+
+/** Linha da tela de acessos (resposta de `acessos.lista`). */
+export interface AcessoLinha {
+  id: string; nome: string; email: string; papel: Papel; ativo: boolean;
+  funcionario_id: string | null; funcionario_nome: string | null;
+  conceder: string[]; negar: string[];
+  exige_ponto: boolean | null; exige_ponto_efetivo: boolean;
+  estado: EstadoAcesso | 'sem_acesso';
+  ultimo_acesso: string | null; trocar_senha: boolean;
+  /** O usuário logado pode alterar este acesso (nível mais alto que o dele, ou administrador). */
+  pode_gerir: boolean;
+  /** O usuário logado pode liberar o acesso desta pessoa por um tempo (gerência do ponto, nível mais alto). */
+  pode_liberar: boolean;
+}
+export interface PoliticaAcesso {
+  exigir_ponto: boolean;
+  /** Permissões de cada nível (padrão ou ajustado pelo escritório). */
+  papeis: Partial<Record<Papel, { permissoes: string[]; personalizado: boolean }>>;
+}
+export type EventoAcesso =
+  | 'login' | 'logout' | 'bloqueado_ponto' | 'acesso_encerrado' | 'senha_trocada' | 'acesso_criado' | 'acesso_alterado'
+  | 'senha_redefinida' | 'acesso_removido' | 'liberacao' | 'permissoes_nivel' | 'politica_ponto';
+export interface RegistroAcesso { id: string; perfil_id: string | null; nome: string; evento: EventoAcesso; detalhe: string; created_at: string }
+export interface MeuPontoHoje {
+  funcionario_id: string | null; estado: EstadoAcesso;
+  marcacoes: { tipo: TipoMarcacao; horario: string; status_aprovacao: string }[];
 }
 
 export interface Auditoria {

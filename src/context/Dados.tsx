@@ -51,19 +51,25 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const recarregar = useCallback(async () => {
     if (!db || !sessao) return;
     const admin = sessao.papel === 'admin';
+    // Porta do ponto fechada: nenhum dado é lido (o banco também recusa); a tela mostra o aviso de acesso.
+    if (sessao.acesso && sessao.acesso !== 'liberado') {
+      setD(x => ({ ...x, cargos: [], escalas: [], funcionarios: [], registros: [], ocorrencias: [], feriados: [], ajustes: [], ajustesDia: [], folhas: [], usuarios: [], tarefas: [], clientes: [], processos: [], novidades: [], intimacoesNovas: 0 }));
+      return;
+    }
+    const seguro = <T,>(p: Promise<T>, padrao: T) => p.catch(() => padrao);
     const [cargos, escalas, func, registros, ocorrencias, feriados, config, ajustes, ajustesDia, folhas, usuarios, periodos, tarefas, clientes, processos, novidades, intimacoesNovas] = await Promise.all([
-      db.cargos.list(), db.escalas.list(),
+      seguro(db.cargos.list(), [] as Cargo[]), seguro(db.escalas.list(), [] as Escala[]),
       admin
         ? db.funcionarios.list()
-        : db.equipe().then(eq => eq.map(e => ({
+        : seguro(db.equipe().then(eq => eq.map(e => ({
           ...e, cpf: null, email: null, telefone: null, salario_mensal: 0, oab: null, pix: null, banco: null, agencia: null,
           conta: null, tipo_conta: null, observacoes: null, created_at: '',
-        }) as Funcionario)),
-      db.registros.list(), db.ocorrencias.list(), db.feriados.list(), db.config.get(),
+        }) as Funcionario)), [] as Funcionario[]),
+      seguro(db.registros.list(), [] as RegistroPonto[]), seguro(db.ocorrencias.list(), [] as Ocorrencia[]), seguro(db.feriados.list(), [] as Feriado[]), seguro(db.config.get(), CONFIG_PADRAO),
       admin ? db.ajustes.list() : Promise.resolve([] as AjusteFolha[]),
-      db.ajustesDia.list(),
+      seguro(db.ajustesDia.list(), [] as AjusteDia[]),
       admin ? db.folhas.list() : Promise.resolve([] as Folha[]),
-      admin ? db.usuarios.list() : Promise.resolve([] as Usuario[]),
+      admin ? seguro(db.usuarios.list(), [] as Usuario[]) : Promise.resolve([] as Usuario[]),
       db.periodosFechados().catch(() => [] as PeriodoFechado[]),
       db.tarefas.list().catch(() => [] as Tarefa[]),   // banco ainda sem a migração 0006: o resto do painel continua funcionando
       db.clientes.list().catch(() => [] as Cliente[]),

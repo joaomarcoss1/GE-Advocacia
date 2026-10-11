@@ -7,6 +7,7 @@ import Dossie from '@/components/Dossie';
 import { Modal } from '@/components/ui';
 import ProcessoDetalhe, { dataHora } from '@/components/ProcessoDetalhe';
 import ProcessoModal from '@/components/ProcessoModal';
+import { useAuth } from '@/context/Auth';
 import { useDados } from '@/context/Dados';
 import { semAcento, plural } from '@/lib/format';
 import { CATEGORIA_ROTULO } from '@/lib/processos';
@@ -19,6 +20,7 @@ const SEMANA = 7 * 86_400_000;
 
 export default function Processos() {
   const { db, processos, clientes, funcionarios, novidades, recarregar } = useDados();
+  const { pode } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [aba, setAba] = useState<Aba>((params.get('aba') as Aba) || (novidades.length ? 'novidades' : 'processos'));
@@ -66,7 +68,7 @@ export default function Processos() {
     <>
       <PageHeader titulo="Processos">
         <button className="btn ghost" onClick={atualizarTodos} disabled={atualizando}><RefreshCw size={17} />{atualizando ? 'Consultando…' : 'Atualizar andamentos'}</button>
-        <button className="btn gold" onClick={() => setNovo(true)}><Plus size={18} />Novo processo</button>
+        {pode('processos.editar') && <button className="btn gold" onClick={() => setNovo(true)}><Plus size={18} />Novo processo</button>}
       </PageHeader>
 
       <div className="grid c4 mb-18" >
@@ -141,7 +143,7 @@ export default function Processos() {
 
         {aba === 'clientes' && (
           <>
-            <div className="filtros"><div className="grow" /><button className="btn gold sm" onClick={() => setNovoCliente('novo')}><Plus size={16} />Novo cliente</button></div>
+            <div className="filtros"><div className="grow" />{pode('clientes.editar') && <button className="btn gold sm" onClick={() => setNovoCliente('novo')}><Plus size={16} />Novo cliente</button>}</div>
             <div className="table-wrap">
               <table className="tbl">
                 <thead><tr><th>Cliente</th><th>Tipo</th><th>Contato</th><th className="num">Processos</th><th><span className="sr-only">Ações</span></th></tr></thead>

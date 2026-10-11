@@ -272,13 +272,20 @@ async function devolverUso(sb: SupabaseClient, id: string) {
 }
 
 // ---------------------------------------------------------------- identificação do chamador
-async function chamador(req: Request, exigirAdmin = false) {
+/** `exigir`: true = só o administrador; texto = a permissão necessária (padrão: ver documentos). */
+async function chamador(req: Request, exigir: boolean | string = 'documentos.ver') {
   const auth = req.headers.get('Authorization');
   if (!auth) throw new Error('SEM_PERMISSAO');
   const sbUser = createClient(URL_BASE, ANON, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
   const { data: u } = await sbUser.auth.getUser();
   if (!u.user) throw new Error('SEM_PERMISSAO');
-  const { data: ok } = await sbUser.rpc(exigirAdmin ? 'eh_admin' : 'eh_delegante');
+  // Permissão específica (migração 0013); num banco ainda sem ela, vale o gate antigo de quem delega.
+  let ok: boolean | null = null;
+  if (exigir === true) ok = (await sbUser.rpc('eh_admin')).data;
+  else {
+    const r = await sbUser.rpc('tem_permissao', { p: exigir });
+    ok = r.error ? (await sbUser.rpc('eh_delegante')).data : r.data;
+  }
   const { data: esc } = await sbUser.rpc('meu_escritorio');
   if (!ok || !esc) throw new Error('SEM_PERMISSAO');
   return { sbUser, userId: u.user.id, escId: esc as string };
@@ -340,7 +347,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // ---------- envio pelo painel ----------
-      const { sbUser, userId, escId } = await chamador(req);                 // sem login e papel válidos, nem chega a ler o corpo
+      const { sbUser, userId, escId } = await chamador(req, 'documentos.enviar');                 // sem login e permissão válidos, nem chega a ler o corpo
       const { campos, bytes, nome } = await lerArquivo(req);
       if (texto(campos.get('acao')) !== 'enviar') return falha('Ação desconhecida.');
       const cliente = uuidOuNulo(texto(campos.get('cliente_id')));
@@ -399,12 +406,12 @@ Deno.serve(async (req: Request) => {
       return json({ url: 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT_URI, response_type: 'code', scope: ESCOPOS, access_type: 'offline', prompt: 'consent', state: estado }) });
     }
     if (acao === 'drive_sincronizar') {
-      const { escId } = await chamador(req);
+      const { escId } = await chamador(req, 'documentos.enviar');
       if (!CLIENT_ID || !TOKEN_KEY) return falha('GOOGLE_INDISPONIVEL', 503);
       return json(await sincronizarEscritorio(sb, escId, 40));
     }
     if (acao === 'reclassificar') {
-      const { sbUser } = await chamador(req);
+      const { sbUser } = await chamador(req, 'documentos.enviar');
       const id = uuidOuNulo(String(corpo.id ?? ''));
       if (!id || !ehCategoria(corpo.categoria)) return falha('Pedido inválido.');
       const { data: d } = await sbUser.from('documentos').select('id,escritorio_id,cliente_id,processo_id,drive_file_id,drive_status,categoria').eq('id', id).maybeSingle();   // o RLS garante que é do escritório de quem pede
@@ -449,7 +456,7 @@ Deno.serve(async (req: Request) => {
       return json({ nome, mime, url: assinada.data.signedUrl });
     }
     if (acao === 'limpar') {
-      const { escId } = await chamador(req);
+      const { escId } = await chamador(req, 'documentos.excluir');
       return json({ ok: true, limpos: await limparLixeira(sb, escId) });
     }
     return falha('Ação desconhecida.');
