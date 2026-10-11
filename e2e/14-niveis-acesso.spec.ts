@@ -90,6 +90,13 @@ test.describe('níveis de acesso e porta do ponto', () => {
     await expect(page.getByRole('heading', { name: 'Bata o ponto para entrar' })).toBeVisible();   // sem entrada hoje, o financeiro aguarda o ponto
   });
 
+  test('funcionário sem acesso criado bate o ponto e a tela explica o que fazer', async ({ page }) => {
+    await irPara(page, '08:03');
+    await baterPonto(page, 'lucas', '215839', /^Entrada$/);
+    await expect(page.getByTestId('sem-acesso-sistema')).toContainText('Acessos e níveis');
+    await expect(page.getByTestId('entrando-no-sistema')).toHaveCount(0);
+  });
+
   test('estagiário não vê o que não é do nível e a matriz de níveis mostra o padrão', async ({ page }) => {
     await irPara(page, '08:03');
     await baterPonto(page, 'pedro', PIN.pedro, /^Entrada$/);

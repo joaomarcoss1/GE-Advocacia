@@ -38,6 +38,7 @@ export default function PainelPonto({ p }: { p: Ponto }) {
             {p.acessoMsg?.tipo === 'aviso' && (
               <div className="mt-6 fs-md" role="status">{p.acessoMsg.texto} <Link to="/entrar" className="auth-link" data-testid="entrar-no-sistema">Entrar com e-mail e senha<ArrowRight size={14} aria-hidden="true" /></Link></div>
             )}
+            {p.acessoMsg?.tipo === 'info' && <div className="mt-6 fs-md" role="status" data-testid="sem-acesso-sistema">{p.acessoMsg.texto}</div>}
             {sucesso.tipo === 'saida' && <div className="mt-6 fs-md">Jornada encerrada: o seu acesso ao sistema também foi encerrado por hoje.</div>}
             {p.volta !== null && (
               <span className="volta">Voltando à tela inicial em {p.volta}s · <button type="button" className="link-btn" onClick={() => p.setVolta(null)}>continuar aqui</button></span>

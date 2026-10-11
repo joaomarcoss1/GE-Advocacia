@@ -12,7 +12,7 @@ import type { Escala, TipoMarcacao, TipoOcorrencia } from '@/lib/types';
 export type Etapa = 'pessoa' | 'pin' | 'painel';
 export type FalhaEscritorio = 'ESCRITORIO_NAO_ENCONTRADO' | 'ESCRITORIO_SUSPENSO';
 /** Entrada automática no sistema depois do ponto: em andamento, ou um aviso (o nível entra com senha, senha provisória…). */
-export interface AcessoAposPonto { tipo: 'entrando' | 'aviso'; texto: string }
+export interface AcessoAposPonto { tipo: 'entrando' | 'aviso' | 'info'; texto: string }
 export interface SucessoPonto { tipo: TipoMarcacao; status: string; hora: string; dif: number; analise?: string | null; aviso?: string }
 
 /**
@@ -244,7 +244,12 @@ export function usePonto(slug: string) {
         nav('/painel');
       } else if (ent.erro === 'ENTRADA_MANUAL' || ent.erro === 'TROCAR_SENHA' || ent.erro === 'INDISPONIVEL') {
         setAcessoMsg({ tipo: 'aviso', texto: PONTO_ERRO_MSG[ent.erro] });
-      } else setAcessoMsg(null);            // sem login ligado ao cadastro: o ponto é só o ponto
+      } else if (ent.erro === 'SEM_ACESSO') {
+        // O ponto vale, mas não há login ligado a este cadastro: diz o que fazer em vez de ficar em silêncio.
+        setAcessoMsg({ tipo: 'info', texto: 'Seu ponto foi registrado, mas você ainda não tem acesso ao sistema. Peça à gerência para criar o seu acesso em "Acessos e níveis".' });
+      } else if (ent.erro === 'LIMITE') {
+        setAcessoMsg({ tipo: 'aviso', texto: PONTO_ERRO_MSG.LIMITE });
+      } else setAcessoMsg(null);
     }
   });
 
