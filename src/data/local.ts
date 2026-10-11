@@ -23,6 +23,7 @@ import { exigeProvidencia, prazoNoTexto } from '@/lib/intimacoes';
 import { ehCategoria, sugerirCategoria, type CategoriaDoc } from '@/lib/organizacao';
 import { calcularPrazo, chaveMovimento, classificarMovimento, porCategoria, tarefaDoMovimento, tribunalDeCnj, type Classificacao, type MovimentoBruto } from '@/lib/processos';
 import { STATUS_ROTULO } from '@/lib/tarefas';
+import { esperaRestante, registrarFalha, textoBloqueio } from '@/lib/limiteLogin';
 import { PAPEIS, PADRAO, ORDEM_PAPEIS, RESERVADAS, ehPapel, ehPermissao, estadoAcesso, permissoesEfetivas, podeAtribuirPapel, podeConceder, podeGerirAlvo, type EstadoAcesso } from '@/lib/permissoes';
 import type {
   AcessoLinha, AcessoSensivel, AjusteDia, AjusteFolha, Andamento, AnexoMeta, Auditoria, Cargo, Config, Escala, EscritorioInfo, EscritorioPlataforma, Feriado, Folha,
@@ -917,6 +918,25 @@ export function criarDbLocal(): Db {
           .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).slice(0, 5)
           .map(f => ({ id: f.id, nome: f.nome, cargo_nome: cs.find(c => c.id === f.cargo_id)?.nome ?? null, escala_id: f.escala_id }));
       },
+      /** Espelho de `ponto_acesso` + `ponto-entrar`: PIN válido, nível que depende do ponto, senha já trocada e entrada de hoje. */
+      async entrarNoSistema(fid, pin) {
+        return comAlvo(async e => {
+          const pv = await validarPin(slug, fid, pin);
+          if (pv !== 'ok') return errP(pv);
+          const u = usuariosDoEscritorio(slug).find(x => x.funcionario_id === fid);
+          if (!u || !u.ativo) return errP('SEM_ACESSO');
+          if (!(lerJson<{ entrada_automatica?: boolean }>(kt(slug, 'acesso_config'), {}).entrada_automatica ?? true)) return errP('ENTRADA_MANUAL');
+          if (u.papel === 'admin' || u.papel === 'gerente' || !(u.exige_ponto ?? PAPEIS[u.papel].exigePonto)) return errP('ENTRADA_MANUAL');
+          if (u.trocar_senha) return errP('TROCAR_SENHA');
+          const hoje = agoraBR().data;
+          const marcas = lerTab<RegistroPonto>(slug, 'registros').filter(r => r.funcionario_id === fid && r.data === hoje && r.status_aprovacao !== 'rejeitado').map(r => r.tipo);
+          if (!marcas.includes('entrada') || marcas.includes('saida')) return errP('SEM_PONTO');
+          gravarJson(K.sessao, { id: u.id, email: u.email, nome: u.nome, papel: u.papel, escritorio: infoDe(e) } satisfies Sessao);
+          gravarTab(slug, 'usuarios', usuariosDoEscritorio(slug).map(x => (x.id === u.id ? { ...x, ultimo_acesso: agoraIso() } : x)));
+          registrarAcesso(slug, u.id, u.nome, 'login', 'entrada automática pelo ponto');
+          return { ok: true as const, nome: u.nome };
+        }) as ReturnType<PontoApi['entrarNoSistema']>;
+      },
       async escala(escalaId) { return 'erro' in alvo() ? null : lerTab<Escala>(slug, 'escalas').find(e => e.id === escalaId) ?? null; },
       async contexto() {
         const t = alvo();
@@ -1230,12 +1250,19 @@ export function criarDbLocal(): Db {
         const ajustes = lerJson<Record<string, string[]>>(kt(a.slug, 'papeis_permissoes'), {});
         const papeis: PoliticaAcesso['papeis'] = {};
         for (const p of ORDEM_PAPEIS.filter(x => x !== 'admin')) papeis[p] = { permissoes: ajustes[p] ?? [...PADRAO[p]], personalizado: p in ajustes };
-        return { exigir_ponto: lerJson<{ exigir_ponto?: boolean }>(kt(a.slug, 'acesso_config'), {}).exigir_ponto ?? true, papeis };
+        const cfg = lerJson<{ exigir_ponto?: boolean; entrada_automatica?: boolean }>(kt(a.slug, 'acesso_config'), {});
+        return { exigir_ponto: cfg.exigir_ponto ?? true, entrada_automatica: cfg.entrada_automatica ?? true, papeis };
       },
       async definirExigirPonto(valor) {
         const a = exigeAdmin();
-        gravarJson(kt(a.slug, 'acesso_config'), { exigir_ponto: !!valor });
+        gravarJson(kt(a.slug, 'acesso_config'), { ...lerJson<Record<string, unknown>>(kt(a.slug, 'acesso_config'), {}), exigir_ponto: !!valor });
         registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'politica_ponto', valor ? 'acesso só depois do ponto' : 'acesso sem exigir ponto');
+      },
+      async definirEntradaAutomatica(valor) {
+        const a = exigeAdmin();
+        const cfg = lerJson<Record<string, unknown>>(kt(a.slug, 'acesso_config'), {});
+        gravarJson(kt(a.slug, 'acesso_config'), { ...cfg, entrada_automatica: !!valor });
+        registrarAcesso(a.slug, a.sessao.id, a.sessao.nome, 'politica_ponto', valor ? 'entrada automática pelo ponto: ligada' : 'entrada automática pelo ponto: desligada');
       },
       async definirPermissoesPapel(papel, permissoes) {
         const a = exigeAdmin();
@@ -1402,13 +1429,25 @@ export function criarDbLocal(): Db {
       async sessao() { return sessaoValida(); },
       async entrar(email, senha) {
         const e = email.trim().toLowerCase();
+        // freio de tentativas (espelha o limite do servidor): 5 falhas em 10 min por e-mail travam o login por 10 min
+        const chaveFalhas = `${NS}login_falhas`;
+        const mapaFalhas = lerJson<Record<string, number[]>>(chaveFalhas, {});
+        const espera = esperaRestante(mapaFalhas[e] ?? [], Date.now());
+        if (espera > 0) throw new ErroNegocio('LOGIN_BLOQUEADO', textoBloqueio(espera));
         const hash = await hashSecreto(e, senha);
-        const falha = () => new Error('E-mail ou senha incorretos.');
+        const falha = () => {
+          const m = lerJson<Record<string, number[]>>(chaveFalhas, {});
+          m[e] = registrarFalha(m[e] ?? [], Date.now());
+          gravarJson(chaveFalhas, m);
+          return new Error('E-mail ou senha incorretos.');
+        };
+        const zerar = () => { const m = lerJson<Record<string, number[]>>(chaveFalhas, {}); if (e in m) { delete m[e]; gravarJson(chaveFalhas, m); } };
         const p = plataformaUsers().find(u => u.email === e);
         if (p) {
           if (!p.ativo || p.senha_hash !== hash) throw falha();
           const s: Sessao = { id: p.id, email: p.email, nome: p.nome, papel: 'plataforma', escritorio: null };
           gravarJson(K.sessao, s);
+          zerar();
           return s;
         }
         for (const esc of escritorios()) {
@@ -1419,6 +1458,7 @@ export function criarDbLocal(): Db {
           if (!esc.ativo) throw erro('ESCRITORIO_SUSPENSO');
           gravarJson(K.sessao, { id: u.id, email: u.email, nome: u.nome, papel: u.papel, escritorio: infoDe(esc) } satisfies Sessao);
           definirFuso(esc.fuso);
+          zerar();
           return sessaoValida()!;
         }
         throw falha();

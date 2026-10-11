@@ -18,6 +18,14 @@ major_version = 15
 # Cadastro aberto DESLIGADO: só o administrador do escritório (ou a plataforma) cria acessos.
 enable_signup = false
 enable_anonymous_sign_ins = false
+# Tentativas de login: limite por IP (o Supabase conta por endereço). Senhas: mínimo de 10, com letras e números.
+minimum_password_length = 10
+password_requirements = "letters_digits"
+
+[auth.rate_limit]
+sign_in_sign_ups = 30        # por 5 minutos e por IP
+token_refresh = 150
+otp = 30
 site_url = "http://localhost:5173"
 
 [functions.anexos]
@@ -34,4 +42,8 @@ verify_jwt = false
 
 [functions.documentos]
 # O link público do cliente e o retorno do Google chegam sem JWT; as ações do painel conferem o JWT e o papel dentro da função.
+verify_jwt = false
+
+[functions.ponto-entrar]
+# Sem login: a função valida o PIN (com bloqueio por origem) e só então gera o link de uso único da sessão.
 verify_jwt = false

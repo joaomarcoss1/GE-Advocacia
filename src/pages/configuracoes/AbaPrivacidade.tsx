@@ -71,7 +71,7 @@ export default function AbaPrivacidade({ c, setC }: { c: Config; setC(c: Config)
 
       <div className="row between mt-6" >
         <div className="section-title">Acessos a documentos sensíveis</div>
-        <a className="btn ghost sm" href={`/privacidade/${escritorio.slug}`} target="_blank" rel="noreferrer"><ExternalLink size={14} />Aviso de privacidade (texto-base)</a>
+        <a className="btn ghost sm" href={`/privacidade/${escritorio.slug}`} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} />Aviso de privacidade (texto-base)</a>
       </div>
       <p className="hint m-0" >Cada abertura de atestado é registrada (quem e quando) e esse registro não pode ser editado nem apagado.</p>
       <div className="grid c3">

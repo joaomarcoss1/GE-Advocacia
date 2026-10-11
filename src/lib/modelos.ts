@@ -76,7 +76,7 @@ export function preencher(modelo: string, valores: Record<string, string | null 
   const faltando: string[] = [];
   const texto = modelo.replace(RE_VAR, (_, chaveBruta: string, padrao?: string) => {
     const chave = chaveBruta.toLowerCase();
-    const v = valores[chave];
+    const v = Object.hasOwn(valores, chave) ? valores[chave] : undefined;     // nunca herda de Object.prototype ({{constructor}}, {{__proto__}})
     if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();
     if (padrao !== undefined && padrao.trim() !== '') return padrao.trim();
     const rot = ROTULO_VAR.get(chave) ?? chave;

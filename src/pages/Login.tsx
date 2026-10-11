@@ -5,8 +5,16 @@ import Stage from '@/components/Stage';
 import { useAuth } from '@/context/Auth';
 import { DEMO_ESCRITORIOS, DEMO_PLATAFORMA } from '@/data/seed';
 import { PAPEIS } from '@/lib/permissoes';
+import { esperaRestante, MAX_FALHAS_APARELHO, registrarFalha, textoBloqueio } from '@/lib/limiteLogin';
 import Credito from '@/components/Nexutec';
 import { InstalarApp } from '@/components/Aplicativo';
+
+const CHAVE_FALHAS = 'ge.login.falhas';
+type MapaFalhas = Record<string, number[]>;
+const lerFalhas = (): MapaFalhas => { try { return JSON.parse(localStorage.getItem(CHAVE_FALHAS) ?? '{}') as MapaFalhas; } catch { return {}; } };
+const gravarFalhas = (m: MapaFalhas) => { try { localStorage.setItem(CHAVE_FALHAS, JSON.stringify(m)); } catch { /* sem armazenamento: o servidor limita de qualquer forma */ } };
+/** Espera (ms) por e-mail e por aparelho; o limite de verdade é do servidor, este freio só poupa a conta de tentativas em massa. */
+const esperaDe = (email: string) => { const m = lerFalhas(); const agora = Date.now(); return Math.max(esperaRestante(m[email.trim().toLowerCase()] ?? [], agora), esperaRestante(m['*'] ?? [], agora, MAX_FALHAS_APARELHO)); };
 
 export default function Login() {
   const { sessao, carregando, entrar, modo } = useAuth();
@@ -22,9 +30,18 @@ export default function Login() {
   async function enviar(e: FormEvent) {
     e.preventDefault();
     if (enviando) return;
+    const espera = esperaDe(email);
+    if (espera > 0) { setErro(textoBloqueio(espera)); return; }
     setErro(''); setEnviando(true);
-    try { const s = await entrar(email, senha); nav(s.papel === 'plataforma' ? '/plataforma' : '/painel'); }
-    catch (x) { setErro((x as Error).message); }
+    try {
+      const s = await entrar(email, senha);
+      const m = lerFalhas(); delete m[email.trim().toLowerCase()]; gravarFalhas(m);
+      nav(s.papel === 'plataforma' ? '/plataforma' : '/painel');
+    } catch (x) {
+      const m = lerFalhas(); const k = email.trim().toLowerCase(); const agora = Date.now();
+      m[k] = registrarFalha(m[k] ?? [], agora); m['*'] = registrarFalha(m['*'] ?? [], agora); gravarFalhas(m);
+      setErro((x as Error).message);
+    }
     finally { setEnviando(false); }
   }
 
@@ -72,7 +89,11 @@ export default function Login() {
             </div>
           )}
         </form>
-        <Link to="/" className="auth-link"><ArrowLeft size={15} />Voltar ao início</Link>
+        <div className="row g-14" style={{ justifyContent: 'center' }}>
+          <Link to="/" className="auth-link"><ArrowLeft size={15} />Voltar ao início</Link>
+          <Link to="/privacidade" className="auth-link">Privacidade</Link>
+          <Link to="/cookies" className="auth-link">Cookies</Link>
+        </div>
         <InstalarApp />
         <Credito className="credito-pagina" />
       </main>

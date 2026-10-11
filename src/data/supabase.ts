@@ -307,6 +307,18 @@ export function criarDbSupabase(url: string, key: string): Db {
           return { ok: false, erro: codigo ?? 'ARQUIVO_INVALIDO', detalhe: codigo ? null : msg };
         }
       },
+      async entrarNoSistema(fid, pin) {
+        try {
+          const r = await chamarFuncao<{ ok: boolean; erro?: PontoErro; token_hash?: string }>('ponto-entrar', { funcionario_id: fid, pin });
+          if (!r.ok || !r.token_hash) return { ok: false, erro: r.erro ?? 'INDISPONIVEL' };
+          const { error } = await sb.auth.verifyOtp({ token_hash: r.token_hash, type: 'magiclink' });
+          if (error) return { ok: false, erro: 'INDISPONIVEL' };
+          const { sessao } = await lerSessao();
+          if (!sessao) { await sb.auth.signOut(); return { ok: false, erro: 'SEM_ACESSO' }; }
+          sessaoCache = sessao;
+          return { ok: true, nome: sessao.nome };
+        } catch { return { ok: false, erro: 'INDISPONIVEL' }; }
+      },
       tarefas: (fid, pin) => rpc('ponto_tarefas', { p_func_id: fid, p_pin: pin }) as ReturnType<PontoApi['tarefas']>,
       atualizarTarefa: a => rpc('ponto_tarefa_atualizar', {
         p_func_id: a.funcionario_id, p_pin: a.pin, p_id: a.id, p_status: a.status, p_nota: a.nota ?? null,
@@ -506,6 +518,7 @@ export function criarDbSupabase(url: string, key: string): Db {
       async remover(id) { await rpc('remover_usuario', { p_id: id }); },
       politica: () => rpc<PoliticaAcesso>('acesso_politica'),
       async definirExigirPonto(valor) { await rpc('definir_exigir_ponto', { p_valor: valor }); },
+      async definirEntradaAutomatica(valor) { await rpc('definir_entrada_automatica', { p_valor: valor }); },
       async definirPermissoesPapel(papel, permissoes) { await rpc('definir_permissoes_papel', { p_papel: papel, p_permissoes: permissoes }); },
       async restaurarPermissoesPapel(papel) { await rpc('restaurar_permissoes_papel', { p_papel: papel }); },
       async liberar(perfilId, minutos, motivo) { await rpc('liberar_acesso', { p_perfil: perfilId, p_minutos: minutos, p_motivo: motivo }); },

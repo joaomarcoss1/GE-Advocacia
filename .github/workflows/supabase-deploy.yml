@@ -75,6 +75,7 @@ jobs:
           supabase functions deploy google-agenda --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
           supabase functions deploy processos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
           supabase functions deploy documentos --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+          supabase functions deploy ponto-entrar --no-verify-jwt --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
       - name: Cadastra os segredos das funções (só os informados) e cria a chave de cifra
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

@@ -14,6 +14,8 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${porta}`,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // o aviso de cookies já vem lido (não cobre botões); o teste dele usa um contexto limpo
+    storageState: { cookies: [], origins: [{ origin: `http://127.0.0.1:${porta}`, localStorage: [{ name: 'ge.aviso.cookies', value: 'v1' }] }] },
     launchOptions: { executablePath: process.env.PW_CHROMIUM || undefined, args: ['--no-sandbox'] },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

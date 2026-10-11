@@ -47,12 +47,22 @@ export default function Privacidade() {
             <li>Gerência: presença, ponto e escalas, <strong>sem</strong> salários, CPF, dados bancários nem atestados.</li>
             <li>Atestados: somente o administrador abre, por endereço temporário de 60 segundos, e <strong>cada abertura fica registrada</strong> (quem, quando).</li>
           </ul>
+          <h2>Acesso ao sistema, níveis e registro de acessos</h2>
+          <ul>
+            <li>Quem tem acesso entra com o próprio login. Cada pessoa tem um <strong>nível</strong> que limita o que ela vê (por exemplo, o advogado vê os processos em que atua; o estagiário, só o que lhe foi delegado).</li>
+            <li>Para certos níveis, o acesso só abre depois do ponto de entrada e fecha com a saída. Se o escritório ligar a <strong>entrada automática</strong>, ao confirmar o ponto com o PIN você entra no sistema sozinho, com o seu nível. Isso <em>não</em> vale no tablet compartilhado (modo quiosque), nem para administração e gerência.</li>
+            <li>Ficam registrados: entradas, tentativas barradas por falta de ponto, trocas e redefinições de senha, liberações de acesso e mudanças de permissão (quem, quando e o motivo informado). O registro é apagado depois de 12 meses.</li>
+            <li>Para impedir tentativas em massa, o sistema limita o número de tentativas por endereço de origem e bloqueia temporariamente o login e o PIN após erros repetidos.</li>
+          </ul>
+          <h2>Cookies e armazenamento no aparelho</h2>
+          <p>Não usamos cookies de publicidade nem de rastreamento. Veja a <Link to="/cookies">política de cookies</Link> com a lista do que é guardado no aparelho.</p>
           <h2>Por quanto tempo guardamos</h2>
           <p>Valores-padrão do sistema (o administrador pode ajustar; <strong>confirmar com o jurídico/contabilidade</strong>):</p>
           <ul>
             <li>Atestados e anexos de saúde: {pad.anexos_meses} meses.</li>
             <li>Coordenadas de GPS das marcações: {pad.geolocalizacao_meses} meses (depois, a marcação permanece sem a coordenada).</li>
             <li>Tentativas de PIN: {RETENCAO_TENTATIVAS_DIAS} dias, removidas automaticamente.</li>
+            <li>Registro de acessos (entradas, bloqueios, senhas e liberações): 12 meses, removido automaticamente.</li>
             <li>Marcações, folha e auditoria: pelo prazo de guarda trabalhista definido pelo escritório.</li>
           </ul>
           <h2>Integrações com o Google (Agenda e Drive)</h2>
@@ -68,7 +78,8 @@ export default function Privacidade() {
           <h2>Como protegemos</h2>
           <ul>
             <li>Cada escritório tem os dados isolados no banco por regras de acesso (o banco recusa qualquer consulta ao escritório de outra pessoa).</li>
-            <li>PIN guardado apenas como hash, com bloqueio após tentativas erradas.</li>
+            <li>PIN guardado apenas como hash, com bloqueio após tentativas erradas; senhas só no serviço de autenticação, nunca em texto.</li>
+            <li>Limite de tentativas por origem em todas as telas públicas, e conexão sempre cifrada (HTTPS) com política de segurança de conteúdo restritiva.</li>
             <li>Atestados em armazenamento privado, sem endereço público.</li>
             <li>Toda alteração relevante é registrada em uma trilha de auditoria que ninguém consegue editar ou apagar.</li>
           </ul>

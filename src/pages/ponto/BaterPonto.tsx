@@ -76,6 +76,7 @@ export default function BaterPonto() {
         <div className="row g-4" style={{ justifyContent: 'center' }}>
           <Link to="/entrar" className="auth-link">Acesso administrativo <ArrowRight size={15} /></Link>
           <Link to={`/privacidade/${slug}`} className="auth-link"><LockKeyhole size={14} />Privacidade</Link>
+          <Link to="/cookies" className="auth-link">Cookies</Link>
           <InstalarApp />
         </div>
         <Credito className="credito-pagina" />

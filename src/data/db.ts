@@ -93,6 +93,11 @@ export interface PontoApi {
   tarefas(funcionarioId: string, pin: string): Promise<PontoResp<{ tarefas: TarefaFunc[] }>>;
   /** O responsável atualiza o andamento (a fazer, em andamento, em revisão, concluída), com nota opcional. */
   atualizarTarefa(a: { funcionario_id: string; pin: string; id: string; status: Exclude<StatusTarefa, 'cancelada'>; nota?: string }): Promise<PontoResp>;
+  /**
+   * Entrada automática no sistema depois do ponto confirmado: abre a sessão do funcionário com o nível dele.
+   * Não vale para administrador e gerência (entram com senha), nem com senha provisória, nem sem entrada confirmada hoje.
+   */
+  entrarNoSistema(funcionarioId: string, pin: string): Promise<PontoResp<{ nome: string }>>;
 }
 
 export interface ResumoExpurgo {
@@ -185,6 +190,7 @@ export interface Db {
     politica(): Promise<PoliticaAcesso>;
     /** Só o administrador. */
     definirExigirPonto(valor: boolean): Promise<void>;
+    definirEntradaAutomatica(valor: boolean): Promise<void>;
     definirPermissoesPapel(papel: Papel, permissoes: string[]): Promise<void>;
     restaurarPermissoesPapel(papel: Papel): Promise<void>;
     /** Gerência: libera o acesso de alguém por um tempo (audiência externa, plantão, hora extra). */

@@ -35,7 +35,7 @@ Cada nível tem um conjunto padrão (tela **Acessos e níveis → Níveis e perm
 
 1. O administrador cria o acesso **a partir do cadastro do funcionário** (o login fica ligado ao cadastro) com uma **senha provisória**; a pessoa troca no primeiro acesso.
 2. Para os níveis Advogado, Financeiro, Secretaria, Estágio e Colaborador, o acesso **só abre depois do registro de entrada** e **fecha com a saída**. Administrador, gerência e coordenação não dependem do ponto.
-3. Depois de bater a entrada na tela de ponto, a pessoa clica em *Entrar no sistema*. Sem ponto, o login mostra apenas o aviso "Bata o ponto para entrar": nenhum dado do escritório é lido, nem pelo banco.
+3. **Entrada automática:** ao confirmar o ponto (entrada ou retorno do intervalo), quem tem login ligado ao cadastro entra no sistema sozinho, com o nível dele (a Edge Function `ponto-entrar` valida o PIN e abre a sessão). Não vale no modo quiosque (tablet compartilhado), para administração e gerência (entram com e-mail e senha), nem com senha provisória. O administrador liga ou desliga em *Acessos e níveis*. Sem ponto, o login mostra apenas "Bata o ponto para entrar": nenhum dado do escritório é lido, nem pelo banco.
 4. **Liberação pela gerência** (audiência externa, plantão, hora extra): de 5 min a 12 h, com motivo, registrada.
 5. O administrador pode desligar a exigência no escritório, ou dispensar/exigir o ponto de uma pessoa.
 
@@ -47,7 +47,7 @@ Entradas, barreiras por ponto, acesso encerrado, criação, alteração e remoç
 
 ## Como ativar
 
-1. Rode o fluxo **Supabase — aplicar banco e funções** (marque *Publicar as Edge Functions*): aplica a migração `0013_niveis_acesso.sql` e republica `documentos` e `processos`.
+1. Rode o fluxo **Supabase — aplicar banco e funções** (marque *Publicar as Edge Functions*): aplica as migrações `0013` e `0014` e publica `documentos`, `processos` e a nova `ponto-entrar`. Veja também `docs/SEGURANCA.md`.
 2. Enquanto o banco não tiver a 0013, o app continua funcionando com os três níveis antigos; a tela de acessos avisa que falta a atualização.
 3. Em **Acessos e níveis**, crie os acessos dos funcionários e confira o padrão de cada nível.
 

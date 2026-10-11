@@ -7,7 +7,8 @@ export type PontoErro =
   | 'PIN_INVALIDO' | 'PIN_BLOQUEADO' | 'TIPO_INVALIDO' | 'GPS_OBRIGATORIO' | 'FORA_DA_AREA' | 'LOCAL_NAO_CONFIGURADO'
   | 'JA_REGISTRADO' | 'JUSTIFICATIVA_OBRIGATORIA' | 'HORA_INVALIDA' | 'USE_PONTO_NORMAL' | 'DATA_MUITO_ANTIGA'
   | 'ARQUIVO_INVALIDO' | 'LIMITE_ANEXOS' | 'NAO_ENCONTRADO' | 'PERIODO_INVALIDO' | 'PERIODO_FECHADO'
-  | 'ESCRITORIO_SUSPENSO' | 'ESCRITORIO_NAO_ENCONTRADO' | 'STATUS_INVALIDO';
+  | 'ESCRITORIO_SUSPENSO' | 'ESCRITORIO_NAO_ENCONTRADO' | 'STATUS_INVALIDO'
+  | 'LIMITE' | 'SEM_ACESSO' | 'ENTRADA_MANUAL' | 'TROCAR_SENHA' | 'SEM_PONTO' | 'INDISPONIVEL';
 
 export const PONTO_ERRO_MSG: Record<PontoErro, string> = {
   PIN_INVALIDO: 'PIN incorreto.',
@@ -29,6 +30,12 @@ export const PONTO_ERRO_MSG: Record<PontoErro, string> = {
   ESCRITORIO_SUSPENSO: 'O acesso deste escritório está suspenso. Fale com o administrador.',
   ESCRITORIO_NAO_ENCONTRADO: 'Escritório não encontrado. Confira o endereço do ponto com o administrador.',
   STATUS_INVALIDO: 'Situação inválida para esta tarefa.',
+  LIMITE: 'Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo.',
+  SEM_ACESSO: 'Você não tem um acesso ao sistema ligado ao seu cadastro.',
+  ENTRADA_MANUAL: 'O seu nível entra no sistema com e-mail e senha.',
+  TROCAR_SENHA: 'Entre uma vez com e-mail e a senha provisória para criar a sua senha.',
+  SEM_PONTO: 'O acesso só abre com a entrada do dia registrada.',
+  INDISPONIVEL: 'Não foi possível entrar agora. Use o login com e-mail e senha.',
 };
 
 /** Erros de gestão (painel): códigos lançados pelo banco ou pelo modo demonstração. */

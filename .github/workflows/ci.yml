@@ -18,6 +18,8 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run typecheck
+      - name: Dependências sem vulnerabilidade conhecida (alta ou crítica)
+        run: npm audit --omit=dev --audit-level=high
       - run: npm run test:cov
       - run: npm run build
 

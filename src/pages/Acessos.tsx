@@ -118,6 +118,10 @@ export default function Acessos() {
     try { await db.acessos.definirExigirPonto(valor); toast.ok(valor ? 'Agora o acesso só abre depois do ponto.' : 'O acesso deixou de depender do ponto.'); await carregar(); }
     catch (e) { toast.erro((e as Error).message); }
   }
+  async function trocarEntradaAutomatica(valor: boolean) {
+    try { await db.acessos.definirEntradaAutomatica(valor); toast.ok(valor ? 'Depois do ponto, o funcionário entra no sistema sozinho.' : 'Depois do ponto, o funcionário entra com e-mail e senha.'); await carregar(); }
+    catch (e) { toast.erro((e as Error).message); }
+  }
   async function salvarNivel() {
     if (!nivelEdit) return;
     try { await db.acessos.definirPermissoesPapel(nivelEdit.papel, DELEGAVEIS.filter(id => nivelEdit.permissoes.has(id))); toast.ok(`Permissões de ${PAPEIS[nivelEdit.papel].rotulo} salvas.`); setNivelEdit(null); await carregar(); }
@@ -151,6 +155,17 @@ export default function Acessos() {
             {ehAdmin
               ? <button className="btn ghost" onClick={() => trocarPolitica(!(politica?.exigir_ponto ?? true))}>{politica?.exigir_ponto ?? true ? 'Desligar a exigência' : 'Exigir o ponto'}</button>
               : <Badge tom={politica?.exigir_ponto ?? true ? 'ok' : 'mute'}>{politica?.exigir_ponto ?? true ? 'Ligado' : 'Desligado'}</Badge>}
+          </div>
+          <div className="card card-pad row between g-14 mb-14">
+            <div>
+              <strong>Entrada automática depois do ponto</strong>
+              <p className="muted fs-md m-0">{politica?.entrada_automatica ?? true
+                ? 'Ao confirmar o ponto, quem tem acesso entra no sistema sozinho, com o nível dele. Administrador e gerência sempre entram com e-mail e senha; quem ainda tem senha provisória também. Não vale no tablet compartilhado (modo quiosque).'
+                : 'Desligada: depois de bater o ponto, cada pessoa entra com e-mail e senha.'}</p>
+            </div>
+            {ehAdmin
+              ? <button className="btn ghost" onClick={() => trocarEntradaAutomatica(!(politica?.entrada_automatica ?? true))}>{politica?.entrada_automatica ?? true ? 'Desligar' : 'Ligar'}</button>
+              : <Badge tom={politica?.entrada_automatica ?? true ? 'ok' : 'mute'}>{politica?.entrada_automatica ?? true ? 'Ligada' : 'Desligada'}</Badge>}
           </div>
           <div className="card" style={{ overflow: 'hidden' }}>
             <div className="table-wrap"><table className="tbl">

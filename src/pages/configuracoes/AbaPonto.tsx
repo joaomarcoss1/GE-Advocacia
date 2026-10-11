@@ -67,7 +67,7 @@ export default function AbaPonto({ c, setC }: { c: Config; setC(c: Config): void
         <div className="row g-8 fx-wrap" >
           <button className="btn" disabled={lendoGps} onClick={definirMinhaLocalizacao}><LocateFixed size={16} />{lendoGps ? 'Obtendo localização…' : 'Usar minha localização'}</button>
           <button className="btn ghost" disabled={lendoGps || !temLocal} onClick={testarDistancia}><Crosshair size={16} />Testar minha distância</button>
-          {temLocal && <a className="btn ghost" href={linkMapa(p.geofence_lat!, p.geofence_lng!)} target="_blank" rel="noreferrer"><ExternalLink size={16} />Ver no mapa</a>}
+          {temLocal && <a className="btn ghost" href={linkMapa(p.geofence_lat!, p.geofence_lng!)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} />Ver no mapa</a>}
         </div>
         {teste && (
           <div className={`notice ${teste.dist <= p.geofence_raio_m ? 'ok' : 'bad'}`} role="status">

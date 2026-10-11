@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/context/Auth';
 import { getDb, type ArquivoAnexo, type ContextoPonto, type JustificativaFunc, type MarcacaoHistorico, type PessoaPonto, type PontoApi } from '@/data/db';
 import { addDays, agoraBR, definirFuso, isoParaBR, type AgoraBR } from '@/lib/datetime';
 import { PONTO_ERRO_MSG } from '@/lib/erros';
@@ -10,6 +11,8 @@ import type { Escala, TipoMarcacao, TipoOcorrencia } from '@/lib/types';
 
 export type Etapa = 'pessoa' | 'pin' | 'painel';
 export type FalhaEscritorio = 'ESCRITORIO_NAO_ENCONTRADO' | 'ESCRITORIO_SUSPENSO';
+/** Entrada automática no sistema depois do ponto: em andamento, ou um aviso (o nível entra com senha, senha provisória…). */
+export interface AcessoAposPonto { tipo: 'entrando' | 'aviso'; texto: string }
 export interface SucessoPonto { tipo: TipoMarcacao; status: string; hora: string; dif: number; analise?: string | null; aviso?: string }
 
 /**
@@ -37,6 +40,9 @@ export function usePonto(slug: string) {
   const [just, setJust] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [sucesso, setSucesso] = useState<SucessoPonto | null>(null);
+  const [acessoMsg, setAcessoMsg] = useState<AcessoAposPonto | null>(null);
+  const nav = useNavigate();
+  const { recarregar } = useAuth();
   const [retro, setRetro] = useState(false);
   const [retroForm, setRetroForm] = useState({ data: '', tipo: 'entrada' as TipoMarcacao, hora: '', justificativa: '' });
   const [retroOk, setRetroOk] = useState(false);
@@ -224,8 +230,22 @@ export function usePonto(slug: string) {
       if (!a.ok) { aviso = `Ponto registrado, mas o arquivo "${arq.nome}" não foi enviado: ${PONTO_ERRO_MSG[a.erro]}`; break; }
     }
     setSucesso({ tipo: escolha, status: r.status, hora: isoParaBR(r.horario_real).hhmm, dif: r.diferenca_minutos, analise: r.analise, aviso });
+    const tipoMarcado = escolha;
     setEscolha(null); setJust(''); setArqAtraso([]);
     await carregarHistorico(pessoa.id, pin);
+    // Ponto confirmado: quem tem login entra no sistema sozinho, com o nível dele. Em tablet compartilhado (quiosque) não.
+    setAcessoMsg(null);
+    if ((tipoMarcado === 'entrada' || tipoMarcado === 'retorno_intervalo') && !quiosque) {
+      setAcessoMsg({ tipo: 'entrando', texto: 'Ponto confirmado. Entrando no sistema…' });
+      const ent = await api.entrarNoSistema(pessoa.id, pin);
+      if (ent.ok) {
+        await new Promise(res => setTimeout(res, 1100));
+        await recarregar();
+        nav('/painel');
+      } else if (ent.erro === 'ENTRADA_MANUAL' || ent.erro === 'TROCAR_SENHA' || ent.erro === 'INDISPONIVEL') {
+        setAcessoMsg({ tipo: 'aviso', texto: PONTO_ERRO_MSG[ent.erro] });
+      } else setAcessoMsg(null);            // sem login ligado ao cadastro: o ponto é só o ponto
+    }
   });
 
   const enviarAusencia = () => comTrava(async () => {
@@ -258,7 +278,7 @@ export function usePonto(slug: string) {
   return {
     slug, modo, api, ctx, falhaEsc, carregando: !ctx && !falhaEsc,
     busca, setBusca, tentou, setTentou, termo, buscando, filtradas, buscar, escolherPessoa,
-    etapa, pessoa, escala, pin, setPin, erro, hist, justs, agora, voltar,
+    etapa, pessoa, escala, pin, setPin, erro, hist, justs, agora, voltar, acessoMsg,
     escolha, previa, just, setJust, enviando, sucesso, volta, setVolta, confirmar, escolherTipo, cancelarEscolha,
     retro, setRetro, retroForm, setRetroForm, retroOk, enviarRetro, abrirRetro,
     aus, setAus, ausForm, setAusForm, ausArq, setAusArq, ausOk, enviarAusencia, abrirAusencia,

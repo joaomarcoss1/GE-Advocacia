@@ -14,6 +14,8 @@ import Privacidade from '@/pages/Privacidade';
 import EnviarDocumentos from '@/pages/EnviarDocumentos';
 import { AvisoAtualizacao, AvisoConexao } from '@/components/Aplicativo';
 import AcessoBloqueado from '@/pages/AcessoBloqueado';
+import AvisoArmazenamento from '@/components/AvisoArmazenamento';
+import Cookies from '@/pages/Cookies';
 import TrocarSenha from '@/pages/TrocarSenha';
 import { PERMISSAO_DA_ROTA, type PapelId } from '@/lib/permissoes';
 
@@ -90,6 +92,7 @@ export default function App() {
           <PerguntaProvider>
             <AvisoConexao />
             <AvisoAtualizacao />
+            <AvisoArmazenamento />
             <Routes>
               <Route path="/" element={<Inicio />} />
               <Route path="/ponto/:slug" element={<BaterPonto />} />
@@ -99,6 +102,7 @@ export default function App() {
               <Route path="/verificar/:codigo" element={<Verificar />} />
               <Route path="/enviar/:token" element={<EnviarDocumentos />} />
               <Route path="/privacidade" element={<Privacidade />} />
+              <Route path="/cookies" element={<Cookies />} />
               <Route path="/privacidade/:slug" element={<Privacidade />} />
 
               <Route path="/painel" element={<Protegido papeis={['admin', 'gerente', 'coordenador', 'advogado', 'financeiro', 'secretaria', 'estagiario', 'colaborador']}><Porta><DadosProvider><Layout /></DadosProvider></Porta></Protegido>}>

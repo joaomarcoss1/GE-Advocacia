@@ -34,8 +34,9 @@ export default function PainelPonto({ p }: { p: Ponto }) {
             <div>{STATUS_TXT[sucesso.status]}{sucesso.dif !== 0 && sucesso.status !== 'extra' ? ` (${sucesso.dif > 0 ? '+' : '−'}${minParaHoras(sucesso.dif)})` : ''}</div>
             {sucesso.analise === 'pendente' && <div className="mt-6 fs-md">Enviado para análise do administrador (aba Ocorrências).</div>}
             {sucesso.aviso && <div className="mt-6 fs-md c-bad">{sucesso.aviso}</div>}
-            {(sucesso.tipo === 'entrada' || sucesso.tipo === 'retorno_intervalo') && (
-              <div className="mt-6 fs-md">Seu acesso ao sistema está liberado. <Link to="/entrar" className="auth-link" data-testid="entrar-no-sistema">Entrar no sistema<ArrowRight size={14} aria-hidden="true" /></Link></div>
+            {p.acessoMsg?.tipo === 'entrando' && <div className="mt-6 fs-md" role="status" data-testid="entrando-no-sistema">{p.acessoMsg.texto}</div>}
+            {p.acessoMsg?.tipo === 'aviso' && (
+              <div className="mt-6 fs-md" role="status">{p.acessoMsg.texto} <Link to="/entrar" className="auth-link" data-testid="entrar-no-sistema">Entrar com e-mail e senha<ArrowRight size={14} aria-hidden="true" /></Link></div>
             )}
             {sucesso.tipo === 'saida' && <div className="mt-6 fs-md">Jornada encerrada: o seu acesso ao sistema também foi encerrado por hoje.</div>}
             {p.volta !== null && (

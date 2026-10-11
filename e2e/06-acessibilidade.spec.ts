@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { CONTAS, entrar, relogio, semear } from './util';
 
 /** WCAG 2.1 AA com axe-core nas telas principais: tema claro e escuro, computador e celular. */
-const PUBLICAS = ['/', '/entrar', '/ponto/silva-ribeiro', '/verificar', '/privacidade/silva-ribeiro', '/diagnostico'];
+const PUBLICAS = ['/', '/entrar', '/ponto/silva-ribeiro', '/verificar', '/privacidade/silva-ribeiro', '/cookies', '/diagnostico'];
 const ADMIN = ['/painel', '/painel/gerencia', '/painel/funcionarios', '/painel/cargos', '/painel/escalas', '/painel/ponto', '/painel/ocorrencias',
   '/painel/feriados', '/painel/folha', '/painel/relatorios', '/painel/configuracoes', '/painel/configuracoes?aba=privacidade', '/painel/acessos', '/painel/meu-espaco', '/painel/tarefas', '/painel/agenda',
   '/painel/processos', '/painel/documentos', '/painel/configuracoes?aba=integracoes', '/painel/configuracoes?aba=backup', '/painel/intimacoes', '/painel/modelos', '/painel/honorarios'];

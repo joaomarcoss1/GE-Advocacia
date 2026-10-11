@@ -351,6 +351,8 @@ export interface AcessoLinha {
 }
 export interface PoliticaAcesso {
   exigir_ponto: boolean;
+  /** Depois do ponto confirmado, o funcionário entra no sistema sozinho (níveis abaixo da coordenação). */
+  entrada_automatica?: boolean;
   /** Permissões de cada nível (padrão ou ajustado pelo escritório). */
   papeis: Partial<Record<Papel, { permissoes: string[]; personalizado: boolean }>>;
 }

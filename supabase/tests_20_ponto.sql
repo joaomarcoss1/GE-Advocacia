@@ -100,6 +100,7 @@ insert into public.registros_ponto (escritorio_id, funcionario_id, data, tipo, s
 \i migrations/0011_honorarios.sql
 \i migrations/0012_intimacoes.sql
 \i migrations/0013_niveis_acesso.sql
+\i migrations/0014_seguranca_entrada_automatica.sql
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') = 1, 'sobrou uma única marcação ativa');
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and motivo_rejeicao like 'Duplicidade removida%') = 2, 'as duas excedentes foram rejeitadas com motivo explícito');
 select t.ok((select horario_real from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') < now() - interval '2 hours 30 minutes', 'a mantida é a mais antiga');

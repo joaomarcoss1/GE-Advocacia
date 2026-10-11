@@ -41,3 +41,15 @@ export async function semear(page: Page) {
   await page.goto('/');
   await page.waitForFunction(() => localStorage.getItem('ge.v1.seeded') === 'v5');
 }
+
+/** Bate um ponto na tela pública, como o funcionário faria (nome → PIN → tipo → confirmar). `tipo` casa com o texto do botão. */
+export async function baterPonto(page: Page, busca: string, pin: string, tipo: RegExp | string, slug = 'silva-ribeiro', query = '') {
+  await page.goto(`/ponto/${slug}${query}`);
+  await page.getByLabel('Digite seu nome').fill(busca);
+  await page.getByRole('button', { name: /Selecionar/ }).first().click();
+  await expect(page.getByRole('heading', { name: 'Digite seu PIN' })).toBeVisible();
+  for (const d of pin) await page.locator('.keypad').getByRole('button', { name: d, exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.locator('.acao', { has: page.locator('.t', { hasText: tipo }) }).click();
+  await page.getByRole('button', { name: 'Confirmar registro' }).click();
+}

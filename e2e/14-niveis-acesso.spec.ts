@@ -1,21 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { CONTAS, PIN, digitarPin, entrar, irPara, relogio, semear } from './util';
+import { CONTAS, PIN, baterPonto, entrar, irPara, relogio, semear } from './util';
 
 const JULIANA = { email: 'juliana@silvaribeiro.adv.br', senha: 'silva2026juliana', pin: '902716' };
 const sair = async (page: Page) => { await page.evaluate(() => localStorage.removeItem('ge.v1.sessao')); await page.goto('/entrar'); };
-
-/** Bate um ponto na tela pública, como o funcionário faria. */
-async function baterPonto(page: Page, busca: string, pin: string, tipo: RegExp | string) {
-  await page.goto('/ponto/silva-ribeiro');
-  await page.getByLabel('Digite seu nome').fill(busca);
-  await page.getByRole('button', { name: /Selecionar/ }).first().click();
-  await expect(page.getByRole('heading', { name: 'Digite seu PIN' })).toBeVisible();
-  await digitarPin(page, pin);
-  await page.getByRole('button', { name: 'Continuar' }).click();
-  await page.locator('.acao', { has: page.locator('.t', { hasText: tipo }) }).click();
-  await page.getByRole('button', { name: 'Confirmar registro' }).click();
-}
 
 test.describe('níveis de acesso e porta do ponto', () => {
   test.beforeEach(async ({ page }) => { await relogio(page, '07:30'); await semear(page); });
@@ -35,8 +23,8 @@ test.describe('níveis de acesso e porta do ponto', () => {
     await irPara(page, '08:02');
     await baterPonto(page, 'juliana', JULIANA.pin, /^Entrada$/);
     await expect(page.getByRole('status').filter({ hasText: 'Entrada registrada às 08:02' })).toBeVisible();
-    await page.getByTestId('entrar-no-sistema').click();
-    await expect(page.getByRole('heading', { name: 'Meu espaço' })).toBeVisible();                  // o painel abre sozinho, sem digitar a senha de novo
+    await expect(page.getByTestId('entrando-no-sistema')).toBeVisible();                            // ponto confirmado: a entrada no sistema é automática
+    await expect(page.getByRole('heading', { name: 'Meu espaço' })).toBeVisible();                  // o painel abre sozinho, sem digitar a senha
 
     const menu = page.getByRole('navigation').first();
     await expect(menu.getByRole('link', { name: 'Processos' })).toBeVisible();
@@ -105,9 +93,7 @@ test.describe('níveis de acesso e porta do ponto', () => {
   test('estagiário não vê o que não é do nível e a matriz de níveis mostra o padrão', async ({ page }) => {
     await irPara(page, '08:03');
     await baterPonto(page, 'pedro', PIN.pedro, /^Entrada$/);
-    await expect(page.getByRole('status').filter({ hasText: 'Entrada registrada' })).toBeVisible();
-    await entrar(page, { email: 'pedro@silvaribeiro.adv.br', senha: 'silva2026pedro' });
-    await expect(page.getByRole('heading', { name: 'Meu espaço' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meu espaço' })).toBeVisible();                  // entrou sozinho, com o nível de estágio
     const menu = page.getByRole('navigation').first();
     await expect(menu.getByRole('link', { name: 'Processos' })).toBeVisible();
     for (const proibido of ['Honorários', 'Folha de pagamento', 'Acessos e níveis']) await expect(menu.getByRole('link', { name: proibido })).toHaveCount(0);
