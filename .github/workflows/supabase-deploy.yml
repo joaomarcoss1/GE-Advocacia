@@ -61,6 +61,8 @@ jobs:
           } | tee verificacao.txt
           v=$(psql "$DB" -X -At -c "select coalesce(max(versao),0) from public.schema_versao")
           if [ "$v" -lt 14 ]; then echo "::error::versão do esquema $v (esperado 14)"; exit 1; fi
+          if grep -A1 '^== tabelas sem RLS' verificacao.txt | tail -1 | grep -qv '^nenhuma$'; then echo "::error::há tabelas sem RLS"; exit 1; fi
+          if grep -A2 '^== objetos esperados que FALTAM' verificacao.txt | tail -2 | grep -qv '^nenhum$'; then echo "::error::faltam tabelas ou funções esperadas"; exit 1; fi
       - name: Guarda o relatório
         if: always()
         uses: actions/upload-artifact@v4
