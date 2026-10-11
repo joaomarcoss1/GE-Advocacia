@@ -38,7 +38,7 @@ jobs:
             -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" -H "x-cron-secret: $SEGREDO" \
             -H "Content-Type: application/json" -d '{"acao":"varredura"}'
           echo
-      - name: Intimações do DJEN (função em São Paulo: o DJEN só responde ao Brasil)
+      - name: Intimações do DJEN (função em São Paulo, pois o DJEN só responde ao Brasil)
         if: steps.segredos.outputs.ok == 'sim' && always()
         run: |
           curl -fsS -m 240 -X POST "$URL/functions/v1/processos" \

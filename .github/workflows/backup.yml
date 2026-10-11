@@ -25,7 +25,7 @@ jobs:
       - name: Ferramentas
         run: |
           sudo apt-get update
-          sudo apt-get install -y age postgresql-client-16 awscli
+          sudo apt-get install -y age postgresql-client-16
       - name: Dump criptografado do banco
         run: |
           set -euo pipefail
