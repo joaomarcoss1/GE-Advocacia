@@ -8,8 +8,15 @@
 -- =====================================================================
 
 -- ---------- Papel coordenador ----------
-alter table public.perfis drop constraint if exists perfis_papel_check;
-alter table public.perfis add constraint perfis_papel_check check (papel in ('admin', 'gerente', 'coordenador'));
+-- Só estreita o conjunto de papéis se a restrição ainda for a antiga: depois da migração 0013 (8 níveis) reaplicar esta
+-- migração não pode voltar a restringir (falharia, e com razão, se já existem pessoas com os novos níveis).
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname = 'perfis_papel_check' and conrelid = 'public.perfis'::regclass
+                   and pg_get_constraintdef(oid) like '%advogado%') then
+    alter table public.perfis drop constraint if exists perfis_papel_check;
+    alter table public.perfis add constraint perfis_papel_check check (papel in ('admin', 'gerente', 'coordenador'));
+  end if;
+end $$;
 
 create or replace function public.eh_delegante() returns boolean
 language sql stable security definer set search_path = public, extensions, pg_temp as $$
