@@ -208,3 +208,14 @@ export const PERMISSAO_DA_ROTA: Record<string, string | null> = {
 /** Texto curto de uma permissão para telas e relatórios. */
 export const rotuloPermissao = (id: string) => POR_ID.get(id)?.rotulo ?? id;
 export const defPermissao = (id: string) => POR_ID.get(id);
+
+/** Sugere o nível de acesso pelo nome do cargo, para o cadastro do funcionário já vir preenchido (quem cadastra pode trocar). */
+export function sugerirNivel(cargo: string | null | undefined): PapelId {
+  const c = (cargo ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (/estagi/.test(c)) return 'estagiario';
+  if (/coordena|gerent/.test(c)) return 'coordenador';          // nunca sugere Gerência/administrador pelo nome do cargo: poder maior é escolha consciente
+  if (/financ|contab|contador/.test(c)) return 'financeiro';
+  if (/secret|recepc|assistente administrativ|auxiliar administrativ/.test(c)) return 'secretaria';
+  if (/advog|jurid|paralegal|socio/.test(c)) return 'advogado';
+  return 'colaborador';
+}

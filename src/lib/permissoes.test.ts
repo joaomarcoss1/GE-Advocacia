@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DELEGAVEIS, ehPapel, estadoAcesso, expandir, ORDEM_PAPEIS, PADRAO, PAPEIS, permissoesEfetivas, PERMISSOES, PERMISSAO_DA_ROTA,
-  podeAtribuirPapel, podeConceder, podeGerirAlvo, RESERVADAS, TODAS, type PapelId,
+  podeAtribuirPapel, podeConceder, podeGerirAlvo, RESERVADAS, sugerirNivel, TODAS, type PapelId,
 } from './permissoes';
 
 describe('catálogo', () => {
@@ -122,5 +122,16 @@ describe('porta do ponto', () => {
     expect(estadoAcesso({ ...base, marcacoes: [], liberadoAte: ate })).toBe('liberado');
     expect(estadoAcesso({ ...base, marcacoes: ['entrada', 'saida'], liberadoAte: ate })).toBe('liberado');
     expect(estadoAcesso({ ...base, marcacoes: ['entrada', 'saida'], liberadoAte: '2026-06-10T13:00:00.000Z' })).toBe('encerrado');
+  });
+});
+
+describe('sugerirNivel (cargo → nível sugerido no cadastro)', () => {
+  it.each([
+    ['Advogado(a) Associado(a)', 'advogado'], ['Assistente Jurídico(a)', 'advogado'], ['Estagiário(a) de Direito', 'estagiario'],
+    ['Secretário(a) / Recepcionista', 'secretaria'], ['Auxiliar Administrativo(a)', 'secretaria'], ['Serviços Gerais', 'colaborador'],
+    ['Gerente Administrativo(a)', 'coordenador'], ['Contador', 'financeiro'], ['', 'colaborador'], [null, 'colaborador'],
+  ] as const)('%s → %s', (cargo, nivel) => { expect(sugerirNivel(cargo)).toBe(nivel); });
+  it('nunca sugere administrador nem gerência', () => {
+    for (const c of ['Sócio(a) Administrador(a)', 'Administrador', 'Gerente Jurídico(a)', 'Diretor']) expect(['admin', 'gerente']).not.toContain(sugerirNivel(c));
   });
 });

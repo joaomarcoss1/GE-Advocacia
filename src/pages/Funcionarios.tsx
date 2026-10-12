@@ -3,11 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { KeyRound, Pencil, Wand2, Plus, Search, Trash2, UserMinus, UserPlus } from 'lucide-react';
 import { Badge, Field, Modal, PageHeader, useConfirm, useToast, Vazio } from '@/components/ui';
 import { useDados } from '@/context/Dados';
+import { useAuth } from '@/context/Auth';
 import { brl, iniciais, mascaraCpf, mascaraTelefone, semAcento } from '@/lib/format';
 import { VINCULO_LABEL, type Funcionario, type Vinculo } from '@/lib/types';
 import { fmtData } from '@/lib/datetime';
 import { temHistorico } from '@/lib/regras';
-import { gerarPin, validarPin } from '@/lib/seguranca';
+import { gerarPin, gerarSenha, validarPin, validarSenha } from '@/lib/seguranca';
+import { ORDEM_PAPEIS, PAPEIS, podeAtribuirPapel, sugerirNivel, type PapelId } from '@/lib/permissoes';
+import Credenciais, { type Entrega } from './acessos/Credenciais';
 
 type Form = Partial<Funcionario> & { salarioTxt?: string; diariaTxt?: string };
 const vazio = (hoje: string): Form => ({
@@ -36,6 +39,33 @@ export default function Funcionarios() {
     setParams({}, { replace: true });
   }, [params, funcionarios, setParams]);
   const [pin, setPin] = useState('');
+  // Acesso ao sistema criado junto com o cadastro: e-mail do cadastro como login, nível sugerido pelo cargo, senha provisória e PIN gerados.
+  const { sessao, pode } = useAuth();
+  const podeCriarAcesso = pode('acessos.gerenciar');
+  const ator: PapelId = sessao && sessao.papel !== 'plataforma' ? sessao.papel : 'colaborador';
+  const papeisPossiveis = ORDEM_PAPEIS.filter(p => podeAtribuirPapel(ator, p));
+  const [ac, setAc] = useState({ criar: true, papel: 'colaborador' as PapelId, senha: '', gerarPin: true });
+  const [comAcesso, setComAcesso] = useState<Map<string, PapelId>>(new Map());
+  const [entrega, setEntrega] = useState<Entrega | null>(null);
+  useEffect(() => {
+    if (!podeCriarAcesso) return;
+    let vivo = true;
+    db.acessos.lista().then(l => { if (vivo) setComAcesso(new Map(l.filter(x => x.funcionario_id).map(x => [x.funcionario_id as string, x.papel]))); }).catch(() => undefined);
+    return () => { vivo = false; };
+  }, [db, podeCriarAcesso, funcionarios.length]);
+  const cargoDe = (id: string | null | undefined) => cargos.find(c => c.id === id)?.nome ?? '';
+  function abrirNovo() {
+    const papel = sugerirNivel('');
+    setAc({ criar: podeCriarAcesso, papel: papeisPossiveis.includes(papel) ? papel : (papeisPossiveis[papeisPossiveis.length - 1] ?? 'colaborador'), senha: gerarSenha(), gerarPin: true });
+    setEd(vazio(agora.data));
+  }
+  /** Ao escolher o cargo, o nível de acesso sugerido acompanha (quem cadastra ainda pode trocar). */
+  function escolherCargo(id: string | null) {
+    set({ cargo_id: id });
+    if (ed?.id) return;
+    const sug = sugerirNivel(cargoDe(id));
+    if (papeisPossiveis.includes(sug)) setAc(a => ({ ...a, papel: sug }));
+  }
 
   const lista = useMemo(() => {
     const q = semAcento(busca.trim());
@@ -57,6 +87,14 @@ export default function Funcionarios() {
     if (!ed.data_admissao) return toast.erro('Informe a data de admissão.');
     const diaria = (ed.diariaTxt ?? '').trim() === '' ? null : Number(String(ed.diariaTxt).replace(/\./g, '').replace(',', '.'));
     if (diaria !== null && !(diaria >= 0)) return toast.erro('Diária fixa inválida. Deixe em branco para usar o cálculo automático.');
+    // Acesso criado junto: confere tudo ANTES de gravar, para não deixar o cadastro pela metade.
+    const criarAcesso = podeCriarAcesso && ac.criar && (!ed.id ? true : !comAcesso.has(ed.id));
+    const emailLogin = (ed.email ?? '').trim().toLowerCase();
+    if (criarAcesso) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailLogin)) return toast.erro('Para criar o acesso, informe o e-mail da pessoa: ele será o login.');
+      const problema = validarSenha(ac.senha);
+      if (problema) return toast.erro(problema);
+    }
     try {
       const dados: Partial<Funcionario> = {
         nome: ed.nome.trim(), cpf: nulo(ed.cpf), email: nulo(ed.email), telefone: nulo(ed.telefone), cargo_id: ed.cargo_id || null,
@@ -65,11 +103,27 @@ export default function Funcionarios() {
         conta: nulo(ed.conta), tipo_conta: nulo(ed.tipo_conta), observacoes: nulo(ed.observacoes), ativo: ed.ativo ?? true,
       };
       dados.diaria_fixa = diaria;
+      let id = ed.id;
       if (ed.id) await db.funcionarios.update(ed.id, dados);
-      else await db.funcionarios.insert({ ...dados, tem_pin: false });
+      else id = (await db.funcionarios.insert({ ...dados, tem_pin: false })).id;
       await auditar(ed.id ? 'Funcionário editado' : 'Funcionário criado', dados.nome);
-      toast.ok(ed.id ? 'Cadastro atualizado.' : 'Funcionário cadastrado. Defina o PIN para liberar o registro de ponto.');
+
+      // PIN do ponto e acesso ao sistema, no mesmo passo. Cada etapa informa a própria falha sem desfazer o cadastro.
+      const entregaNova: Entrega = { nome: dados.nome, avisos: [] };
+      if (!ed.id && ac.gerarPin && id) {
+        const novoPin = gerarPin();
+        try { await db.definirPin(id, novoPin); entregaNova.pin = novoPin; await auditar('PIN definido no cadastro', dados.nome ?? ''); }
+        catch (e) { entregaNova.avisos!.push(`O cadastro foi salvo, mas o PIN não foi definido: ${(e as Error).message} Defina-o pelo ícone de chave.`); }
+      }
+      if (criarAcesso && id) {
+        try {
+          await db.acessos.criar({ nome: dados.nome ?? '', email: emailLogin, papel: ac.papel, senha: ac.senha, funcionario_id: id });
+          entregaNova.email = emailLogin; entregaNova.senha = ac.senha;
+        } catch (e) { entregaNova.avisos!.push(`O cadastro foi salvo, mas o acesso ao sistema não foi criado: ${(e as Error).message} Crie-o em Acessos e níveis.`); }
+      }
+      toast.ok(ed.id ? 'Cadastro atualizado.' : 'Funcionário cadastrado.');
       setEd(null); await recarregar();
+      if (entregaNova.pin || entregaNova.senha || entregaNova.avisos!.length) setEntrega(entregaNova);
     } catch (e) { toast.erro((e as Error).message); }
   }
 
@@ -108,7 +162,7 @@ export default function Funcionarios() {
   return (
     <>
       <PageHeader titulo="Funcionários">
-        <button className="btn gold" onClick={() => setEd(vazio(agora.data))}><Plus size={18} />Novo funcionário</button>
+        <button className="btn gold" onClick={abrirNovo}><Plus size={18} />Novo funcionário</button>
       </PageHeader>
       <div className="card">
         <div className="card-head">
@@ -146,7 +200,7 @@ export default function Funcionarios() {
           </table>
           {!lista.length && (funcionarios.length
             ? <Vazio tipo="busca" titulo="Nenhum funcionário encontrado" />
-            : <Vazio tipo="pessoas" titulo="Sua equipe começa aqui" acao={{ rotulo: 'Cadastrar o primeiro funcionário', onClick: () => setEd(vazio(agora.data)) }} />)}
+            : <Vazio tipo="pessoas" titulo="Sua equipe começa aqui" acao={{ rotulo: 'Cadastrar o primeiro funcionário', onClick: abrirNovo }} />)}
         </div>
       </div>
 
@@ -181,7 +235,7 @@ export default function Funcionarios() {
             <div className="section-title">Vínculo e jornada</div>
             <div className="grid c3">
               <Field label="Cargo">
-                <select className="select" value={ed.cargo_id ?? ''} onChange={e => set({ cargo_id: e.target.value || null })}>
+                <select className="select" value={ed.cargo_id ?? ''} onChange={e => escolherCargo(e.target.value || null)}>
                   <option value="">Selecione…</option>{cargos.filter(c => c.ativo || c.id === ed.cargo_id).map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
               </Field>
@@ -208,11 +262,37 @@ export default function Funcionarios() {
               <Field label="Agência"><input className="input" value={ed.agencia ?? ''} onChange={e => set({ agencia: e.target.value })} /></Field>
               <Field label="Conta"><input className="input" value={ed.conta ?? ''} onChange={e => set({ conta: e.target.value })} /></Field>
             </div>
+            {podeCriarAcesso && (!ed.id || !comAcesso.has(ed.id)) && (
+              <>
+                <div className="section-title">Acesso ao sistema</div>
+                <div className="card card-pad stack no-shadow" data-testid="secao-acesso">
+                  <label className="check"><input type="checkbox" checked={ac.criar} onChange={e => setAc({ ...ac, criar: e.target.checked })} /><strong>{ed.id ? 'Criar o acesso ao sistema desta pessoa' : 'Criar o acesso ao sistema junto com o cadastro'}</strong></label>
+                  {ac.criar && (
+                    <div className="grid c3">
+                      <Field label="Login" dica="É o e-mail do cadastro (campo acima)."><input className="input" value={ed.email ?? ''} readOnly aria-readonly="true" placeholder="preencha o e-mail acima" /></Field>
+                      <Field label="Nível de acesso" dica={PAPEIS[ac.papel].descricao}>
+                        <select className="select" value={ac.papel} onChange={e => setAc({ ...ac, papel: e.target.value as PapelId })}>
+                          {papeisPossiveis.map(p => <option key={p} value={p}>{PAPEIS[p].rotulo}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Senha provisória" dica="Gerada agora. A pessoa troca no primeiro acesso.">
+                        <div className="row g-8 fx-nowrap"><input className="input mono" value={ac.senha} onChange={e => setAc({ ...ac, senha: e.target.value })} autoComplete="off" />
+                          <button type="button" className="icon-btn" title="Gerar outra senha" aria-label="Gerar outra senha" onClick={() => setAc({ ...ac, senha: gerarSenha() })}><Wand2 size={18} /></button></div>
+                      </Field>
+                    </div>
+                  )}
+                  {!ed.id && <label className="check"><input type="checkbox" checked={ac.gerarPin} onChange={e => setAc({ ...ac, gerarPin: e.target.checked })} />Gerar o PIN do ponto agora (aparece uma única vez, junto com a senha)</label>}
+                  <p className="hint m-0">Os dados de acesso aparecem uma única vez, ao salvar, para você entregar à pessoa. O acesso abre com a entrada no ponto e fecha com a saída.</p>
+                </div>
+              </>
+            )}
+            {ed.id && comAcesso.has(ed.id) && <p className="hint m-0">Esta pessoa já tem acesso ao sistema ({PAPEIS[comAcesso.get(ed.id)!].rotulo}). Para mudar nível ou senha, use <em>Acessos e níveis</em>.</p>}
             <Field label="Observações"><textarea className="textarea" value={ed.observacoes ?? ''} onChange={e => set({ observacoes: e.target.value })} /></Field>
             <label className="check"><input type="checkbox" checked={ed.ativo ?? true} onChange={e => set({ ativo: e.target.checked })} />Funcionário ativo</label>
           </div>
         </Modal>
       )}
+      {entrega && <Credenciais e={entrega} onClose={() => setEntrega(null)} />}
     </>
   );
 }

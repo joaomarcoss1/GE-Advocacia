@@ -9,6 +9,7 @@ import {
   DELEGAVEIS, ORDEM_PAPEIS, PADRAO, PAPEIS, PERMISSOES, expandir, permissoesEfetivas, podeAtribuirPapel, podeConceder, type PapelId,
 } from '@/lib/permissoes';
 import { gerarSenha, validarSenha } from '@/lib/seguranca';
+import Credenciais, { type Entrega } from './acessos/Credenciais';
 import type { AcessoLinha, PoliticaAcesso, RegistroAcesso } from '@/lib/types';
 import EditorPermissoes, { diferenca } from './acessos/EditorPermissoes';
 
@@ -42,7 +43,7 @@ export default function Acessos() {
   const [senhaDe, setSenhaDe] = useState<{ a: AcessoLinha; senha: string } | null>(null);
   const [liberando, setLiberando] = useState<{ a: AcessoLinha; minutos: number; motivo: string } | null>(null);
   const [nivelEdit, setNivelEdit] = useState<{ papel: PapelId; permissoes: Set<string> } | null>(null);
-  const [entregue, setEntregue] = useState<{ email: string; senha: string } | null>(null);
+  const [entregue, setEntregue] = useState<Entrega | null>(null);
 
   const ator = sessao && sessao.papel !== 'plataforma' ? sessao.papel : 'colaborador';
   const ehAdmin = ator === 'admin';
@@ -95,14 +96,14 @@ export default function Acessos() {
         const problema = validarSenha(edicao.senha);
         if (problema) return toast.erro(problema);
         await db.acessos.criar({ nome: edicao.nome, email: edicao.email, papel: edicao.papel, senha: edicao.senha, funcionario_id: edicao.funcionario_id || null, conceder, negar, exige_ponto: exige });
-        setEntregue({ email: edicao.email.trim().toLowerCase(), senha: edicao.senha });
+        setEntregue({ nome: edicao.nome, email: edicao.email.trim().toLowerCase(), senha: edicao.senha });
       }
       setEdicao(null); await carregar(); await recarregar();
     } catch (e) { toast.erro((e as Error).message); }
   }
   async function redefinir() {
     if (!senhaDe) return;
-    try { await db.acessos.redefinirSenha(senhaDe.a.id, senhaDe.senha); setEntregue({ email: senhaDe.a.email, senha: senhaDe.senha }); setSenhaDe(null); await carregar(); }
+    try { await db.acessos.redefinirSenha(senhaDe.a.id, senhaDe.senha); setEntregue({ nome: senhaDe.a.nome, email: senhaDe.a.email, senha: senhaDe.senha }); setSenhaDe(null); await carregar(); }
     catch (e) { toast.erro((e as Error).message); }
   }
   async function remover(a: AcessoLinha) {
@@ -325,15 +326,7 @@ export default function Acessos() {
         </Modal>
       )}
 
-      {entregue && (
-        <Modal titulo="Dados de acesso" onClose={() => setEntregue(null)} rodape={<button className="btn" onClick={() => setEntregue(null)}>Concluir</button>}>
-          <div className="stack">
-            <p>Entregue estes dados à pessoa, por um canal seguro. Esta senha não será mostrada de novo e precisa ser trocada no primeiro acesso.</p>
-            <div className="notice"><div><strong>Login:</strong> {entregue.email}</div><div><strong>Senha provisória:</strong> <span className="mono">{entregue.senha}</span></div></div>
-            <button className="btn ghost sm" onClick={() => { void navigator.clipboard?.writeText(`Login: ${entregue.email}\nSenha provisória: ${entregue.senha}`); toast.ok('Copiado.'); }}>Copiar</button>
-          </div>
-        </Modal>
-      )}
+      {entregue && <Credenciais e={entregue} onClose={() => setEntregue(null)} />}
     </>
   );
 }

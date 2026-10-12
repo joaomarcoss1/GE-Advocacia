@@ -90,6 +90,37 @@ test.describe('níveis de acesso e porta do ponto', () => {
     await expect(page.getByRole('heading', { name: 'Bata o ponto para entrar' })).toBeVisible();   // sem entrada hoje, o financeiro aguarda o ponto
   });
 
+  test('cadastro do funcionário já cria o acesso e o PIN; no dia seguinte ela bate o ponto e entra sozinha', async ({ page }) => {
+    await entrar(page, CONTAS.adminA);
+    await page.goto('/painel/funcionarios');
+    await page.getByRole('button', { name: 'Novo funcionário' }).click();
+    const dlg = page.getByRole('dialog', { name: 'Novo funcionário' });
+    await dlg.getByLabel('Nome completo').fill('Camila Andrade Teste');
+    await dlg.getByLabel('E-mail', { exact: true }).fill('camila@silvaribeiro.adv.br');
+    await dlg.getByLabel('Cargo').selectOption({ label: 'Advogado(a) Associado(a)' });
+    await expect(dlg.getByLabel('Nível de acesso')).toHaveValue('advogado');                         // o nível acompanha o cargo
+    await dlg.getByLabel('Escala de trabalho').selectOption({ index: 1 });
+    await dlg.getByLabel(/Salário mensal/).fill('3000');
+    await expect(dlg.getByTestId('secao-acesso')).toBeVisible();                                   // o acesso nasce junto com o cadastro
+    const senha = await dlg.getByLabel('Senha provisória').inputValue();
+    expect(senha.length).toBeGreaterThanOrEqual(10);
+    await dlg.getByRole('button', { name: 'Salvar' }).click();
+    const entrega = page.getByRole('dialog', { name: 'Dados de acesso' });
+    await expect(entrega.getByText('camila@silvaribeiro.adv.br')).toBeVisible();
+    const pin = (await entrega.getByTestId('credenciais').locator('.mono').last().textContent())!.trim();
+    expect(pin).toMatch(/^\d{6}$/);
+    await entrega.getByRole('button', { name: 'Concluir' }).click();
+    await page.goto('/painel/acessos');
+    await expect(page.locator('tr', { hasText: 'Camila Andrade Teste' })).toBeVisible();          // já aparece em Acessos e níveis, ligada ao cadastro
+
+    await sair(page);
+    await entrar(page, { email: 'camila@silvaribeiro.adv.br', senha });
+    await page.getByLabel('Nova senha', { exact: true }).fill('SenhaNova2026x');
+    await page.getByLabel('Repita a nova senha').fill('SenhaNova2026x');
+    await page.getByRole('button', { name: 'Salvar e entrar' }).click();
+    await expect(page.getByRole('heading', { name: 'Bata o ponto para entrar' })).toBeVisible();
+  });
+
   test('funcionário sem acesso criado bate o ponto e a tela explica o que fazer', async ({ page }) => {
     await irPara(page, '08:03');
     await baterPonto(page, 'lucas', '215839', /^Entrada$/);
