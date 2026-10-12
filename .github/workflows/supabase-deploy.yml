@@ -60,7 +60,7 @@ jobs:
             psql "$DB" -X -At -c "select coalesce(string_agg(n, ', '), 'nenhum') from unnest(array['tem_permissao','estado_acesso','ponto_acesso','processo_visivel','papel_atual']) n where not exists (select 1 from pg_proc p join pg_namespace s on s.oid=p.pronamespace where s.nspname='public' and p.proname=n)"
           } | tee verificacao.txt
           v=$(psql "$DB" -X -At -c "select coalesce(max(versao),0) from public.schema_versao")
-          if [ "$v" -lt 14 ]; then echo "::error::versão do esquema $v (esperado 14)"; exit 1; fi
+          if [ "$v" -lt 15 ]; then echo "::error::versão do esquema $v (esperado 15)"; exit 1; fi
           if grep -A1 '^== tabelas sem RLS' verificacao.txt | tail -1 | grep -qv '^nenhuma$'; then echo "::error::há tabelas sem RLS"; exit 1; fi
           if grep -A2 '^== objetos esperados que FALTAM' verificacao.txt | tail -2 | grep -qv '^nenhum$'; then echo "::error::faltam tabelas ou funções esperadas"; exit 1; fi
       - name: Guarda o relatório
