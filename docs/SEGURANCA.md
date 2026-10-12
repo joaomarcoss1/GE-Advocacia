@@ -31,6 +31,27 @@ Apoio técnico: este documento descreve o que o sistema faz e como é testado. E
 * **Login**: `config.toml` define `[auth.rate_limit]`. **Atenção:** no projeto hospedado, esses números também precisam estar em *Authentication → Rate Limits* no painel do Supabase (o `config.toml` só vale para o CLI local).
 * **Cliente**: 5 erros por e-mail em 10 min travam o formulário até a mais antiga sair da janela; 15 erros no aparelho travam qualquer e-mail.
 
+## Um escritório nunca enxerga o outro
+
+Cada escritório (inquilino) é identificado por `escritorio_id`; toda tabela de dados tem RLS ligado e as políticas só enxergam o escritório do usuário logado (`meu_escritorio()`). Funções `SECURITY DEFINER` fixam o `search_path` e conferem o escritório do chamador; as Edge Functions confirmam a posse de qualquer id vindo do cliente com um cliente RLS (`sbUser`) antes de usar a chave de serviço.
+
+A suíte `supabase/tests_99c_isolamento_total.sql` varre **todas** as tabelas com `escritorio_id` (hoje 42), sem lista escrita à mão — uma tabela nova sem política correta derruba os testes:
+
+* estrutura: RLS ligado em todo o schema `public`; `escritorio_id` NOT NULL; nenhuma política aberta (`using (true)`) nem válida para anônimo; todas as funções `SECURITY DEFINER` com `search_path` fixo; anônimo sem privilégio direto;
+* ataque: o administrador e a gerência de A tentam ler, alterar, apagar e inserir (clonando linhas reais) no escritório B, e o administrador de B faz o mesmo em A — nada pode passar;
+* anônimo e plataforma não leem tabela de escritório nenhuma; ao final, os dados de A e de B continuam idênticos.
+
+O teste foi validado "por mutação": uma política `using (escritorio_id is not null)` colocada de propósito é detectada (leitura, alteração e inserção).
+
+Tabelas só do servidor (PINs, tentativas, tokens do Google/Drive, lixeiras) têm RLS e nenhuma política: ficam fechadas para qualquer usuário. Cada escritório tem a própria configuração (inclusive a cerca de GPS), o próprio endereço de ponto (`/ponto/<slug>`) e os próprios acessos.
+
+## GPS do ponto
+
+* **Leitura**: o aparelho é acompanhado por alguns segundos e vale a melhor leitura (a primeira costuma vir de antena/Wi-Fi, com centenas de metros de erro). A leitura verificada na tela é reaproveitada ao registrar (até 45 s), em vez de uma segunda leitura pior.
+* **Tolerância**: a cerca aceita *raio + tolerância do GPS* (padrão 30 m, 0 a 150 m, configurável por escritório). O servidor aplica a mesma regra (`ponto_bater`, migração 0015) e recalcula a distância a cada registro; a precisão informada pelo aparelho nunca é confiada pelo servidor.
+* **Configuração**: em *Configurações → Ponto* — "calibrar pelo GPS" (média ponderada de ~15 s de leituras, de dentro do escritório), colar coordenadas ou o link do Google Maps, atalhos de raio e a tolerância. Tudo isso é auditado.
+* O GPS vem do aparelho e pode ser falsificado por quem tem controle dele; a cerca reduz fraude comum e a auditoria e a aprovação de ajustes cobrem o resto.
+
 ## Cookies, privacidade e LGPD
 
 * O sistema não usa cookies de publicidade nem de rastreamento e não grava cookies próprios. O que fica no aparelho está listado em `/cookies` (tabela mantida igual ao código por teste).

@@ -10,6 +10,7 @@ export const CONFIG_PADRAO: Config = {
     geofence_lat: null,
     geofence_lng: null,
     geofence_raio_m: 300,
+    geofence_margem_m: 30,
     geofence_endereco: '',
   },
   folha: { periodicidade: 'mensal', descontar_atrasos: false, hora_extra_pct: 50 },

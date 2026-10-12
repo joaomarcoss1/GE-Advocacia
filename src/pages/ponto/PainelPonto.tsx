@@ -7,6 +7,7 @@ import { ANALISE_LABEL, OCORRENCIA_LABEL, TIPO_MARCACAO_LABEL, type TipoMarcacao
 import { ConfirmarMarcacao, FormAusencia, FormRetro, STATUS_TXT } from './FormulariosPonto';
 import MinhasTarefas from './MinhasTarefas';
 import StatusLocal from './StatusLocal';
+import { limiteGps } from '@/lib/geo';
 import type { Ponto } from './usePonto';
 
 const ICONE: Record<TipoMarcacao, typeof LogIn> = { entrada: LogIn, saida_intervalo: Coffee, retorno_intervalo: Undo2, saida: LogOut };
@@ -50,8 +51,8 @@ export default function PainelPonto({ p }: { p: Ponto }) {
       {p.retroOk && <div className="notice gold" role="status">Solicitação enviada. A gerência vai analisar o ajuste do seu ponto.</div>}
       {p.erro && <div className="notice bad" role="alert">{p.erro}</div>}
 
-      {p.cerca && p.ctx && !p.retro && !p.aus && !p.dentro && <StatusLocal local={p.local} raio={p.ctx.ponto.geofence_raio_m} onVerificar={p.checarLocal} />}
-      {p.cerca && p.ctx && !p.retro && !p.aus && p.dentro && p.local.estado === 'dentro' && <StatusLocal compacto local={p.local} raio={p.ctx.ponto.geofence_raio_m} onVerificar={p.checarLocal} />}
+      {p.cerca && p.ctx && !p.retro && !p.aus && !p.dentro && <StatusLocal local={p.local} limite={limiteGps(p.ctx.ponto)} onVerificar={p.checarLocal} />}
+      {p.cerca && p.ctx && !p.retro && !p.aus && p.dentro && p.local.estado === 'dentro' && <StatusLocal compacto local={p.local} limite={limiteGps(p.ctx.ponto)} onVerificar={p.checarLocal} />}
 
       {!ocupado && (
         <>

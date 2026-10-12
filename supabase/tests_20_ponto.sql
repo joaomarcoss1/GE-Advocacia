@@ -46,6 +46,20 @@ select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'entr
 select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'entrada', null, -4.0, -43.0) ->> 'erro') = 'FORA_DA_AREA', 'cerca ativa: longe do escritório é recusado');
 select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'entrada', null, 95, 10) ->> 'erro') = 'GPS_OBRIGATORIO', 'coordenada inválida');
 select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'entrada', null, -4.4609, -43.8882) ->> 'ok') = 'true', 'cerca ativa: dentro do raio é aceito');
+-- tolerância do GPS: raio 300 m + margem padrão 30 m
+select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'saida_intervalo', null, -4.46368, -43.8881) ->> 'ok') = 'true', 'tolerância do GPS: ~320 m com raio de 300 m é aceito (margem padrão de 30 m)');
+select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'retorno_intervalo', null, -4.4645, -43.8881) ->> 'erro') = 'FORA_DA_AREA', 'além do raio + margem (~410 m) é recusado');
+select t.como((select v::uuid from t.ctx where k = 'adminA'));
+update public.configuracoes set dados = jsonb_set(dados, '{ponto}', (dados -> 'ponto') || '{"geofence_margem_m": 0}'::jsonb);
+select t.anon();
+select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'retorno_intervalo', null, -4.46368, -43.8881) ->> 'erro') = 'FORA_DA_AREA', 'margem zero: ~320 m com raio de 300 m é recusado');
+select t.como((select v::uuid from t.ctx where k = 'adminA'));
+update public.configuracoes set dados = jsonb_set(dados, '{ponto}', (dados -> 'ponto') || '{"geofence_margem_m": 500}'::jsonb);
+select t.anon();
+select t.ok((ponto_bater('00000000-0000-0000-0000-00000000a003', '845216', 'retorno_intervalo', null, -4.46494, -43.8881) ->> 'erro') = 'FORA_DA_AREA', 'a margem tem teto de 150 m: ~460 m é recusado mesmo com margem 500');
+select t.como((select v::uuid from t.ctx where k = 'adminA'));
+update public.configuracoes set dados = jsonb_set(dados, '{ponto}', (dados -> 'ponto') - 'geofence_margem_m');
+select t.anon();
 -- escritório B tem a própria cerca (desligada): a de A não vale para B
 select t.ok((ponto_bater('00000000-0000-0000-0000-00000000b002', '902716', 'entrada') ->> 'ok') = 'true', 'cerca de A não afeta o escritório B');
 select t.como((select v::uuid from t.ctx where k = 'adminA'));
@@ -101,6 +115,7 @@ insert into public.registros_ponto (escritorio_id, funcionario_id, data, tipo, s
 \i migrations/0012_intimacoes.sql
 \i migrations/0013_niveis_acesso.sql
 \i migrations/0014_seguranca_entrada_automatica.sql
+\i migrations/0015_gps_margem.sql
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') = 1, 'sobrou uma única marcação ativa');
 select t.ok((select count(*) from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and motivo_rejeicao like 'Duplicidade removida%') = 2, 'as duas excedentes foram rejeitadas com motivo explícito');
 select t.ok((select horario_real from public.registros_ponto where funcionario_id = '00000000-0000-0000-0000-00000000a002' and data = current_date - 11 and status_aprovacao <> 'rejeitado') < now() - interval '2 hours 30 minutes', 'a mantida é a mais antiga');

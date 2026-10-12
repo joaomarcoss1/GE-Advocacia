@@ -11,6 +11,7 @@ import { addDays, agoraBR, brParaIso, definirFuso, hhmmParaMin, hojeMais, isoPar
 import { gerarCodigoDocumento } from '@/lib/codigo';
 import { ErroNegocio, erro } from '@/lib/erros';
 import { semAcento, plural } from '@/lib/format';
+import { limiteGps } from '@/lib/geo';
 import { classificar, distanciaMetros, exigeJustificativa, previstoDoTipo, turnoDaData } from '@/lib/ponto';
 import { RETENCAO_TENTATIVAS_DIAS, SCHEMA_ESPERADO, periodoFechado, temHistorico, validarMudancaFolha } from '@/lib/regras';
 import { validarPin as validarFormatoPin, validarSenha } from '@/lib/seguranca';
@@ -955,7 +956,8 @@ export function criarDbLocal(): Db {
             if (cfg.geofence_lat == null || cfg.geofence_lng == null) return errP('LOCAL_NAO_CONFIGURADO');
             if (a.lat == null || a.lng == null || Math.abs(a.lat) > 90 || Math.abs(a.lng) > 180) return errP('GPS_OBRIGATORIO');
             const d = distanciaMetros(a.lat, a.lng, cfg.geofence_lat, cfg.geofence_lng);
-            if (d > cfg.geofence_raio_m) return errP('FORA_DA_AREA', `${Math.round(d)} m (máx. ${cfg.geofence_raio_m} m)`);
+            const limite = limiteGps(cfg);   // raio + tolerância do GPS, igual ao servidor
+            if (d > limite) return errP('FORA_DA_AREA', `${Math.round(d)} m (máx. ${limite} m)`);
           }
           const turno = turnoDaData(escalaDoFunc(slug, a.funcionario_id), agora.data);
           const previsto = previstoDoTipo(turno, a.tipo);

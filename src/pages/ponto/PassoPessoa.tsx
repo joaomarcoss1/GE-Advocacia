@@ -1,6 +1,7 @@
 import { ArrowRight, Search, X } from 'lucide-react';
 import { iniciais, plural } from '@/lib/format';
 import StatusLocal from './StatusLocal';
+import { limiteGps } from '@/lib/geo';
 import type { Ponto } from './usePonto';
 
 /** Etapa 1: o funcionário digita o nome (a busca roda no servidor, só neste escritório). */
@@ -9,7 +10,7 @@ export default function PassoPessoa({ p }: { p: Ponto }) {
   return (
     <>
       <h1>Identifique-se</h1>
-      {p.cerca && ctx && <StatusLocal local={p.local} raio={ctx.ponto.geofence_raio_m} onVerificar={p.checarLocal} />}
+      {p.cerca && ctx && <StatusLocal local={p.local} limite={limiteGps(ctx.ponto)} onVerificar={p.checarLocal} />}
       {p.modo === 'local' && <span className="badge gold mt-12" >Modo demonstração · dados fictícios</span>}
 
       <form className="search" role="search" onSubmit={e => { e.preventDefault(); p.buscar(); }}>

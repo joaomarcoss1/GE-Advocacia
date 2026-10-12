@@ -274,6 +274,8 @@ export interface ConfigPonto {
   geofence_lat: number | null;
   geofence_lng: number | null;
   geofence_raio_m: number;
+  /** Tolerância do GPS (m) somada ao raio; 0–150, padrão 30. */
+  geofence_margem_m: number;
   /** Endereço do ponto central da cerca (informativo). */
   geofence_endereco: string;
 }

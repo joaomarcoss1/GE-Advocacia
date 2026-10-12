@@ -84,7 +84,7 @@ export function usePonto(slug: string) {
   const checarLocal = useCallback(async () => {
     if (!ctx?.ponto.geofence_ativo || ctx.ponto.geofence_lat == null || ctx.ponto.geofence_lng == null) return;
     setLocal({ estado: 'verificando' });
-    setLocal(await verificarLocal({ ...ctx.ponto, geofence_lat: ctx.ponto.geofence_lat, geofence_lng: ctx.ponto.geofence_lng }));
+    setLocal(await verificarLocal({ ...ctx.ponto, geofence_lat: ctx.ponto.geofence_lat, geofence_lng: ctx.ponto.geofence_lng }, p => setLocal({ estado: 'verificando', precisao: p.precisao })));
   }, [ctx]);
 
   // Carrega o escritório do endereço
@@ -207,6 +207,8 @@ export function usePonto(slug: string) {
   /** Leitura nova no momento do registro (a do carregamento pode estar velha). */
   async function obterGps(): Promise<{ lat: number; lng: number } | null> {
     if (!ctx?.ponto.geofence_ativo) return null;
+    // A leitura precisa acabou de ser feita na verificação da tela: reaproveita enquanto é recente (evita uma 2ª leitura pior).
+    if (local.estado === 'dentro' && local.pos && local.em && Date.now() - local.em < 45_000) return { lat: local.pos.lat, lng: local.pos.lng };
     try { const p = await lerPosicao(); return { lat: p.lat, lng: p.lng }; }
     catch (e) { throw new Error((e as { mensagem?: string }).mensagem ?? PONTO_ERRO_MSG.GPS_OBRIGATORIO); }
   }

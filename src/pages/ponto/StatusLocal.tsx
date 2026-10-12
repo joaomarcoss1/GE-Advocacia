@@ -1,14 +1,20 @@
 import { MapPin, MapPinOff } from 'lucide-react';
 import { fmtDistancia, type EstadoLocal } from '@/lib/geo';
 
-/** Situação da cerca de GPS: dentro, fora, verificando ou localização indisponível. */
-export default function StatusLocal({ local, raio, onVerificar, compacto }: { local: EstadoLocal; raio: number; onVerificar: () => void; compacto?: boolean }) {
+/** Situação da cerca de GPS: dentro, fora, verificando ou localização indisponível. `limite` = raio configurado + tolerância do GPS. */
+export default function StatusLocal({ local, limite, onVerificar, compacto }: { local: EstadoLocal; limite: number; onVerificar: () => void; compacto?: boolean }) {
   const ok = local.estado === 'dentro';
   const carregando = local.estado === 'verificando';
   const Ic = ok ? MapPin : MapPinOff;
   let titulo = 'Verificando sua localização…', detalhe = 'Autorize o acesso à localização se o navegador pedir.';
-  if (local.estado === 'dentro') { titulo = 'Você está no escritório'; detalhe = `A ${fmtDistancia(local.distancia)} do ponto central · limite ${fmtDistancia(raio)}${local.precisao > 100 ? ` · sinal de GPS impreciso (±${fmtDistancia(local.precisao)})` : ''}`; }
-  else if (local.estado === 'fora') { titulo = 'Fora da área permitida'; detalhe = `Você está a ${fmtDistancia(local.distancia)} do escritório e o limite é ${fmtDistancia(raio)}. O registro de ponto está bloqueado.${local.precisao > 100 ? ` Sinal de GPS impreciso (±${fmtDistancia(local.precisao)}): vá para um local aberto e verifique de novo.` : ''}`; }
+  if (local.estado === 'verificando' && local.precisao !== undefined) detalhe = `Melhorando a precisão do GPS (±${fmtDistancia(local.precisao)})… aguarde alguns segundos.`;
+  if (local.estado === 'dentro') { titulo = 'Você está no escritório'; detalhe = `A ${fmtDistancia(local.distancia)} do ponto central · limite ${fmtDistancia(limite)}${local.precisao > 100 ? ` · sinal de GPS impreciso (±${fmtDistancia(local.precisao)})` : ''}`; }
+  else if (local.estado === 'fora') {
+    titulo = local.incerto ? 'Não foi possível confirmar sua localização' : 'Fora da área permitida';
+    detalhe = local.incerto
+      ? `O GPS está impreciso (±${fmtDistancia(local.precisao)}) e você pode estar dentro da área. Vá para perto de uma janela ou porta, aguarde alguns segundos e verifique de novo. Limite: ${fmtDistancia(limite)}.`
+      : `Você está a ${fmtDistancia(local.distancia)} do escritório e o limite é ${fmtDistancia(limite)}. O registro de ponto está bloqueado.${local.precisao > 100 ? ` Sinal de GPS impreciso (±${fmtDistancia(local.precisao)}): vá para um local aberto e verifique de novo.` : ''}`;
+  }
   else if (local.estado === 'negado' || local.estado === 'indisponivel' || local.estado === 'erro') { titulo = local.estado === 'negado' ? 'Localização bloqueada' : 'Localização indisponível'; detalhe = local.mensagem; }
   return (
     <div className={`geo ${carregando ? 'wait' : ok ? 'ok' : 'bad'} ${compacto ? 'compacto' : ''}`} role="status" aria-live="polite">

@@ -17,6 +17,10 @@ Apoio técnico: quem define o que cada nível pode fazer no escritório é o só
 
 Gerência e coordenação mantêm exatamente o que tinham antes dos novos níveis.
 
+## Cadastro e acesso em um passo só
+
+Em **Funcionários → Novo funcionário** (quem tem a permissão *gerenciar acessos*), a seção **Acesso ao sistema** já vem ligada: o login é o e-mail do cadastro, o nível é sugerido pelo cargo (nunca administrador nem gerência — esses são escolha consciente), a senha provisória é gerada na hora e o PIN do ponto pode ser gerado junto. Ao salvar, os dados aparecem **uma única vez** para você entregar à pessoa. Se uma etapa falhar (por exemplo, e-mail já usado), o cadastro fica salvo e a tela diz o que faltou. Para quem já está cadastrado e ainda não tem acesso, a mesma seção aparece na edição. Acessos e níveis continua sendo o lugar para mudar nível, permissões, senha ou remover.
+
 ## Permissões
 
 Cada nível tem um conjunto padrão (tela **Acessos e níveis → Níveis e permissões**). O administrador pode ajustar o padrão de cada nível para o escritório, e cada pessoa pode ter permissões **a mais** ou **a menos** que o nível. "Negar" tem a última palavra.

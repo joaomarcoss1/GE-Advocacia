@@ -14,7 +14,7 @@ const escala: Escala = {
 };
 const config: Config = {
   escritorio: { nome: '', cnpj: '', endereco: '', cidade: '', telefone: '', email: '', oab_sociedade: '' },
-  ponto: { tolerancia_min: 5, limite_atraso_min: 30, geofence_ativo: false, geofence_lat: 0, geofence_lng: 0, geofence_raio_m: 300, geofence_endereco: '' },
+  ponto: { tolerancia_min: 5, limite_atraso_min: 30, geofence_ativo: false, geofence_lat: 0, geofence_lng: 0, geofence_raio_m: 300, geofence_margem_m: 30, geofence_endereco: '' },
   folha: { periodicidade: 'mensal', descontar_atrasos: false, hora_extra_pct: 50 },
   privacidade: { anexos_meses: 60, geolocalizacao_meses: 12 },
   automacao: { tarefa_andamento: true, enviar_drive: true },
