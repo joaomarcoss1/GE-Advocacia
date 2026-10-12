@@ -39,7 +39,7 @@ jobs:
           if [ -z "$DB" ]; then echo "::error::Cadastre o segredo SUPABASE_DB_URL"; exit 1; fi
       - run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Aplica o schema (idempotente, pode rodar mais de uma vez)
-        run: psql "$DB" -X -v ON_ERROR_STOP=1 -q -f supabase/atualizacao_definitiva.sql
+        run: psql "$DB" -X -1 -v ON_ERROR_STOP=1 -q -f supabase/atualizacao_definitiva.sql   # -1: tudo ou nada; se algo falhar, o banco continua exatamente como estava
       - name: Versão do esquema e tabelas
         run: |
           psql "$DB" -X -At -c "select 'versao='||max(versao) from public.schema_versao"

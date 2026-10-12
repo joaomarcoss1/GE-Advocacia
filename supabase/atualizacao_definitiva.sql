@@ -1692,12 +1692,13 @@ insert into public.schema_versao (versao, nome) values (5, 'privacidade e retenc
 -- =====================================================================
 
 -- ---------- Papel coordenador ----------
--- Só estreita o conjunto de papéis se a restrição ainda for a antiga: depois da migração 0013 (8 níveis) reaplicar esta
--- migração não pode voltar a restringir (falharia, e com razão, se já existem pessoas com os novos níveis).
+-- Só estreita o conjunto de papéis se a restrição existir e ainda for a antiga (3 papéis). Depois da migração 0013 (8 níveis)
+-- reaplicar esta migração não pode voltar a restringir: falharia se já existem pessoas com os novos níveis. Se a restrição não
+-- existe (aplicação interrompida), nada a fazer aqui: a 0013 recria a definitiva logo adiante.
 do $$ begin
-  if not exists (select 1 from pg_constraint where conname = 'perfis_papel_check' and conrelid = 'public.perfis'::regclass
-                   and pg_get_constraintdef(oid) like '%advogado%') then
-    alter table public.perfis drop constraint if exists perfis_papel_check;
+  if exists (select 1 from pg_constraint where conname = 'perfis_papel_check' and conrelid = 'public.perfis'::regclass
+               and pg_get_constraintdef(oid) not like '%advogado%') then
+    alter table public.perfis drop constraint perfis_papel_check;
     alter table public.perfis add constraint perfis_papel_check check (papel in ('admin', 'gerente', 'coordenador'));
   end if;
 end $$;

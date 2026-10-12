@@ -9,6 +9,9 @@ select 'perfis' t, count(*) n from public.perfis union all select 'funcionarios'
 select t.ok((select n from antes where t = 'papeis_distintos') >= 3, 'o banco de teste tem pessoas com vários níveis (' || (select n from antes where t = 'papeis_distintos') || ' papéis)');
 \echo == reaplicando atualizacao_definitiva.sql por cima dos dados
 \i atualizacao_definitiva.sql
+\echo == e de novo, depois de uma aplicação interrompida (restrição de papéis apagada no meio do caminho)
+alter table public.perfis drop constraint perfis_papel_check;
+\i atualizacao_definitiva.sql
 create temp table depois as
 select 'perfis' t, count(*) n from public.perfis union all select 'funcionarios', count(*) from public.funcionarios
  union all select 'registros_ponto', count(*) from public.registros_ponto union all select 'escritorios', count(*) from public.escritorios
