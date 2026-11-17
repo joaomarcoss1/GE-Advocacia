@@ -1,0 +1,35 @@
+name: Diagnóstico de login (somente leitura)
+# Consulta o banco (nenhuma escrita) e mostra, sem e-mails nem senhas, o que costuma impedir o login:
+# conexão, contas sem cadastro, e-mail não confirmado, conta bloqueada, escritório suspenso, senha provisória.
+# Segredo necessário: SUPABASE_DB_URL (o mesmo do fluxo "Supabase — aplicar banco e funções").
+on:
+  workflow_dispatch:
+
+permissions: { contents: read }
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DB: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Confere o segredo
+        run: |
+          if [ -z "$DB" ]; then echo "::error::Cadastre o segredo SUPABASE_DB_URL"; exit 1; fi
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Diagnóstico
+        run: |
+          q() { psql "$DB" -X -At -c "$1"; }
+          echo "== conexão"; q "select 'banco acessível · '||current_database()||' · '||now()::date"
+          echo "== versão do esquema"; q "select coalesce(max(versao),0) from public.schema_versao"
+          echo "== escritórios"; q "select 'total='||count(*)||' ativos='||count(*) filter (where ativo)||' suspensos='||count(*) filter (where not ativo) from public.escritorios"
+          echo "== contas de acesso (auth.users)"; q "select 'total='||count(*)||' e-mail não confirmado='||count(*) filter (where email_confirmed_at is null)||' bloqueadas='||count(*) filter (where banned_until is not null and banned_until > now())||' sem login há >30 dias='||count(*) filter (where last_sign_in_at < now() - interval '30 days')||' nunca entraram='||count(*) filter (where last_sign_in_at is null) from auth.users"
+          echo "== cadastros de acesso (perfis)"; q "select 'total='||count(*)||' ativos='||count(*) filter (where ativo)||' inativos='||count(*) filter (where not ativo)||' com senha provisória='||count(*) filter (where trocar_senha) from public.perfis"
+          echo "== por nível"; q "select coalesce(string_agg(papel||'='||n, ' · ' order by papel),'nenhum') from (select papel, count(*) n from public.perfis group by papel) x"
+          echo "== contas SEM cadastro de acesso (entram no Auth mas o sistema não as reconhece)"; q "select count(*) from auth.users u where not exists (select 1 from public.perfis p where p.id = u.id) and not exists (select 1 from public.plataforma_admins a where a.id = u.id)"
+          echo "== cadastros de acesso SEM conta (não conseguem entrar)"; q "select count(*) from public.perfis p where not exists (select 1 from auth.users u where u.id = p.id)"
+          echo "== administradores de escritório ativos"; q "select count(*) from public.perfis where papel = 'admin' and ativo"
+          echo "== administradores da plataforma ativos"; q "select count(*) from public.plataforma_admins where ativo"
+          echo "== restrições do banco"; q "select coalesce(string_agg(conname, ', '),'AUSENTE') from pg_constraint where conname = 'perfis_papel_check' and conrelid = 'public.perfis'::regclass"
+          echo "== registro de acessos nas últimas 24h"; q "select coalesce(string_agg(evento||'='||n, ' · '),'nenhum') from (select evento, count(*) n from public.acessos_log where created_at > now() - interval '24 hours' group by evento) x" || true
